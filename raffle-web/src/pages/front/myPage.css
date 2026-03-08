@@ -1,0 +1,505 @@
+.myShell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: #fff;
+}
+
+.myTopCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, rgba(53, 69, 91, 0.72), rgba(39, 41, 63, 0.82));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.myTopLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.myAvatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background: linear-gradient(180deg, #77c2ff, #4d95ff);
+  color: #07111d;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+}
+
+.myUserInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.myUserId {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.myVip {
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #d8e9ff;
+  border: 1px solid rgba(140, 190, 255, 0.35);
+  background: rgba(90, 145, 255, 0.12);
+}
+
+.myTopRight {
+  flex: 1;
+}
+
+.myTitle {
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.mySub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.myCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.myCard {
+  min-height: 100%;
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  background: linear-gradient(180deg, rgba(6, 12, 23, 0.96), rgba(3, 8, 18, 0.96));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.myCardTitle {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 18px;
+}
+
+.myRow {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.myKey {
+  font-size: 14px;
+  color: rgba(255,255,255,0.72);
+  font-weight: 700;
+}
+
+.myVal {
+  font-size: 15px;
+  color: #ffffff;
+  font-weight: 700;
+  min-width: 0;
+}
+
+.myVal input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  border-radius: 12px;
+  padding: 0 12px;
+  outline: none;
+  font-size: 14px;
+}
+
+.myVal input:focus {
+  border-color: rgba(123, 187, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(91, 162, 255, 0.12);
+}
+
+.mySaveBtn {
+  height: 42px;
+  min-width: 120px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #dfe6ee);
+  color: #27313d;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mySaveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.myHint {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.58);
+}
+
+.myWalletRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.myWalletLeft {
+  min-width: 0;
+}
+
+.myWalletLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.72);
+  margin-bottom: 8px;
+}
+
+.myWalletAmount {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+.myWalletUseBtn {
+  flex: 0 0 auto;
+  min-width: 88px;
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.myWalletUseBtn:hover {
+  background: rgba(255,255,255,0.11);
+  transform: translateY(-1px);
+}
+
+.myWalletNotice {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.56);
+}
+
+@media (max-width: 1280px) {
+  .myCardsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .myTopCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .myTopLeft {
+    min-width: 0;
+  }
+
+  .myCardTitle {
+    font-size: 20px;
+  }
+
+  .myRow {
+    grid-template-columns: 90px 1fr;
+    gap: 10px;
+  }
+
+  .myWalletAmount {
+    font-size: 24px;
+  }
+}
+
+.myLineWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.myLineWrap input {
+  flex: 1;
+}
+
+.myVerifyBtn {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.myVerifyBtn:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+
+.myVerifiedBadge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(15, 185, 85, 0.14);
+  border: 1px solid rgba(33, 210, 103, 0.35);
+  color: #2ee66b;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.myLineWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.myLineWrap input {
+  flex: 1;
+}
+
+.myVerifyBtn {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.myVerifyBtn:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+
+.myVerifiedBadge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(15, 185, 85, 0.14);
+  border: 1px solid rgba(33, 210, 103, 0.35);
+  color: #2ee66b;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.myLineWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.myLineWrap input {
+  flex: 1;
+}
+
+.myVerifyBtn {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.myVerifyBtn:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+
+.myVerifiedBadge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(15, 185, 85, 0.14);
+  border: 1px solid rgba(33, 210, 103, 0.35);
+  color: #2ee66b;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.myInlineAction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.myInlineAction input {
+  flex: 1;
+}
+
+.myMiniSaveBtn {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.myMiniSaveBtn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+
+.myMiniSaveBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.myLineWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.myLineWrap input {
+  flex: 1;
+}
+
+.myVerifyBtn {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.myVerifyBtn:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateY(-1px);
+}
+
+.myVerifiedBadge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(15, 185, 85, 0.14);
+  border: 1px solid rgba(33, 210, 103, 0.35);
+  color: #2ee66b;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.mySaveBtn{
+  margin: 0;
+  align-self: flex-start;
+}
+
+.myHint{
+  margin-top: 10px;
+  text-align: left;
+}
+
+.myRow--action{
+  grid-template-columns: 1fr;
+}
+
+.myVal--action{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.mySaveBtn{
+  margin: 0;
+  align-self: flex-start;
+}
+
+.myHint{
+  margin-top: 10px;
+  text-align: left;
+}

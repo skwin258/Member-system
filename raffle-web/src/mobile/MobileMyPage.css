@@ -1,0 +1,436 @@
+.mMyPage{
+  height: calc(100vh - 86px);
+  min-height: 0;
+  color: #fff;
+  padding: 0 0 12px;
+  background: transparent;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mMyHero{
+  flex: 0 0 auto;
+  padding: 6px 0 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.mMyHeroTop{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.mMyAvatarWrap{
+  flex: 0 0 auto;
+}
+
+.mMyAvatar{
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #4ad4e5, #2a99ad);
+  border: 2px solid rgba(255,255,255,0.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+}
+
+.mMyHeroInfo{
+  min-width: 0;
+  flex: 1;
+}
+
+.mMyHeroWelcome{
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+.mMyHeroUser{
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.76);
+  font-weight: 700;
+}
+
+.mMyVipBar{
+  margin-top: 12px;
+  height: 44px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(23,154,180,0.98), rgba(10,127,149,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 6px 18px rgba(0,0,0,0.18);
+}
+
+.mMyVipItem{
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+  white-space: nowrap;
+}
+
+.mMyVipDivider{
+  width: 1px;
+  height: 22px;
+  background: rgba(255,255,255,0.24);
+}
+
+.mMyVipBtn{
+  height: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 8px;
+  color: rgba(255,255,255,0.92);
+}
+
+.mMyVipBtn:active{
+  opacity: 0.75;
+}
+
+.mMyActionRow{
+  flex: 0 0 auto;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mMyActionBtn{
+  min-height: 72px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(112,225,247,0.42), rgba(69,171,192,0.26));
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.22),
+    0 8px 16px rgba(0,0,0,0.15);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 8px 4px;
+}
+
+.mMyActionBtn.isActive{
+  background: linear-gradient(180deg, rgba(145,239,255,0.55), rgba(73,193,214,0.34));
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.24),
+    0 0 0 2px rgba(255, 183, 0, 0.95),
+    0 8px 16px rgba(0,0,0,0.16);
+}
+
+.mMyActionIcon{
+  font-size: 22px;
+  line-height: 1;
+}
+
+.mMyContentCard{
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 14px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(28,168,192,0.95), rgba(17,146,168,0.95));
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.18),
+    0 12px 24px rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.10);
+  display: flex;
+  flex-direction: column;
+}
+
+.mMyContentTitle{
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.14);
+  background: linear-gradient(180deg, rgba(36,181,208,0.98), rgba(19,153,176,0.98));
+}
+
+.mMyList,
+.mMyBankForm,
+.mMyWalletSection{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* 個人資料 */
+.mMyList{
+  padding: 0 12px 10px;
+}
+
+.mMyInfoRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+.mMyInfoRow.isBlock{
+  display: block;
+  padding: 10px 4px;
+}
+
+.mMyInfoLabel{
+  flex: 0 0 auto;
+  color: rgba(255,255,255,0.94);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.mMyInfoValue{
+  min-width: 0;
+  text-align: right;
+  color: rgba(255,255,255,0.96);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mMyInputStack{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mMyInput{
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  outline: none;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mMyInput::placeholder{
+  color: rgba(255,255,255,0.55);
+}
+
+.mMyInput:focus{
+  border-color: rgba(255,255,255,0.32);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
+}
+
+.mMyPrimaryBtn,
+.mMyGhostBtn,
+.mMySaveBtn,
+.mMyWalletBtn{
+  height: 40px;
+  border: none;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mMyPrimaryBtn{
+  background: linear-gradient(180deg, #ffffff, #dff6ff);
+  color: #0d5763;
+}
+
+.mMyGhostBtn{
+  min-width: 92px;
+  padding: 0 14px;
+  border: 1px solid rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+.mMySaveBtn{
+  width: 100%;
+  margin-top: 8px;
+  background: linear-gradient(180deg, #ffffff, #dff6ff);
+  color: #0d5763;
+}
+
+.mMyPrimaryBtn:disabled,
+.mMySaveBtn:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mMyLockedText{
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.mMyLineVerifyBox{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.mMyVerifiedBadge{
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 82px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(37, 205, 109, 0.18);
+  border: 1px solid rgba(46, 230, 107, 0.34);
+  color: #d9ffe7;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+/* 銀行管理 */
+.mMyBankForm{
+  padding: 12px 14px 14px;
+}
+
+.mMyField{
+  margin-bottom: 10px;
+}
+
+.mMyFieldLabel{
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.95);
+}
+
+.mMyLockedBox,
+.mMyHintBox{
+  min-height: 40px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #fff;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.mMyHintBox{
+  color: rgba(255,255,255,0.80);
+  font-size: 13px;
+}
+
+/* 我的錢包 */
+.mMyWalletSection{
+  padding: 0 14px 14px;
+}
+
+.mMyWalletBlock{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.mMyWalletLeft{
+  min-width: 0;
+  flex: 1;
+}
+
+.mMyWalletLabel{
+  font-size: 14px;
+  color: rgba(255,255,255,0.78);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.mMyWalletAmount{
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.mMyWalletBtn{
+  flex: 0 0 auto;
+  min-width: 80px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.mMyWalletNotice{
+  padding-top: 12px;
+  color: rgba(255,255,255,0.64);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* 捲軸 */
+.mMyList::-webkit-scrollbar,
+.mMyBankForm::-webkit-scrollbar,
+.mMyWalletSection::-webkit-scrollbar{
+  width: 6px;
+}
+
+.mMyList::-webkit-scrollbar-thumb,
+.mMyBankForm::-webkit-scrollbar-thumb,
+.mMyWalletSection::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.22);
+  border-radius: 999px;
+}
+
+.mMyList::-webkit-scrollbar-track,
+.mMyBankForm::-webkit-scrollbar-track,
+.mMyWalletSection::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+@media (max-width: 380px){
+  .mMyHeroWelcome{
+    font-size: 15px;
+  }
+
+  .mMyActionBtn{
+    min-height: 66px;
+    font-size: 12px;
+  }
+
+  .mMyActionIcon{
+    font-size: 20px;
+  }
+
+  .mMyWalletAmount{
+    font-size: 21px;
+  }
+}

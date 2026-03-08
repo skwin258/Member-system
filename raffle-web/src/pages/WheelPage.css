@@ -1,0 +1,110 @@
+/* =========================
+ * Wheel Win Modal controls
+ * ========================= */
+:root{
+  /* 折抵金（整行） */
+  --wheel-discount-font: 74px;
+  --wheel-discount-x: 0px;
+  --wheel-discount-y: 0px;
+
+  /* 現金（整行） */
+  --wheel-cash-font: 70px;
+  --wheel-cash-x: 0px;
+  --wheel-cash-y: 0px;
+
+  /* S幣 icon */
+  --wheel-scoin-icon-size: 86px;
+  --wheel-scoin-icon-x: 6px;
+  --wheel-scoin-icon-y: 20px;
+
+  /* S幣文字（整行） */
+  --wheel-scoin-font: 66px;
+  --wheel-scoin-x: 0px;
+  --wheel-scoin-y: 0px;
+
+  /* 獎品圖片（kind=image） */
+  --wheel-prize-img-w: 320px;
+  --wheel-prize-img-h: auto;
+  --wheel-prize-img-x: 0px;
+  --wheel-prize-img-y: 0px;
+}
+
+/* 黑幕 */
+.wheelWinMask{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0,0,0,.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* 中央內容 */
+.wheelWinCenter{
+  pointer-events: none; /* 點哪都能關 */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+.wheelWinStack{
+  pointer-events: none;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap: 10px;
+}
+
+/* 標題 */
+.wheelWinTitle{
+  font-size: 30px;
+  font-weight: 800;
+  color:#fff;
+  text-shadow: 0 3px 18px rgba(0,0,0,.55);
+}
+
+/* 通用行 */
+.wheelWinLine{
+  display:flex;
+  align-items:baseline;
+  gap: 10px;
+  color:#fff;
+  text-shadow: 0 3px 18px rgba(0,0,0,.55);
+}
+
+/* ✅ 折抵金：用你 JSX 已有 class */
+.wheelWinLine--discount{
+  font-size: var(--wheel-discount-font);
+  transform: translate(var(--wheel-discount-x), var(--wheel-discount-y));
+}
+
+/* ✅ 現金：用你 JSX 已有 class */
+.wheelWinLine--cash{
+  font-size: var(--wheel-cash-font);
+  transform: translate(var(--wheel-cash-x), var(--wheel-cash-y));
+}
+
+/* ✅ S幣 icon */
+.wheelWinIcon{
+  width: var(--wheel-scoin-icon-size);
+  height: var(--wheel-scoin-icon-size);
+  object-fit: contain;
+  transform: translate(var(--wheel-scoin-icon-x), var(--wheel-scoin-icon-y));
+}
+
+/* ✅ S幣整行（你 JSX 用 wheelWinLine--img） */
+.wheelWinLine--img{
+  font-size: var(--wheel-scoin-font);
+  transform: translate(var(--wheel-scoin-x), var(--wheel-scoin-y));
+}
+
+/* 獎品圖片 */
+.wheelWinPrizeImg{
+  width: var(--wheel-prize-img-w);
+  height: var(--wheel-prize-img-h);
+  object-fit: contain;
+  transform: translate(var(--wheel-prize-img-x), var(--wheel-prize-img-y));
+  filter: drop-shadow(0 10px 28px rgba(0,0,0,.55));
+}

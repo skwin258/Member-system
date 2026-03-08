@@ -1,0 +1,113 @@
+/* raffle-web/src/components/confirmRedeemModal.css */
+.crmOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0,0,0,0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+.crmCard{
+  width: min(620px, 92vw);
+  border-radius: 18px;
+  background: rgba(20,20,20,0.92);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+  overflow: hidden;
+}
+.crmHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.crmTitle{
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: .5px;
+}
+.crmX{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+  cursor: pointer;
+}
+.crmX:hover{ background: rgba(255,255,255,0.10); }
+
+.crmBody{ padding: 16px; }
+.crmRow{ display:flex; gap: 14px; }
+.crmImgWrap{
+  width: 110px;
+  height: 110px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.crmImg{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display:block;
+}
+.crmImg.ph{
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.10), transparent 55%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.08), transparent 55%);
+}
+.crmInfo{ flex: 1 1 auto; min-width: 0; }
+.crmPTitle{
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+.crmPPrice{
+  color: rgba(255,255,255,0.88);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.crmHint{
+  color: rgba(255,255,255,0.55);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.crmFoot{
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+.crmBtn{
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.crmBtn.ghost{
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+}
+.crmBtn.solid{
+  background: rgba(0,255,102,0.18);
+  border-color: rgba(0,255,102,0.35);
+  color: #00ff66;
+  font-weight: 800;
+}
+.crmBtn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}

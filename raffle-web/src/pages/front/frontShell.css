@@ -1,0 +1,2479 @@
+/* src/pages/front/frontShell.css */
+
+:root {
+  --bg: #0b0f14;
+  --panel: rgba(255,255,255,0.06);
+  --panel2: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.10);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.60);
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+
+.frontApp {
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(1200px 600px at 15% 0%, rgba(120, 180, 255, 0.10), transparent 60%),
+              radial-gradient(1200px 600px at 85% 20%, rgba(160, 120, 255, 0.10), transparent 55%),
+              var(--bg);
+  color: var(--text);
+  overflow: hidden;
+
+  display: grid;
+  grid-template-columns: 280px 1fr;
+}
+
+/* ===== Left ===== */
+.frontSidebar {
+  height: 100%;
+  padding: 14px 12px;
+  border-right: 1px solid var(--border);
+  background: linear-gradient(
+    120deg,
+    #4e63d7 0%,
+    #5fa7d6 45%,
+    #67cdd6 100%
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+/* ✅ Logo 容器：不給外框、不給背景、不撐爆版 */
+.frontBrand{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 8px 6px;
+  border: none !important;
+  background: transparent !important;
+  width: 100%;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+/* ✅ Logo 本體：限制大小 + 發光 */
+.frontLogo{
+  width: 70px;          /* 想更小就改 90 / 100 */
+  max-width: 100%;
+  height: auto;
+  display: block;
+
+  object-fit: contain;   /* ✅ 防止被拉伸 */
+  user-select: none;     /* ✅ 不要選取樣式 */
+  pointer-events: none;  /* ✅ 滑過不會變成可選取 */
+
+  filter:
+drop-shadow(0 0 12px rgba(255,255,255,0.5));
+}
+
+.frontMenu {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.frontMenuBtn {
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.50);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  min-height: 62px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+}
+
+.frontMenuBtn:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.16);
+}
+
+.frontMenuBtnActive {
+  background: rgba(120, 180, 255, 0.10);
+  border-color: rgba(120, 180, 255, 0.25);
+}
+
+.frontMenuTitle {
+  font-weight: 900;
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.frontMenuDesc {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.frontSidebarFooter {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.frontUserCard {
+  background: rgba(0,0,0,0.50);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 10px;
+}
+
+.frontUserName {
+  font-weight: 900;
+}
+
+.frontUserMeta {
+  font-size: 12px;
+  color: var(--muted);
+  display: grid;
+  gap: 4px;
+}
+
+.frontFooterBtns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.frontBtn {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.frontBtn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* ===== Right ===== */
+.frontMain{
+  height: 100%;
+  padding: 18px;
+  overflow: hidden;           /* ✅ 外框不滾 */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;              /* ✅ 重要：讓子層能滾 */
+}
+
+.frontTopbar {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.frontTopbarTitle {
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.frontTopbarSub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.frontPills {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.frontPill {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* content inner helpers */
+.card {
+  border: none !important;      /* 移除框 */
+  box-shadow: none !important;  /* 移除外框光暈 */
+  outline: none !important;
+}
+
+.h2 {
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0 0 10px 0;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tabBar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tabBtn {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.tabBtnActive {
+  background: rgba(160, 120, 255, 0.12);
+  border-color: rgba(160, 120, 255, 0.26);
+}
+
+/* ===== My Page 新版（深色玻璃版，字會清楚） ===== */
+
+.myShell{
+  display: grid;
+  gap: 16px;
+}
+
+/* 上方（圖2排版，但維持你站的深色玻璃風） */
+.myTopCard{
+  border-radius: 18px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+
+  /* ✅ 深色玻璃 */
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+}
+
+.myTopLeft{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 240px;
+}
+
+.myAvatar{
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#7fb5ff,#5dd1ff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 26px;
+  color:#fff;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+}
+
+.myUserInfo{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.myUserId{
+  font-size:16px;
+  font-weight:800;
+  color: rgba(255,255,255,0.92);
+  letter-spacing: 0.3px;
+}
+
+.myVip{
+  background: rgba(90,166,255,0.20);
+  border: 1px solid rgba(90,166,255,0.45);
+  color: rgba(255,255,255,0.92);
+  font-size:12px;
+  padding:4px 10px;
+  border-radius:999px;
+  width: fit-content;
+}
+
+.myTopRight{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.myTitle{
+  font-size:18px;
+  font-weight:900;
+  color: rgba(255,255,255,0.95);
+}
+
+.mySub{
+  font-size:13px;
+  color: rgba(255,255,255,0.72);
+}
+
+/* 下方資訊卡（深色玻璃 + 高對比字色） */
+.myCard{
+  border-radius:18px;
+  padding:18px 22px;
+
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+}
+
+.myCardTitle{
+  font-weight:900;
+  margin-bottom:12px;
+  color: rgba(255,255,255,0.92);
+  letter-spacing: 0.3px;
+}
+
+.myRow{
+  display:flex;
+  align-items:center;
+  padding:14px 0;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+
+.myRow:last-child{
+  border-bottom: none;
+}
+
+.myKey{
+  width:160px;
+  color: rgba(255,255,255,0.70);
+  font-size: 13px;
+}
+
+.myVal{
+  flex: 1;
+  font-weight: 800;
+  color: rgba(255,255,255,0.92);
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;   /* ✅ 靠左 */
+}
+
+/* 生日 input 也做成深色可讀 */
+.myVal input[type="date"]{
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.92);
+  padding: 8px 10px;
+  border-radius: 10px;
+  outline: none;
+}
+
+.myVal input[type="date"]::-webkit-calendar-picker-indicator{
+  filter: invert(1);
+  opacity: 0.85;
+}
+
+/* Promo 大橫幅卡片（像圖2 VIP 那種） */
+.promoGrid{
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 18px;
+  align-items: stretch;  /* 🔥 讓右邊撐高 */
+}
+
+.promoCard {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+}
+
+.promoBanner {
+  width: 100%;
+  height: 300px;          /* ✅ 這個就是你要的「像圖2那樣大」關鍵 */
+  overflow: hidden;
+}
+
+.promoBanner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;      /* ✅ 滿版裁切，效果最像圖2 */
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .promoBanner { height: 220px; }  /* 手機縮一點 */
+}
+
+/* ===== PromoPage：做成「紅框活動選單」風格 ===== */
+
+.promoPage{
+  width: 100%;
+}
+
+.promoHeader{
+  padding: 8px 2px 14px;
+}
+
+.promoTitle{
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.promoSub{
+  color: rgba(255,255,255,0.65);
+  font-size: 13px;
+}
+
+.promoErr{
+  color: #ff6b6b;
+  margin-left: 6px;
+}
+
+.promoGrid{
+  display: grid;
+  grid-template-columns: 340px 1.6fr;  /* 🔥 右邊變大 */
+  gap: 18px;
+  align-items: start;
+}
+
+/* ===== 左側：橘色活動選單框 ===== */
+.promoSide{
+  border-radius: 18px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(180deg, rgba(255,176,92,0.25), rgba(255,120,20,0.18));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+}
+
+/* 上方裝飾圖區 */
+.promoSideTop{
+  border-radius: 16px;
+  height: 120px;
+  background: rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.promoSideTopImg{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: translateY(6px);
+}
+
+/* 中間標題條：優惠活動 */
+.promoSideBarTitle{
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,210,145,0.95), rgba(255,150,60,0.95));
+  color: #fff;
+  font-weight: 900;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.2);
+  margin: 8px 0 12px;
+}
+
+/* 按鈕列 */
+.promoSideBtns{
+  display: grid;
+  gap: 12px;
+  padding: 0 6px;
+}
+
+/* 橘色圓角按鈕（仿紅框那種） */
+.promoSideBtn{
+  height: 54px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.08);
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 16px;
+  color: rgba(255,255,255,0.95);
+
+  background: linear-gradient(180deg, rgba(255,170,80,0.95), rgba(210,95,0,0.95));
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.25), 0 10px 18px rgba(0,0,0,0.22);
+}
+
+.promoSideBtn:hover{
+  filter: brightness(1.05);
+}
+
+.promoSideBtn.active{
+  background: linear-gradient(180deg, rgba(255,215,120,0.98), rgba(255,120,10,0.98));
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.3), 0 14px 26px rgba(0,0,0,0.28);
+}
+
+/* 小字說明 */
+.promoSideHint{
+  margin-top: 12px;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.65);
+}
+
+/* ===== 右側大圖 ===== */
+.promoRight{
+  width: 100%;
+  height: 100%; 
+
+  display: flex;
+  align-items: flex-start;   /* ⭐ 改這行 = 上移 */
+  justify-content: center;
+}
+
+.promoHeroImg{
+  width: 100%;
+  height: 100%;
+  margin-top: 20px;   /* 往上 */
+
+  object-fit: contain;   /* 不裁切 */
+  object-position: center;
+
+  display: block;
+
+  max-width: none;       /* ⭐ 關鍵：解除限制 */
+  max-height: none;      /* ⭐ 關鍵 */
+
+  border-radius: 18px;
+}
+
+/* ===== 彈窗 ===== */
+.promoModalMask{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9999;
+}
+
+.promoModal{
+  width: min(980px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(18,22,28,0.95);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.promoModalTop{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.promoModalTitle{
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.promoModalBody{
+  margin-top: 12px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.9);
+}
+
+/* ===== 右圖一模一樣：橘色紋理底 + 大貼紙 + 半透明面板 + 內凹按鈕 ===== */
+
+.promoSideLike{
+  position: relative;
+  width: 340px;
+
+  /* ✅ 外層框全部拿掉 */
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important; /* 讓貼紙可以超出 */
+}
+
+/* 大貼紙：要“很大”、在面板後面、超出面板上緣（像右圖） */
+.promoSideLike__sticker{
+  position: absolute;
+  top: -28px !important;
+  left: -10px !important;
+  right: -10px !important;
+  height: 210px !important; /* ✅ 變大：右圖關鍵 */
+  background: url("/img/promo-dog.png") center / contain no-repeat !important;
+  z-index: 1 !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 16px 18px rgba(0,0,0,0.22)) !important;
+  pointer-events: none;
+}
+
+/* 半透明玻璃面板：右圖那個“浮起來”的半透明框 */
+.promoSideLike__panel{
+  position: relative;
+  z-index: 2 !important;
+  margin-top: 116px !important;  /* ✅ 讓大貼紙露出上半截，面板在下面 */
+  border-radius: 16px;
+  padding: 12px 14px 14px !important;
+
+  /* 半透明 + 玻璃感 */
+  background: rgba(255, 150, 50, 0.28) !important;
+  border: 1px solid rgba(255,255,255,0.20) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.18),
+    0 12px 22px rgba(0,0,0,0.22) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* 標題條：右圖那條“優惠活動”是面板裡第一條，整條寬、柔和漸層 */
+.promoSideLike__title{
+  height: 56px !important;
+  width: 100% !important;
+  margin: 0 0 12px 0 !important;
+  border-radius: 14px !important;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-weight: 900 !important;
+  font-size: 20px !important;
+  letter-spacing: 2px !important;
+  color: #fff !important;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.18);
+
+  background: linear-gradient(180deg, rgba(255,210,145,0.95), rgba(255,150,60,0.95)) !important;
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.22), 0 10px 18px rgba(0,0,0,0.18) !important;
+}
+
+/* 按鈕列：右圖按鈕比較窄、上下距離固定 */
+.promoSideLike__btns{
+  display: grid;
+  gap: 12px !important;
+  padding: 0 !important;
+}
+
+/* 內凹膠囊按鈕：右圖的“入金/返水”是凹進去的深色膠囊 */
+.promoSideLike__btn{
+  height: 56px !important;
+  border-radius: 18px !important;
+
+  border: 1px solid rgba(0,0,0,0.10) !important;
+  cursor: pointer !important;
+
+  font-weight: 900 !important;
+  font-size: 18px !important;
+  letter-spacing: 2px !important;
+
+  /* 右圖：非 active 字是偏橘紅 */
+  color: rgba(255, 115, 20, 0.95) !important;
+
+  background: linear-gradient(180deg, rgba(160, 70, 0, 0.95), rgba(115, 45, 0, 0.95)) !important;
+
+  /* ✅ 內凹關鍵：inset 大陰影 */
+  box-shadow:
+    inset 0 16px 26px rgba(0,0,0,0.32),
+    inset 0 2px 0 rgba(255,255,255,0.08) !important;
+}
+
+/* Active（全部）：右圖“全部”是亮橘膠囊 + 外凸 */
+.promoSideLike__btn--active{
+  color: #fff !important;
+
+  background: linear-gradient(180deg, rgba(255,215,120,0.98), rgba(255,120,10,0.98)) !important;
+
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.30),
+    0 14px 26px rgba(0,0,0,0.26) !important;
+}
+
+/* 小字：右圖是在面板底下、貼著左側背景 */
+.promoSideLike__hint{
+  position: relative;
+  z-index: 2;
+  margin-top: 10px !important;
+  padding: 0 2px !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  color: rgba(255,255,255,0.65) !important;
+}
+
+/* ===== Promo Modal Image (show clicked cover) ===== */
+.promoModalBody{
+  display: grid;
+  gap: 12px;
+}
+
+.promoModalImg{
+  width: 100%;
+  max-height: 55vh;
+  object-fit: contain;      /* ✅ 不裁切 */
+  display: block;
+  border-radius: 14px;
+}
+
+/* ✅ 如果你不要 content_html 裡面再出現別張圖（例如打字機圖），就打開這段 */
+/*
+.promoModalHtml img{
+  display: none !important;
+}
+*/
+
+/* ===== PromoPage layout：吃滿 frontContent，不要長出卷軸 ===== */
+.promoPage{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.promoHeader{
+  padding: 8px 2px 14px;
+  flex: 0 0 auto;
+}
+
+.promoGrid{
+  flex: 1 1 auto;            /* ✅ 撐滿剩餘高度 */
+  min-height: 0;             /* ✅ 重要：避免 grid 內容把自己撐爆 */
+  display: grid;
+  grid-template-columns: 340px 1.6fr;
+  gap: 18px;
+  align-items: stretch;      /* ✅ 左右同高 */
+}
+
+/* ===== 右側大圖 ===== */
+.promoRight{
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;          /* ✅ 把任何溢位吃掉，不要出卷軸 */
+  cursor: pointer;
+}
+
+/* ✅ 用 transform 上移，不用 margin-top 造成溢位 */
+.promoHeroImg{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;       /* 不裁切 */
+  object-position: center;
+  display: block;
+  border-radius: 18px;
+  transform: translateY(-60px); /* ⭐ 你要上移就改這裡數字 */
+}
+
+/* =========================
+   Promo Lightbox
+========================= */
+
+.promoLightboxMask{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.promoLightbox{
+  position: relative;
+  width: min(980px, 92vw);
+  max-height: 86vh;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background:
+    linear-gradient(180deg, rgba(9,15,28,0.96), rgba(6,12,22,0.94));
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.promoLightboxClose{
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  width: 52px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(8,12,20,0.72);
+  color: rgba(255,255,255,0.9);
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promoLightboxClose:hover{
+  background: rgba(255,255,255,0.08);
+}
+
+.promoLightboxHead{
+  flex: 0 0 auto;
+  padding: 18px 84px 14px 28px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+
+.promoLightboxTitle{
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #ffffff;
+  text-align: center;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.promoLightboxScroll{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 24px 24px;
+}
+
+.promoLightboxScroll::-webkit-scrollbar{
+  width: 10px;
+}
+
+.promoLightboxScroll::-webkit-scrollbar-track{
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+}
+
+.promoLightboxScroll::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+
+.promoLightboxScroll::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,0.28);
+}
+
+.promoLightboxImgWrap{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.promoLightboxImg{
+  display: block;
+  width: min(100%, 760px);
+  height: auto;
+  max-height: 56vh;
+  object-fit: contain;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 14px 30px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.02);
+}
+
+.promoLightboxHtml{
+  width: 100%;
+  max-width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  padding: 18px 20px;
+  color: rgba(255,255,255,0.92);
+  line-height: 1.9;
+  font-size: 18px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  white-space: pre-line;
+}
+
+/* 後台 content_html 進來的內容統一排版 */
+.promoLightboxHtml h1,
+.promoLightboxHtml h2,
+.promoLightboxHtml h3{
+  margin: 0 0 12px;
+  color: #fff;
+  line-height: 1.35;
+  font-weight: 900;
+}
+
+.promoLightboxHtml h1{ font-size: 28px; }
+.promoLightboxHtml h2{ font-size: 24px; }
+.promoLightboxHtml h3{ font-size: 20px; }
+
+.promoLightboxHtml p{
+  margin: 0 0 14px;
+  color: rgba(255,255,255,0.92);
+  line-height: 1.95;
+  font-size: 18px;
+}
+
+.promoLightboxHtml ul,
+.promoLightboxHtml ol{
+  margin: 0 0 14px 1.2em;
+  padding: 0;
+}
+
+.promoLightboxHtml li{
+  margin-bottom: 10px;
+  line-height: 1.9;
+}
+
+.promoLightboxHtml strong,
+.promoLightboxHtml b{
+  color: #fff;
+  font-weight: 900;
+}
+
+.promoLightboxHtml img{
+  display: none !important;
+}
+
+/* 手機 */
+@media (max-width: 768px){
+  .promoLightboxMask{
+    padding: 12px;
+  }
+
+  .promoLightbox{
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 20px;
+  }
+
+  .promoLightboxHead{
+    padding: 16px 66px 12px 16px;
+  }
+
+  .promoLightboxTitle{
+    font-size: 20px;
+  }
+
+  .promoLightboxClose{
+    top: 12px;
+    right: 12px;
+    width: 46px;
+    height: 34px;
+    font-size: 28px;
+  }
+
+  .promoLightboxScroll{
+    padding: 12px 12px 16px;
+  }
+
+  .promoLightboxImg{
+    width: 100%;
+    max-height: 42vh;
+    border-radius: 18px;
+  }
+
+  .promoLightboxHtml{
+    padding: 14px;
+    font-size: 15px;
+    line-height: 1.8;
+  }
+
+  .promoLightboxHtml h1{ font-size: 22px; }
+  .promoLightboxHtml h2{ font-size: 20px; }
+  .promoLightboxHtml h3{ font-size: 18px; }
+
+  .promoLightboxHtml p{
+    font-size: 15px;
+    line-height: 1.85;
+  }
+}
+
+/* ===== Treasure Page: 右上角福利/兌換固定卡 ===== */
+.treasureWrap{
+  position: relative; /* ✅ 讓右上角卡片定位在奪寶頁範圍內 */
+}
+
+.treasureWelfareBox{
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 50;
+
+  width: 200px;
+  padding: 14px 14px 12px;
+  border-radius: 16px;
+
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(10px);
+}
+
+.treasureWelfareLabel{
+  font-size: 12px;
+  color: rgba(255,255,255,0.70);
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.treasureWelfareRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.treasureWelfareNum{
+  font-size: 26px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: 0.5px;
+}
+
+.treasureWelfareBtn{
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.treasureWelfareBtn:hover{
+  background: rgba(255,255,255,0.10);
+}
+
+/* =========================
+   WheelPage (玻璃黑金風)
+========================= */
+
+.wheelPage{
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header */
+.wheelHeader{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wheelBackBtn{
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.92);
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 900;
+}
+.wheelBackBtn:hover{
+  background: rgba(255,255,255,0.08);
+}
+
+.wheelHeaderTitle{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wheelTitle{
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: .5px;
+  color: rgba(255,255,255,0.95);
+}
+
+.wheelSub{
+  font-size: 12px;
+  color: rgba(255,255,255,0.68);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.wheelSub b{ color: rgba(255,255,255,0.92); }
+.wheelDot{ opacity: .5; }
+.wheelClaim{
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+}
+
+/* Body layout */
+.wheelBody{
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 18px;
+  align-items: start;
+  min-height: 0;
+}
+
+/* Card base */
+.wheelCard{
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.wheelCard--wheel{
+  padding: 16px;
+}
+
+.wheelCanvasWrap{
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border-radius: 16px;
+  background: radial-gradient(600px 300px at 50% 20%, rgba(255,215,120,0.18), transparent 60%),
+              rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.wheelCanvas{
+  width: 340px;
+  height: 340px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  filter: drop-shadow(0 16px 30px rgba(0,0,0,0.35));
+}
+.wheelCanvas.isSpinning{
+  cursor: not-allowed;
+  opacity: .92;
+}
+
+/* actions */
+.wheelActions{
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.wheelBtn{
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 900;
+}
+.wheelBtn:hover{ background: rgba(255,255,255,0.10); }
+.wheelBtn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.wheelTip{
+  font-size: 12px;
+  color: rgba(255,255,255,0.62);
+}
+
+/* Prize list */
+.wheelCard--list{
+  padding: 16px;
+  min-height: 0;
+}
+
+.wheelCardTitle{
+  font-weight: 900;
+  margin-bottom: 10px;
+  color: rgba(255,255,255,0.92);
+}
+
+.wheelMuted{
+  color: rgba(255,255,255,0.62);
+  font-size: 13px;
+}
+
+.wheelPrizeList{
+  display: grid;
+  gap: 10px;
+  padding-right: 6px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.wheelPrizeRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.16);
+}
+
+.wheelPrizeName{
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+}
+
+.wheelPrizeProb{
+  font-size: 12px;
+  color: rgba(255,255,255,0.68);
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+}
+
+/* Result card */
+.wheelResultCard{
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  max-width: 860px;
+}
+
+.wheelResultTitle{
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+  margin-bottom: 8px;
+}
+
+.wheelResultName{
+  font-weight: 900;
+  font-size: 16px;
+  color: rgba(255,255,255,0.95);
+}
+
+.wheelResultMoney{
+  margin-top: 10px;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: rgba(255,215,120,0.95);
+  text-shadow: 0 10px 24px rgba(0,0,0,0.35);
+}
+
+.wheelResultText{
+  margin-top: 10px;
+  color: rgba(255,255,255,0.80);
+}
+
+/* Modal */
+.wheelModalMask{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+
+.wheelModal{
+  position: relative;
+  width: min(420px, 96vw);
+  border-radius: 18px;
+  padding: 18px 16px 16px;
+  background: rgba(18,22,28,0.95);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  text-align: center;
+}
+
+.wheelModalClose{
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.9);
+  font-size: 26px;
+  line-height: 36px;
+  cursor: pointer;
+}
+.wheelModalClose:hover{ background: rgba(0,0,0,0.55); }
+
+.wheelModalTitle{
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.95);
+}
+
+.wheelModalName{
+  margin-top: 8px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+}
+
+.wheelModalMoney{
+  margin-top: 14px;
+  font-size: 44px;
+  font-weight: 900;
+  color: rgba(255,215,120,0.95);
+  text-shadow: 0 12px 26px rgba(0,0,0,0.35);
+}
+
+.wheelModalImg{
+  margin-top: 12px;
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+}
+
+.wheelModalPlaceholder{
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.70);
+  background: rgba(0,0,0,0.20);
+}
+
+.wheelModalText{
+  margin-top: 10px;
+  color: rgba(255,255,255,0.80);
+  line-height: 1.6;
+}
+
+.wheelModalOk{
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  font-weight: 900;
+  cursor: pointer;
+}
+.wheelModalOk:hover{ background: rgba(255,255,255,0.10); }
+
+/* Responsive */
+@media (max-width: 1100px){
+  .wheelBody{ grid-template-columns: 1fr; }
+  .wheelCanvas{ width: 320px; height: 320px; }
+}
+
+/* ✅ 只在奪寶頁，改上方導航條（.frontTopbar） */
+.treasureScope .frontTopbar {
+  /* 你原本那段想要的 */
+  margin: 18px 28px 0 28px;
+  height: 70px;
+  min-height: 70px;
+  padding: 0 24px;
+  background: linear-gradient(180deg, #1c2734 0%, #16202b 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+
+/* ✅ 只在奪寶頁，改紅包左右兩區塊 */
+.treasureScope .rp-card.rp-left,
+.treasureScope .rp-card.rp-right {
+  background: linear-gradient(180deg, #1c2734 0%, #16202b 100%) !important;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+
+/* ✅ 三欄版面：左獎項 / 中輪盤 / 右歷史 */
+.wheelBody3{
+  display:grid;
+  grid-template-columns: 320px 1fr 360px;
+  gap: 18px;
+  align-items: start;
+}
+
+/* 中間欄置中 */
+.wheelCenterWrap{
+  display:flex;
+  justify-content:center;
+}
+
+/* 左右卡片可捲動（避免整頁爆高） */
+.wheelCard--leftList .wheelPrizeList,
+.wheelCard--rightHistory .wheelWinnersList{
+  max-height: 560px;
+  overflow:auto;
+  padding-right: 6px;
+}
+
+/* 中間輪盤放大、置中 */
+.wheelCard--centerWheel{
+  width: 100%;
+  max-width: 760px;
+}
+
+.wheelCanvasWrap--big{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding: 14px 0 6px;
+}
+
+.wheelCanvasWrap--big canvas{
+  display:block;
+  width: min(620px, 100%);
+  height: auto;
+}
+
+/* 標題列（含右上角刷新小按鈕） */
+.wheelCardTitleRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 10px;
+}
+
+.wheelMiniBtn{
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color:#fff;
+  cursor:pointer;
+}
+.wheelMiniBtn:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+}
+
+/* 中間結果卡（輪盤下方） */
+.wheelResultInline{
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+}
+
+/* 右側歷史 row */
+.wheelWinnerRow{
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  margin-bottom: 10px;
+}
+.wheelWinnerName{ font-weight:700; }
+.wheelWinnerPrize{ opacity:0.9; margin-top:2px; }
+.wheelWinnerRight{ text-align:right; opacity:0.85; font-size:12px; }
+
+/* 小螢幕：改成上下排列 */
+@media (max-width: 1100px){
+  .wheelBody3{
+    grid-template-columns: 1fr;
+  }
+  .wheelCard--leftList .wheelPrizeList,
+  .wheelCard--rightHistory .wheelWinnersList{
+    max-height: 320px;
+  }
+}
+
+/* ✅ 中間：只留輪盤，不要卡片框 */
+.wheelCenterPlain{
+  width: 100%;
+  max-width: 900px;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* ✅ canvas 外面也不要任何框/底 */
+.wheelCanvasWrap--big{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.wheelCanvas{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* ✅ 右側歷史區塊：可上下調
+   改這個數字：負數往上，正數往下 */
+:root{
+  --wheel-history-shiftY: -20px;
+}
+
+.wheelCard--rightHistory{
+  transform: translateY(var(--wheel-history-shiftY));
+}
+
+/* 左側：獎項列表可捲動 */
+.wheelCard--leftList .wheelPrizeList{
+  max-height: 560px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+/* 右側：歷史中獎可捲動 */
+.wheelCard--rightHistory .wheelWinnersList{
+  max-height: 560px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+/* 右側歷史：直式窄長卡片（像你圖那樣） */
+.wheelCard--rightHistory{
+  width: 320px;                 /* ✅ 變窄 */
+  height: 760px;                /* ✅ 變長 */
+  border-radius: 26px;          /* ✅ 大圓角 */
+  padding: 18px 16px;
+  overflow: hidden;
+
+  /* 背景/邊框/陰影：更像你圖 */
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+
+  /* ✅ 你要上下左右微調就改這行 */
+  transform: translate(-50px, 60px);
+}
+
+/* 標題列：左標題、右刷新 */
+.wheelCard--rightHistory .wheelCardTitleRow{
+  margin-bottom: 12px;
+}
+
+/* 標題文字更大更粗 */
+.wheelCard--rightHistory .wheelCardTitle{
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* 刷新按鈕：像圖中那種小膠囊 */
+.wheelCard--rightHistory .wheelMiniBtn{
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+/* 每筆中獎紀錄：膠囊列 */
+.wheelCard--rightHistory .wheelWinnerRow{
+  border-radius: 14px;
+  padding: 12px 12px;
+  margin-bottom: 12px;
+
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+
+  /* ✅ 變成單行排列 */
+  display: block;
+}
+
+/* 讓文字像「userA 抽中紅包現金 50 元」那種一行 */
+.wheelCard--rightHistory .wheelWinnerLeft,
+.wheelCard--rightHistory .wheelWinnerRight{
+  display: inline;
+}
+
+/* 把原本右側小字/時間弄淡（你圖裡沒有強調右側） */
+.wheelCard--rightHistory .wheelWinnerRight{
+  margin-left: 8px;
+  opacity: 0.85;
+  font-size: 12px;
+}
+
+/* 主文字稍微大一點 */
+.wheelCard--rightHistory .wheelWinnerName{
+  font-weight: 800;
+  font-size: 14px;
+}
+.wheelCard--rightHistory .wheelWinnerPrize{
+  display: inline;
+  margin-left: 6px;
+  font-size: 14px;
+  opacity: 0.95;
+}
+
+/* 底部說明文字（固定在卡片底部） */
+.wheelCard--rightHistory::after{
+  content: "顯示所有使用者歷史中獎紀錄（最新在上）";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.wheelCard--rightHistory{
+  position: relative; /* 讓 ::after 能定位 */
+}
+
+/* ✅ 右側整片滿版：把外層底色清掉，背景鋪到最外層 */
+.frontMain--treasure{
+  background:
+    linear-gradient(rgba(0,0,0,0.00), rgba(0,0,0,0.00)),
+    url("/bg_redpacket.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* ✅ 外層通常有預設底色，讓它透明（不然會蓋住你背景） */
+.frontMainTreasure {
+  background-color: transparent !important;
+}
+
+/* ✅ 如果你的右側還有一層 frontContent / frontMain 有 padding 或底色，清掉它 */
+.frontMainTreasure .frontContent,
+.frontMainTreasure .frontMain {
+  background: transparent !important;
+}
+
+.wheelCard--rightHistory{
+  width: 380px;      /* 改這個數字 */
+}
+
+.wheelCard--rightHistory{
+  height: 500px;     /* 固定高度 */
+}
+
+.wheelCard--rightHistory{
+  margin-top: -260px;     /* 上 */
+  margin-bottom: 20px;  /* 下 */
+  margin-left: 10px;    /* 左 */
+  margin-right: 10px;   /* 右 */
+}
+
+.wheelTopCard{
+  width: 320px;          /* 👈 加這行 */
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+
+  padding: 20px 28px;
+  margin-bottom: 24px;
+
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+.frontTopbar{
+  background: rgba(0, 0, 0, 0.4);
+  height: 60px;
+  min-height: 80px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+}
+
+.wheelTitle{
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.wheelSub{
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.wheelDot{
+  opacity: 0.5;
+}
+
+.wheelCard--leftList{
+  height: 500px;   /* 改成你要的高度 */
+}
+
+.wheelCard--leftList{
+  margin-top: -20px;   /* 往下推 */
+}
+
+.wheelResultInline--belowHistory{
+  margin-top: 20px;     /* 上 */
+  margin-bottom: 20px;  /* 下 */
+}
+
+.wheelResultInline--belowHistory{
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.wheelCenterWrap{
+  margin-top: -200px;     /* 上 */
+  margin-bottom: 20px;  /* 下 */
+  margin-left: 15px;    /* 左 */
+  margin-right: 15px;   /* 右 */
+}
+
+/* 右側歷史卡片：改成直向排版 */
+.wheelCard--rightHistory{
+  display: flex;
+  flex-direction: column;
+}
+
+/* 歷史清單：撐滿可用高度（有資料時可捲） */
+.wheelCard--rightHistory .wheelWinnersList{
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ✅ 抽中結果：自動被推到底部 */
+.wheelCard--rightHistory .wheelResultInline{
+  margin-top: auto;   /* 這行就是「推下去」的關鍵 */
+}
+
+.wheelResultInline--outside{
+  /* ===== 位置（上下左右距離） ===== */
+  margin-top: 80px;     /* 往下 */
+
+  /* ===== 高度 ===== */
+  min-height: 160px;    /* 最小高度 */
+  height: auto;         /* 自動撐開 */
+
+  /* ===== 內距 ===== */
+  padding: 16px 20px;
+
+  /* ===== 外觀 ===== */
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+}
+
+.wheelResultInline--outside{
+  margin-left: -40px;
+}
+
+.wheelResultInline--outside{
+  width: 119%;
+}
+
+/* 讓包裹層可以疊按鈕 */
+.wheelCanvasWrap--big {
+  position: relative;
+}
+
+/* ✅ 中心透明點擊區（大小=紅色按鈕直徑） */
+.wheelCenterHit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 112px;   /* 2 * CENTER_BTN_R (56*2) */
+  height: 112px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* 禁用時不要點 */
+.wheelCenterHit.isDisabled {
+  cursor: default;
+  pointer-events: none;
+}
+
+/* 可選：避免 focus 外框 */
+.wheelCenterHit:focus {
+  outline: none;
+}
+
+/* ✅ 輪盤 canvas 不要出現選取/拖曳樣式 */
+.wheelCanvas {
+  cursor: default !important;      /* 不要手指/十字 */
+  user-select: none;               /* 不可選取 */
+  -webkit-user-select: none;
+  -ms-user-select: none;
+
+  -webkit-user-drag: none;         /* 避免拖曳影像感 */
+  user-drag: none;
+
+  touch-action: none;              /* 手機避免滑動被當手勢 */
+}
+
+.promoHeader{
+  display:none;
+}
+
+
+
+.frontSidebar{
+  background: linear-gradient(
+    120deg,
+    #4e63d7 0%,
+    #5fa7d6 45%,
+    #67cdd6 100%
+  );
+}
+
+/* 左側選單按鈕 */
+.frontMenuBtn{
+  background: rgba(0,0,0,0.50);   /* 黑色透明 */
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+}
+
+
+/* footer按鈕 */
+.frontFooterBtns button{
+  flex:1;
+
+  background: rgba(0,0,0,0.50);   /* 改成黑色透明 */
+  border:1px solid rgba(255,255,255,0.15);
+
+  border-radius:14px;
+  padding:10px 0;
+
+  color:#fff;
+  font-weight:500;
+
+  box-shadow:0 4px 12px rgba(0,0,0,0.35);
+
+  transition:all .2s ease;
+}
+
+
+/* 測試用戶卡片 */
+.frontUserCard{
+  background: rgba(0,0,0,0.50);   /* 黑色透明卡片 */
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  border-radius:16px;
+}
+
+/* Records page 外層 */
+.recordsZ{
+  width: 100%;
+}
+
+/* 最外層大卡 */
+.recordsCard{
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.02);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+/* 內層區塊卡：查詢/列表 */
+.recordsSection{
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+/* 查詢按鈕 */
+.recordsSearchBtn{
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(120,180,255,0.18);
+  color: rgba(255,255,255,0.95);
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.recordsSearchBtn:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 表格外框 */
+.recordsTableWrap{
+  overflow-x: auto;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+}
+
+/* 錯誤字 */
+.recordsErr{
+  margin-top: 10px;
+  color: #ffb3b3;
+  font-weight: 900;
+}
+
+
+
+.recordsSection{
+background: rgba(0,0,0,0.20);
+}
+
+.recordsCard{
+  background: rgba(0,0,0,0.80);     /* 黑色透明 */
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+  padding: 14px;
+
+  /* 透陰影 */
+  box-shadow:
+    0 8px 24px rgba(0,0,0,0.45),     /* 主陰影 */
+    0 0 0 1px rgba(255,255,255,0.03) inset;
+
+  backdrop-filter: blur(6px);       /* 玻璃效果 */
+}
+
+/* ✅ 只有紀錄列表這塊可捲動（有滑塊） */
+.recordsSection{
+  /* 你要多高就調這個 */
+  max-height: 420px;
+
+  /* ✅ 開滑塊 */
+  overflow: auto;
+
+  /* ✅ 美觀：避免內層被切到 */
+  padding: 14px;
+
+  /* 你要的黑色透明卡 */
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+
+  /* ✅ 透陰影 */
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+
+  /* 有玻璃感可留著 */
+  backdrop-filter: blur(6px);
+}
+
+/* 表格外層：讓橫向也能捲 */
+.recordsTableWrap{
+  overflow-x: auto;
+  overflow-y: hidden; /* 直向捲交給 recordsSection */
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+}
+
+/* ✅ 滑塊樣式（Chrome/Edge） */
+.recordsSection::-webkit-scrollbar{
+  width: 10px;
+}
+.recordsSection::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.20);
+  border-radius: 999px;
+}
+.recordsSection::-webkit-scrollbar-track{
+  background: rgba(0,0,0,0.15);
+  border-radius: 999px;
+}
+
+/* =========================
+ * Wheel Win Popup (no card)
+ * ========================= */
+
+.wheelWinMask{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.68);
+  z-index: 99999;
+}
+
+.wheelWinClose{
+  position: fixed;
+  top: 26px;
+  right: 28px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(0,0,0,.35);
+  color: rgba(255,255,255,.92);
+  font-size: 26px;
+  line-height: 42px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.wheelWinCenter{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+}
+
+.wheelWinStack{
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.wheelWinTitle{
+  font-size: 28px;
+  font-weight: 900;
+  color: rgba(255,255,255,.96);
+  text-shadow: 0 6px 24px rgba(0,0,0,.45);
+  letter-spacing: .5px;
+}
+
+.wheelWinLine{
+  display:flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 6px;
+}
+
+.wheelWinNum{
+  font-size: 74px;
+  font-weight: 1000;
+  color: rgba(255, 220, 130, .98);
+  text-shadow: 0 10px 30px rgba(0,0,0,.6);
+  letter-spacing: 1px;
+}
+
+.wheelWinLine--img{
+  align-items: center;
+}
+
+.wheelWinIcon{
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,.55));
+}
+
+.wheelWinPrizeImg{
+  width: min(520px, 88vw);
+  max-height: 48vh;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 40px rgba(0,0,0,.62));
+}
+
+.wheelWinText{
+  font-size: 26px;
+  font-weight: 900;
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 10px 26px rgba(0,0,0,.6);
+}
+
+.wheelWinOk{
+  margin-top: 8px;
+  width: min(340px, 82vw);
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.10);
+  color: rgba(255,255,255,.92);
+  font-weight: 900;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.frontMain--promo{
+  background:
+    linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.15)),
+    url("/img/promo-bg.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.frontMain--shop{
+  background:
+    linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+    url("/img/shop-bg.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* =========================
+   Invite Page
+========================= */
+
+.invitePage{
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: #fff;
+}
+
+.inviteHeroCard,
+.inviteCard{
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 12px 36px rgba(0,0,0,0.18);
+  backdrop-filter: blur(8px);
+}
+
+.inviteHeroCard{
+  padding: 22px 24px;
+}
+
+.inviteHeroTitle{
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: rgba(255,255,255,0.97);
+}
+
+.inviteHeroSub{
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.65);
+}
+
+.inviteGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  min-height: 0;
+}
+
+.inviteCard{
+  padding: 20px;
+  min-height: 0;
+}
+
+.inviteCardTitle{
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.96);
+}
+
+.inviteCardSub{
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.60);
+}
+
+.inviteLinkBox{
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  align-items: center;
+}
+
+.inviteInput{
+  flex: 1 1 auto;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.24);
+  color: rgba(255,255,255,0.96);
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.inviteInput::placeholder{
+  color: rgba(255,255,255,0.34);
+}
+
+.inviteBtn{
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.94);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .18s ease;
+}
+
+.inviteBtn:hover{
+  background: rgba(255,255,255,0.10);
+  transform: translateY(-1px);
+}
+
+.inviteBtn:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.inviteBtnPrimary{
+  background: rgba(0,255,102,0.14);
+  border-color: rgba(0,255,102,0.24);
+  color: #00ff66;
+}
+
+.inviteBtnPrimary:hover{
+  background: rgba(0,255,102,0.20);
+}
+
+.inviteBtnGhost{
+  background: rgba(255,255,255,0.06);
+}
+
+.inviteStatsRow{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.inviteCountBadge{
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.92);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.inviteList{
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.inviteList::-webkit-scrollbar{
+  width: 10px;
+}
+
+.inviteList::-webkit-scrollbar-track{
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+}
+
+.inviteList::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+
+.inviteList::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,0.28);
+}
+
+.inviteUserRow{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.18);
+}
+
+.inviteUserIndex{
+  flex: 0 0 auto;
+  min-width: 40px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.82);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.inviteUserName{
+  font-size: 15px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.95);
+  word-break: break-word;
+}
+
+.inviteHint{
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.70);
+  line-height: 1.7;
+}
+
+.inviteError{
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255,80,120,0.10);
+  border: 1px solid rgba(255,80,120,0.18);
+  color: rgba(255,190,205,0.96);
+  line-height: 1.7;
+}
+
+.inviteFooterRow{
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px){
+  .inviteGrid{
+    grid-template-columns: 1fr;
+  }
+
+  .inviteLinkBox{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inviteBtn{
+    width: 100%;
+  }
+
+  .inviteStatsRow{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inviteFooterRow{
+    justify-content: stretch;
+  }
+}
+
+.frontMain--my{
+  background:
+    linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.05)),
+    url("/img/my-bg.jpg");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 推薦名單外層視窗 */
+.inviteListViewport{
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* 手機版：固定高度 + 可滑動 */
+@media (max-width: 768px){
+  .inviteListViewport{
+    height: 150px;          /* 故意壓小 */
+    overflow: hidden;
+    border-radius: 18px;
+    position: relative;
+  }
+
+  .inviteList{
+    height: 100%;
+    overflow-y: scroll;     /* 改成 scroll，不是 auto */
+    overflow-x: hidden;
+    padding-right: 8px;
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(46,255,137,0.9) rgba(255,255,255,0.06);
+  }
+
+  .inviteList::-webkit-scrollbar{
+    width: 8px;
+  }
+
+  .inviteList::-webkit-scrollbar-track{
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
+  }
+
+  .inviteList::-webkit-scrollbar-thumb{
+    border-radius: 999px;
+    background: linear-gradient(180deg, #31ff92 0%, #0ecf67 100%);
+    box-shadow: 0 0 8px rgba(49,255,146,0.28);
+  }
+}
+
+@media (max-width: 768px){
+  .inviteHeroCard{
+    display: none;
+  }
+}

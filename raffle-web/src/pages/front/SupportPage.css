@@ -1,0 +1,220 @@
+.supportPage{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 26px 0 0 24px;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+/* 外框容器 */
+.supportFrame{
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  border-radius: 24px;
+  padding: 2px;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.03);
+}
+
+/* 這層是真正旋轉的流光 */
+.supportGlow{
+  position: absolute;
+  inset: -46%;
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 333deg,
+      rgba(0,255,102,0.00) 344deg,
+      rgba(0,255,102,0.05) 349deg,
+      rgba(0,255,102,0.16) 353deg,
+      rgba(70,255,145,0.82) 356deg,
+      rgba(220,255,235,0.98) 358deg,
+      rgba(0,255,102,0.75) 359deg,
+      transparent 360deg
+    );
+  filter:
+    blur(8px)
+    drop-shadow(0 0 6px rgba(0,255,102,0.16))
+    drop-shadow(0 0 14px rgba(0,255,102,0.10));
+}
+
+.supportGlowA{
+  animation: supportMeteorSpinA 8s linear infinite;
+}
+
+.supportGlowB{
+  opacity: 0.78;
+  animation: supportMeteorSpinB 8s linear infinite;
+}
+
+/* 內層底板，把中間蓋住，只留邊框 */
+.supportInner{
+  position: relative;
+  z-index: 1;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #071424 0%, #020b16 100%);
+  margin: 4px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    inset 0 0 0 1px rgba(255,255,255,0.02),
+    0 14px 32px rgba(0,0,0,0.32);
+}
+
+/* 卡片內容 */
+.supportBox{
+  position: relative;
+  width: 100%;
+  min-height: 340px;
+  border-radius: 20px;
+  padding: 24px 22px 22px;
+  box-sizing: border-box;
+  background: transparent;
+  overflow: hidden;
+}
+
+.supportBox h3{
+  margin: 0 0 18px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+.supportBox p{
+  margin: 0 0 14px;
+  color: rgba(255,255,255,0.76);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.supportBox ul{
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.supportBox li{
+  position: relative;
+  padding-left: 18px;
+  margin-bottom: 11px;
+  color: rgba(255,255,255,0.84);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.supportBox li::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2dff86, #00d95a);
+  box-shadow:
+    0 0 6px rgba(0,255,102,0.35),
+    0 0 12px rgba(0,255,102,0.18);
+}
+
+.supportBtn{
+  display: block;
+  width: 100%;
+  margin-top: 22px;
+  min-width: 118px;
+  height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #22ff7f 0%, #00df61 100%);
+  color: #06130b;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow:
+    0 10px 22px rgba(0,255,102,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.34);
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.supportBtn:hover{
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 28px rgba(0,255,102,0.24),
+    inset 0 1px 0 rgba(255,255,255,0.42);
+  filter: brightness(1.03);
+}
+
+.supportBtn:disabled{
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes supportMeteorSpinA{
+  from{
+    transform: rotate(0deg);
+  }
+  to{
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes supportMeteorSpinB{
+  from{
+    transform: rotate(180deg);
+  }
+  to{
+    transform: rotate(540deg);
+  }
+}
+
+/* 桌機：左上但不要貼齊 */
+@media (min-width: 769px){
+  .supportPage{
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 26px 0 0 24px;
+  }
+}
+
+/* 手機：置中，靠上，不貼齊 */
+@media (max-width: 768px){
+  .supportPage{
+    justify-content: center;
+    align-items: flex-start;
+    padding: 18px 12px 0;
+  }
+
+  .supportFrame{
+    max-width: 360px;
+  }
+
+  .supportBox{
+    min-height: auto;
+    padding: 22px 18px 20px;
+  }
+
+  .supportBox h3{
+    font-size: 17px;
+  }
+
+  .supportBox p,
+  .supportBox li{
+    font-size: 13px;
+  }
+
+  .supportBtn{
+    height: 40px;
+    font-size: 14px;
+  }
+}

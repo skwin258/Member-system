@@ -1,0 +1,463 @@
+.mRecPage{
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #fff;
+  padding: 0;
+}
+
+.mRecTabs{
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 12px;
+  scrollbar-width: none;
+}
+.mRecTabs::-webkit-scrollbar{
+  display: none;
+}
+
+.mRecTab{
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+    linear-gradient(180deg, #16385a 0%, #0f2640 100%);
+  color: rgba(255,255,255,0.86);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mRecTab.active{
+  color: #fff;
+  border-color: rgba(0,224,255,0.28);
+  background:
+    linear-gradient(180deg, rgba(0,224,255,0.22), rgba(0,224,255,0.07)),
+    linear-gradient(180deg, #1d567d 0%, #12344f 100%);
+  box-shadow: 0 8px 20px rgba(0, 170, 255, 0.14);
+}
+
+.mRecFilterCard{
+  border-radius: 22px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)),
+    linear-gradient(180deg, rgba(11,21,36,0.98), rgba(7,12,22,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 16px 32px rgba(0,0,0,0.24);
+}
+
+.mRecFilterTitle{
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 12px;
+  letter-spacing: .3px;
+}
+
+.mRecFieldGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mRecField{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mRecField--full{
+  grid-column: 1 / -1;
+}
+
+.mRecField span{
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  font-weight: 700;
+}
+
+.mRecField input,
+.mRecField select{
+  width: 100%;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  padding: 0 12px;
+  outline: none;
+  font-size: 13px;
+}
+
+.mRecQuickRow{
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-top: 12px;
+  scrollbar-width: none;
+}
+.mRecQuickRow::-webkit-scrollbar{
+  display: none;
+}
+
+.mRecQuickBtn{
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.90);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mRecHintRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.mRecHint{
+  font-size: 12px;
+  color: rgba(255,255,255,0.68);
+}
+
+.mRecSearchBtn{
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #14dbff 0%, #0aa2e0 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 10px 20px rgba(0,170,255,0.18);
+}
+
+.mRecError{
+  margin-top: 12px;
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255,110,150,0.20);
+  background: rgba(255,80,120,0.10);
+  color: rgba(255,190,210,0.96);
+  font-size: 13px;
+}
+
+.mRecSectionHead{
+  margin-top: 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mRecSectionTitle{
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .3px;
+}
+
+.mRecSectionCount{
+  font-size: 12px;
+  color: rgba(255,255,255,0.64);
+}
+
+.mRecList{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.mRecItemCard{
+  border-radius: 20px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+    linear-gradient(180deg, rgba(12,20,33,0.98), rgba(8,12,20,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 12px 26px rgba(0,0,0,0.20);
+}
+
+.mRecItemTop{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mRecTime{
+  min-width: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.64);
+  word-break: break-word;
+}
+
+.mRecStatus,
+.mRecTag{
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+}
+
+.mRecStatus.win{
+  color: #74ffb1;
+  border-color: rgba(0,255,102,0.22);
+  background: rgba(0,255,102,0.10);
+}
+
+.mRecStatus.lose{
+  color: #ffb1c7;
+  border-color: rgba(255,110,150,0.18);
+  background: rgba(255,110,150,0.08);
+}
+
+.mRecMainPrize{
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.4;
+  color: #fff;
+}
+
+.mRecMetaGrid{
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mRecMetaBox{
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mRecMetaBox span,
+.mRecMetaLine span,
+.mRecNote span{
+  font-size: 11px;
+  color: rgba(255,255,255,0.60);
+  font-weight: 700;
+}
+
+.mRecMetaBox strong,
+.mRecMetaLine strong{
+  font-size: 13px;
+  color: #fff;
+  font-weight: 800;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.mRecMetaStack{
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mRecMetaLine{
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mRecNote{
+  margin-top: 12px;
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.mRecNote p{
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.88);
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.mRecEmpty{
+  border-radius: 18px;
+  padding: 18px 14px;
+  text-align: center;
+  color: rgba(255,255,255,0.64);
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+}
+
+@media (max-width: 380px){
+  .mRecFieldGrid{
+    grid-template-columns: 1fr;
+  }
+
+  .mRecField--full{
+    grid-column: auto;
+  }
+
+  .mRecHintRow{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mRecSearchBtn{
+    width: 100%;
+  }
+
+  .mRecMetaGrid{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   搜尋區塊新排版（保留原本色系）
+========================= */
+
+.mRecQuickBar{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mRecQuickChip{
+  height: 38px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mRecQuickChip:active{
+  transform: scale(0.98);
+}
+
+.mRecStackFields{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mRecSelectRow{
+  position: relative;
+  display: block;
+}
+
+.mRecSelectRow select{
+  width: 100%;
+  height: 42px;
+  padding: 0 40px 0 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mRecSelectRow::after{
+  content: "⌄";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-55%);
+  color: rgba(255,255,255,0.82);
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.mRecSearchBtn--block{
+  width: 100%;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.mRecSubTools{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mRecDateRange{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 380px){
+  .mRecQuickBar{
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mRecDateRange{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 抽獎紀錄列表區可單獨滑動 ===== */
+
+.mRecPage{
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mRecRecordsPanel{
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.mRecScrollArea{
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px;
+}
+
+.mRecList{
+  margin-top: 0;
+}

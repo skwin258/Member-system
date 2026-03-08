@@ -1,0 +1,57 @@
+/* raffle-web/src/pages/front/redeemRecordsPage.css */
+.rrZ{ padding: 18px 20px; color: #fff; }
+.rrHead{ display:flex; align-items:flex-end; justify-content:space-between; gap: 14px; flex-wrap: wrap; }
+.rrTitle{ font-weight: 900; letter-spacing: .4px; }
+.rrBtns{ display:flex; gap: 10px; align-items:center; }
+.rrBtn{
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  cursor: pointer;
+}
+.rrBtn.ghost{
+  background: rgba(0,255,102,0.12);
+  border-color: rgba(0,255,102,0.20);
+  color: #00ff66;
+  font-weight: 800;
+}
+.rrErr{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,80,120,0.12);
+  border: 1px solid rgba(255,80,120,0.25);
+  color: rgba(255,180,200,0.95);
+}
+.rrTableWrap{
+  margin-top: 12px;
+  border-radius: 16px;
+  overflow: auto;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.32);
+}
+.rrTable{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+.rrTable th, .rrTable td{
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  vertical-align: top;
+}
+.rrTable th{
+  text-align: left;
+  font-size: 12px;
+  letter-spacing: .6px;
+  color: rgba(255,255,255,0.66);
+  background: rgba(255,255,255,0.04);
+}
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; font-size: 12px; color: rgba(255,255,255,0.80); }
+.ok{ color: #00ff66; font-weight: 800; }
+.fail{ color: rgba(255,120,150,0.95); font-weight: 800; }
+.note{ color: rgba(255,255,255,0.70); }
+.empty{ text-align:center; padding: 18px; color: rgba(255,255,255,0.55); }

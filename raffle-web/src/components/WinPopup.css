@@ -1,0 +1,365 @@
+/* raffle-web/src/components/WinPopup.css */
+
+:root{
+  /* ===== 桌機版：圖片 ===== */
+  --winpop-big-size: 370px;
+  --winpop-big-x: 0px;
+  --winpop-big-y: -60px;
+
+  --winpop-super-size: 620px;
+  --winpop-super-x: 0px;
+  --winpop-super-y: -70px;
+
+  --winpop-mega-size: 520px;
+  --winpop-mega-x: 0px;
+  --winpop-mega-y: -80px;
+
+  --winpop-ultra-size: 620px;
+  --winpop-ultra-x: 0px;
+  --winpop-ultra-y: -90px;
+
+  --winpop-legendary-size: 980px;
+  --winpop-legendary-x: 0px;
+  --winpop-legendary-y: -100px;
+
+  /* ===== 桌機版：文字（共用，不動） ===== */
+  --winpop-big-text-x: 0px;
+  --winpop-big-text-y: 220px;
+  --winpop-big-money-size: 90px;
+  --winpop-big-num-size: 100px;
+  --winpop-big-unit-size: 90px;
+  --winpop-big-gap: 12px;
+
+  --winpop-super-text-x: 0px;
+  --winpop-super-text-y: 220px;
+  --winpop-super-money-size: 90px;
+  --winpop-super-num-size: 100px;
+  --winpop-super-unit-size: 90px;
+  --winpop-super-gap: 12px;
+
+  --winpop-mega-text-x: 0px;
+  --winpop-mega-text-y: 220px;
+  --winpop-mega-money-size: 90px;
+  --winpop-mega-num-size: 100px;
+  --winpop-mega-unit-size: 90px;
+  --winpop-mega-gap: 12px;
+
+  --winpop-ultra-text-x: 0px;
+  --winpop-ultra-text-y: 220px;
+  --winpop-ultra-money-size: 90px;
+  --winpop-ultra-num-size: 100px;
+  --winpop-ultra-unit-size: 90px;
+  --winpop-ultra-gap: 12px;
+
+  --winpop-legendary-text-x: 0px;
+  --winpop-legendary-text-y: 220px;
+  --winpop-legendary-money-size: 90px;
+  --winpop-legendary-num-size: 100px;
+  --winpop-legendary-unit-size: 90px;
+  --winpop-legendary-gap: 12px;
+}
+
+.winpop-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:99999;
+}
+
+.winpop-card{
+  position:relative;
+  width:min(720px,92vw);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow: visible;
+}
+
+.winpop-stack{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  animation: winpopPulse 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.winpop-imgWrap{
+  transform: translate3d(0,0,0);
+  will-change: transform;
+}
+
+/* ===== 圖片位移 ===== */
+.winpop-stack.is-big > .winpop-imgWrap{
+  transform: translate3d(var(--winpop-big-x), var(--winpop-big-y), 0);
+}
+.winpop-stack.is-super > .winpop-imgWrap{
+  transform: translate3d(var(--winpop-super-x), var(--winpop-super-y), 0);
+}
+.winpop-stack.is-mega > .winpop-imgWrap{
+  transform: translate3d(var(--winpop-mega-x), var(--winpop-mega-y), 0);
+}
+.winpop-stack.is-ultra > .winpop-imgWrap{
+  transform: translate3d(var(--winpop-ultra-x), var(--winpop-ultra-y), 0);
+}
+.winpop-stack.is-legendary > .winpop-imgWrap{
+  transform: translate3d(var(--winpop-legendary-x), var(--winpop-legendary-y), 0);
+}
+
+.winpop-img{
+  display:block;
+  height:auto;
+  max-width:none !important;
+  filter:
+    drop-shadow(0 0 18px rgba(255,220,120,.85))
+    drop-shadow(0 0 38px rgba(255,200,0,.55))
+    drop-shadow(0 18px 44px rgba(0,0,0,.55));
+}
+
+/* ===== 圖片尺寸 ===== */
+.winpop-stack.is-big > .winpop-imgWrap > .winpop-img{ width: var(--winpop-big-size) !important; }
+.winpop-stack.is-super > .winpop-imgWrap > .winpop-img{ width: var(--winpop-super-size) !important; }
+.winpop-stack.is-mega > .winpop-imgWrap > .winpop-img{ width: var(--winpop-mega-size) !important; }
+.winpop-stack.is-ultra > .winpop-imgWrap > .winpop-img{ width: var(--winpop-ultra-size) !important; }
+.winpop-stack.is-legendary > .winpop-imgWrap > .winpop-img{ width: var(--winpop-legendary-size) !important; }
+
+@keyframes winpopPulse{
+  0%{ transform: scale(1); }
+  50%{ transform: scale(1.07); }
+  100%{ transform: scale(1); }
+}
+
+/* ===== 金額共用骨架 ===== */
+.winpop-amt{
+  position:absolute;
+  left:50%;
+  top:50%;
+  display:flex;
+  align-items:baseline;
+  white-space:nowrap;
+  pointer-events:none;
+}
+
+/* ===== 各等級文字位置 / 間距 ===== */
+.winpop-stack.is-big > .winpop-amt{
+  transform: translate(-50%, -50%) translate(var(--winpop-big-text-x), var(--winpop-big-text-y));
+  gap: var(--winpop-big-gap);
+}
+.winpop-stack.is-super > .winpop-amt{
+  transform: translate(-50%, -50%) translate(var(--winpop-super-text-x), var(--winpop-super-text-y));
+  gap: var(--winpop-super-gap);
+}
+.winpop-stack.is-mega > .winpop-amt{
+  transform: translate(-50%, -50%) translate(var(--winpop-mega-text-x), var(--winpop-mega-text-y));
+  gap: var(--winpop-mega-gap);
+}
+.winpop-stack.is-ultra > .winpop-amt{
+  transform: translate(-50%, -50%) translate(var(--winpop-ultra-text-x), var(--winpop-ultra-text-y));
+  gap: var(--winpop-ultra-gap);
+}
+.winpop-stack.is-legendary > .winpop-amt{
+  transform: translate(-50%, -50%) translate(var(--winpop-legendary-text-x), var(--winpop-legendary-text-y));
+  gap: var(--winpop-legendary-gap);
+}
+
+.winpop-money,
+.winpop-num,
+.winpop-unit{
+  font-weight:1000;
+  letter-spacing:1px;
+  background:linear-gradient(
+    180deg,
+    #fff4c8 0%,
+    #ffd86a 20%,
+    #ffbf2b 50%,
+    #ff9a12 70%,
+    #c95b00 100%
+  );
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  -webkit-text-stroke:2px rgba(120,50,0,.55);
+  text-shadow:
+    0 2px 0 rgba(255,255,255,.35),
+    0 6px 0 rgba(160,70,0,.55),
+    0 10px 14px rgba(0,0,0,.45),
+    0 0 14px rgba(255,220,90,.75),
+    0 0 30px rgba(255,200,0,.55);
+}
+
+/* ===== 各等級文字尺寸 ===== */
+.winpop-stack.is-big .winpop-money{ font-size: var(--winpop-big-money-size); font-weight:1800; }
+.winpop-stack.is-big .winpop-num{ font-size: var(--winpop-big-num-size); }
+.winpop-stack.is-big .winpop-unit{ font-size: var(--winpop-big-unit-size); }
+
+.winpop-stack.is-super .winpop-money{ font-size: var(--winpop-super-money-size); font-weight:1800; }
+.winpop-stack.is-super .winpop-num{ font-size: var(--winpop-super-num-size); }
+.winpop-stack.is-super .winpop-unit{ font-size: var(--winpop-super-unit-size); }
+
+.winpop-stack.is-mega .winpop-money{ font-size: var(--winpop-mega-money-size); font-weight:1800; }
+.winpop-stack.is-mega .winpop-num{ font-size: var(--winpop-mega-num-size); }
+.winpop-stack.is-mega .winpop-unit{ font-size: var(--winpop-mega-unit-size); }
+
+.winpop-stack.is-ultra .winpop-money{ font-size: var(--winpop-ultra-money-size); font-weight:1800; }
+.winpop-stack.is-ultra .winpop-num{ font-size: var(--winpop-ultra-num-size); }
+.winpop-stack.is-ultra .winpop-unit{ font-size: var(--winpop-ultra-unit-size); }
+
+.winpop-stack.is-legendary .winpop-money{ font-size: var(--winpop-legendary-money-size); font-weight:1800; }
+.winpop-stack.is-legendary .winpop-num{ font-size: var(--winpop-legendary-num-size); }
+.winpop-stack.is-legendary .winpop-unit{ font-size: var(--winpop-legendary-unit-size); }
+
+/* ===== 手機版（<=768） ===== */
+@media (max-width: 768px){
+  :root{
+    /* 圖片 */
+    --winpop-big-size: 190px;
+    --winpop-big-x: 0px;
+    --winpop-big-y: -24px;
+
+    --winpop-super-size: 240px;
+    --winpop-super-x: 0px;
+    --winpop-super-y: -26px;
+
+    --winpop-mega-size: 220px;
+    --winpop-mega-x: 0px;
+    --winpop-mega-y: -28px;
+
+    --winpop-ultra-size: 260px;
+    --winpop-ultra-x: 0px;
+    --winpop-ultra-y: -30px;
+
+    --winpop-legendary-size: 290px;
+    --winpop-legendary-x: 0px;
+    --winpop-legendary-y: -34px;
+
+    /* BIG 文字 */
+    --winpop-big-text-x: 0px;
+    --winpop-big-text-y: 98px;
+    --winpop-big-money-size: 28px;
+    --winpop-big-num-size: 34px;
+    --winpop-big-unit-size: 28px;
+    --winpop-big-gap: 5px;
+
+    /* SUPER 文字 */
+    --winpop-super-text-x: 0px;
+    --winpop-super-text-y: 98px;
+    --winpop-super-money-size: 28px;
+    --winpop-super-num-size: 34px;
+    --winpop-super-unit-size: 28px;
+    --winpop-super-gap: 5px;
+
+    /* MEGA 文字 */
+    --winpop-mega-text-x: 0px;
+    --winpop-mega-text-y: 98px;
+    --winpop-mega-money-size: 28px;
+    --winpop-mega-num-size: 34px;
+    --winpop-mega-unit-size: 28px;
+    --winpop-mega-gap: 5px;
+
+    /* ULTRA 文字 */
+    --winpop-ultra-text-x: 0px;
+    --winpop-ultra-text-y: 98px;
+    --winpop-ultra-money-size: 28px;
+    --winpop-ultra-num-size: 34px;
+    --winpop-ultra-unit-size: 28px;
+    --winpop-ultra-gap: 5px;
+
+    /* LEGENDARY 文字 */
+    --winpop-legendary-text-x: 0px;
+    --winpop-legendary-text-y: 98px;
+    --winpop-legendary-money-size: 28px;
+    --winpop-legendary-num-size: 34px;
+    --winpop-legendary-unit-size: 28px;
+    --winpop-legendary-gap: 5px;
+  }
+
+  .winpop-overlay{
+    padding: 16px;
+    background: rgba(0,0,0,0.76);
+  }
+
+  .winpop-card{
+    width: min(92vw, 360px);
+  }
+
+  .winpop-money,
+  .winpop-num,
+  .winpop-unit{
+    -webkit-text-stroke: 1px rgba(120,50,0,.55);
+    text-shadow:
+      0 1px 0 rgba(255,255,255,.28),
+      0 2px 0 rgba(160,70,0,.45),
+      0 6px 10px rgba(0,0,0,.40),
+      0 0 8px rgba(255,220,90,.56),
+      0 0 16px rgba(255,200,0,.34);
+  }
+}
+
+/* ===== 小手機（<=420） ===== */
+@media (max-width: 420px){
+  :root{
+    /* 圖片 */
+    --winpop-big-size: 230px;
+    --winpop-big-x: 0px;
+    --winpop-big-y: -40px;
+
+    --winpop-super-size: 295px;
+    --winpop-super-x: 0px;
+    --winpop-super-y: -58px;
+
+    --winpop-mega-size: 258px;
+    --winpop-mega-x: 0px;
+    --winpop-mega-y: -30px;
+
+    --winpop-ultra-size: 300px;
+    --winpop-ultra-x: 0px;
+    --winpop-ultra-y: -52px;
+
+    --winpop-legendary-size: 390px;
+    --winpop-legendary-x: 0px;
+    --winpop-legendary-y: -76px;
+
+    /* BIG 文字 */
+    --winpop-big-text-x: 0px;
+    --winpop-big-text-y: 104px;
+    --winpop-big-money-size: 60px;
+    --winpop-big-num-size: 66px;
+    --winpop-big-unit-size: 60px;
+    --winpop-big-gap: 5px;
+
+    /* SUPER 文字 */
+    --winpop-super-text-x: 0px;
+    --winpop-super-text-y: 84px;
+    --winpop-super-money-size: 60px;
+    --winpop-super-num-size: 66px;
+    --winpop-super-unit-size: 60px;
+    --winpop-super-gap: 5px;
+
+    /* MEGA 文字 */
+    --winpop-mega-text-x: 0px;
+    --winpop-mega-text-y: 104px;
+    --winpop-mega-money-size: 50px;
+    --winpop-mega-num-size: 56px;
+    --winpop-mega-unit-size: 50px;
+    --winpop-mega-gap: 5px;
+
+    /* ULTRA 文字 */
+    --winpop-ultra-text-x: 0px;
+    --winpop-ultra-text-y: 84px;
+    --winpop-ultra-money-size: 60px;
+    --winpop-ultra-num-size: 66px;
+    --winpop-ultra-unit-size: 60px;
+    --winpop-ultra-gap: 5px;
+
+    /* LEGENDARY 文字 */
+    --winpop-legendary-text-x: 0px;
+    --winpop-legendary-text-y: 54px;
+    --winpop-legendary-money-size: 60px;
+    --winpop-legendary-num-size: 66px;
+    --winpop-legendary-unit-size: 60px;
+    --winpop-legendary-gap: 5px;
+  }
+}

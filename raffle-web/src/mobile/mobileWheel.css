@@ -1,0 +1,323 @@
+.mWheelPage{
+  min-height: 100%;
+  color: #fff;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.mWheelBody{
+  flex: 1;
+  padding: 2px 12px 12px;
+  overflow: visible;
+}
+
+.mWheelSectionPlain{
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+
+/* ===== 跑馬燈 + 選單 ===== */
+.mWheelFeedSection--top{
+  margin: 0 0 10px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.mWheelMarqueeViewport--plain{
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 24px;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  margin-bottom: 6px;
+}
+
+.mWheelMarqueeSingle{
+  position: absolute;
+  top: 0;
+  left: 100%;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff1c1;
+  line-height: 24px;
+}
+
+.mWheelMarqueeSingle.is-animating{
+  animation: mWheelSingleRun 10s linear 1 forwards;
+}
+
+@keyframes mWheelSingleRun{
+  0%{
+    transform: translateX(0);
+  }
+  100%{
+    transform: translateX(calc(-100% - 100vw));
+  }
+}
+
+.mWheelFeedSelectWrap{
+  width: 100%;
+  margin: 0;
+}
+
+.mWheelFeedSelect{
+  width: 100%;
+  max-width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(19,31,47,0.92);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  outline: none;
+  box-shadow: none;
+}
+
+/* ===== 輪盤區 ===== */
+.mWheelCanvasSection{
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.mWheelCanvasWrap{
+  position: relative;
+  width: 350px;
+  height: 350px;
+  margin: 0 auto;
+}
+
+.mWheelCanvas{
+  width: 350px;
+  height: 350px;
+  display: block;
+  filter: drop-shadow(0 14px 24px rgba(0,0,0,.26));
+}
+
+.mWheelCenterHit{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 86px;
+  height: 86px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.mWheelCenterHit.isDisabled,
+.mWheelCenterHit:disabled{
+  cursor: not-allowed;
+}
+
+.mWheelMuted{
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(255,255,255,.65);
+  text-align: center;
+}
+
+/* ===== 下方統計區 ===== */
+.mWheelStatsCard{
+  margin-top: 18px;
+  padding: 16px 0 8px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+.mWheelStatsSingle{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mWheelStatsMiniCard{
+  min-height: auto;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  text-align: center;
+}
+
+.mWheelStatsMiniLabel{
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255,255,255,0.68);
+  font-weight: 700;
+}
+
+.mWheelStatsMiniValue{
+  margin-top: 4px;
+  font-size: 34px;
+  line-height: 1;
+  color: #fff;
+  font-weight: 900;
+}
+
+/* ===== 中獎彈窗 ===== */
+.mWheelWinMask{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0,0,0,.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mWheelWinCenter{
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.mWheelWinStack{
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.mWheelWinTitle{
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 18px rgba(0,0,0,.55);
+}
+
+.mWheelWinLine{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: #fff;
+  text-shadow: 0 3px 18px rgba(0,0,0,.55);
+}
+
+.mWheelWinLine--discount,
+.mWheelWinLine--cash,
+.mWheelWinLine--img{
+  font-size: 34px;
+  font-weight: 900;
+}
+
+.mWheelWinLabel{
+  font-size: 22px;
+}
+
+.mWheelWinNum{
+  font-size: 42px;
+  line-height: 1;
+}
+
+.mWheelWinUnit{
+  font-size: 20px;
+}
+
+.mWheelWinIcon{
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.mWheelWinPrizeImg{
+  width: 220px;
+  max-width: 80vw;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 28px rgba(0,0,0,.55));
+}
+
+.mWheelWinText{
+  font-size: 28px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 18px rgba(0,0,0,.55);
+}
+
+/* ===== 手機小尺寸 ===== */
+@media (max-width: 420px){
+  .mWheelBody{
+    padding: 2px 8px 10px;
+  }
+
+  .mWheelCanvasWrap{
+    width: 370px;
+    height: 370px;
+  }
+
+  .mWheelCanvas{
+    width: 370px;
+    height: 370px;
+  }
+
+  .mWheelCenterHit{
+    width: 92px;
+    height: 92px;
+  }
+
+  .mWheelStatsTriple{
+    gap: 10px;
+  }
+
+  .mWheelStatsMiniLabel{
+    font-size: 11px;
+  }
+
+  .mWheelStatsMiniValue{
+    font-size: 28px;
+  }
+
+  .mWheelMarqueeSingle{
+    font-size: 13px;
+  }
+
+  .mWheelWinTitle{
+    font-size: 22px;
+  }
+
+  .mWheelWinLine--discount,
+  .mWheelWinLine--cash,
+  .mWheelWinLine--img{
+    font-size: 28px;
+  }
+
+  .mWheelWinNum{
+    font-size: 36px;
+  }
+
+  .mWheelWinLabel{
+    font-size: 18px;
+  }
+
+  .mWheelWinUnit{
+    font-size: 18px;
+  }
+}

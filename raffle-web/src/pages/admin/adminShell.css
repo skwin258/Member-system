@@ -1,0 +1,547 @@
+/* raffle-web/src/pages/admin/adminShell.css */
+/* ✅ 同時支援兩套 class：ra-admin*（新）與 admin*（舊） */
+/* ✅ 只影響後台容器，不碰前台 */
+
+:root{
+  --bg:#070A12;
+  --bg2:#05060B;
+  --panel: rgba(255,255,255,0.055);
+  --panel2: rgba(255,255,255,0.08);
+  --line: rgba(255,255,255,0.12);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.62);
+  --neon:#6CF9FF;
+  --neon2:#8A5CFF;
+  --ok:#22c55e;
+}
+
+/* =========================
+   ✅ 1) 後台滿屏 + 不露白邊
+========================= */
+.ra-adminShell,
+.adminShell{
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+  color: var(--text);
+
+  /* 科技感背景（暗色、柔光） */
+  background:
+    radial-gradient(1200px 700px at 10% 10%, rgba(108,249,255,0.14), transparent 55%),
+    radial-gradient(900px 600px at 80% 20%, rgba(138,92,255,0.12), transparent 55%),
+    radial-gradient(900px 700px at 60% 90%, rgba(34,197,94,0.08), transparent 60%),
+    linear-gradient(180deg, var(--bg), var(--bg2));
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Microsoft JhengHei", Arial;
+}
+
+/* ✅ 防止 flex 子元素撐爆造成右邊黑邊 */
+.ra-adminShell > * ,
+.adminShell > *{
+  min-width: 0;
+}
+
+/* ✅ 只在後台容器內強制橫排（解決直排字） */
+.ra-adminShell,
+.ra-adminShell *,
+.adminShell,
+.adminShell *{
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  transform: none !important;
+}
+
+/* =========================
+   ✅ 2) 左側 sidebar（新/舊）
+========================= */
+.ra-adminSidebar,
+.adminNav{
+  width: 320px;
+  min-width: 320px;
+  height: 100%;
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  backdrop-filter: blur(12px);
+}
+
+/* 小螢幕可隱藏左欄（你原本也有） */
+@media (max-width: 980px){
+  .ra-adminSidebar,
+  .adminNav{ display:none; }
+}
+
+/* =========================
+   ✅ 3) 右側 main（新/舊）
+========================= */
+.ra-adminMain,
+.adminMain{
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  gap: 14px;
+  overflow: hidden; /* 外框不滾 */
+}
+
+/* Topbar（新） */
+.ra-topBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.045);
+  backdrop-filter: blur(12px);
+}
+
+/* Topbar（舊） */
+.topbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.045);
+  backdrop-filter: blur(12px);
+}
+
+.topTitle{ font-size: 20px; font-weight: 1000; letter-spacing: .2px; }
+.topHint{ margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+/* =========================
+   ✅ 4) 內容區：只讓這裡滾動（不卡、不重疊）
+========================= */
+.ra-contentScroll,
+.content{
+  flex: 1;
+  min-height: 0;     /* ✅ 這個超重要，否則 overflow 不生效會擠爆重疊 */
+  min-width: 0;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.035);
+  backdrop-filter: blur(10px);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* =========================
+   ✅ 5) 按鈕、輸入框間距（不重疊）
+========================= */
+.ra-btn,
+.navBtn,
+.logoutBtn,
+.ra-navBtn{
+  border-radius: 14px;
+}
+
+.ra-nav{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.ra-navBtn{
+  width: 100%;
+  text-align: left;
+  padding: 12px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.045);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform .08s ease, background .12s ease, border-color .12s ease;
+}
+.ra-navBtn:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.06);
+}
+.ra-navBtnActive{
+  border-color: rgba(108,249,255,0.45);
+  background: linear-gradient(90deg, rgba(108,249,255,0.18), rgba(138,92,255,0.10));
+}
+
+.ra-btn{
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 900;
+}
+.ra-btn:hover{
+  border-color: rgba(108,249,255,0.35);
+  background: rgba(255,255,255,0.075);
+}
+.ra-btnGhost{
+  background: transparent;
+}
+
+/* 讓 pill 看起來更科技 */
+.ra-pill,
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+  font-size: 12px;
+  color: rgba(255,255,255,0.86);
+  white-space: nowrap;
+}
+
+/* 輸入框不擠壓 */
+input, select, textarea{
+  max-width: 100%;
+}
+.ra-adminShell input,
+.ra-adminShell select,
+.ra-adminShell textarea,
+.adminShell input,
+.adminShell select,
+.adminShell textarea{
+  color: var(--text);
+}
+
+/* ✅ 給後台表單用的統一樣式（不影響前台） */
+.ra-input,
+.ra-textarea{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+  outline: none;
+}
+.ra-input:focus,
+.ra-textarea:focus{
+  border-color: rgba(108,249,255,0.45);
+  background: rgba(255,255,255,0.06);
+}
+
+/* =========================
+   ✅ 6) Dashboard grid（避免卡片擠爆）
+========================= */
+.ra-grid{
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px;
+}
+.ra-card{
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  padding: 14px;
+  backdrop-filter: blur(10px);
+  min-width: 0;
+}
+.ra-span4{ grid-column: span 4; }
+.ra-span8{ grid-column: span 8; }
+.ra-span12{ grid-column: span 12; }
+
+@media (max-width: 1100px){
+  .ra-adminSidebar{ width: 260px; min-width: 260px; }
+  .ra-span4{ grid-column: span 6; }
+  .ra-span8{ grid-column: span 12; }
+}
+@media (max-width: 780px){
+  .ra-grid{ grid-template-columns: 1fr; }
+  .ra-span4, .ra-span8, .ra-span12{ grid-column: span 1; }
+}
+
+/* =========================
+   ✅ FIX: Admin 進入時解除 App.css 的 #root 限制（只影響後台）
+========================= */
+
+/* 有些瀏覽器不支援 :has 時，我們用雙保險：鎖 ra-adminShell / adminShell 的父層 */
+/* 1) 只要頁面上出現後台容器，就把 #root 解鎖成滿屏 */
+body:has(.ra-adminShell) #root,
+body:has(.adminShell) #root{
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left !important;
+}
+
+/* 2) 同時確保 html/body 不會額外產生白邊/置中 */
+html, body{
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+/* 3) 後台本體再保險一次貼齊 */
+.ra-adminShell,
+.adminShell{
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* =========================
+   ✅ FIX: 後台表單輸入格避免重疊（Admin only）
+   - 不改 JSX
+   - 只影響 .ra-adminShell/.adminShell 內
+========================= */
+
+.ra-adminShell *,
+.adminShell *{
+  box-sizing: border-box;
+}
+
+/* 1) flex/grid 子元素允許縮小，不然會擠爆重疊 */
+.ra-adminShell * ,
+.adminShell *{
+  min-width: 0;
+}
+
+/* 2) 所有 input/select/textarea 預設吃滿欄位 */
+.ra-adminShell input,
+.ra-adminShell select,
+.ra-adminShell textarea,
+.adminShell input,
+.adminShell select,
+.adminShell textarea{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: block;
+}
+
+/* 3) 任何「同一行多欄」的容器，強制可換行 + gap */
+.ra-adminShell form > div,
+.adminShell form > div{
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* 4) 常見表單列：若你內層是 flex，讓每個欄位至少 260px，不夠就換行 */
+.ra-adminShell .ra-contentScroll > * { min-width: 0; }
+.ra-adminShell .ra-contentScroll div[style*="display: flex"],
+.ra-adminShell .ra-contentScroll div[style*="display:flex"],
+.adminShell .content div[style*="display: flex"],
+.adminShell .content div[style*="display:flex"]{
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* 5) 讓 input/select 在一列中可以伸縮，不會互蓋 */
+.ra-adminShell .ra-contentScroll input,
+.ra-adminShell .ra-contentScroll select,
+.ra-adminShell .ra-contentScroll textarea,
+.adminShell .content input,
+.adminShell .content select,
+.adminShell .content textarea{
+  flex: 1 1 260px;
+}
+
+/* 6) 按鈕不要把整行撐爆 */
+.ra-adminShell button,
+.adminShell button{
+  max-width: 100%;
+}
+
+/* 7) 如果你有 table row 形式（像你截圖的金額/機率/刪除），保險：行內欄位用 grid 也不重疊 */
+.ra-adminShell .ra-contentScroll .row,
+.adminShell .content .row{
+  min-width: 0;
+}
+
+/* =========================
+   ✅ FIX: 後台 input 白底白字/游標看不到（看起來像不能輸入）
+   ========================= */
+
+/* 後台所有 input/select/textarea 統一樣式 */
+.ra-adminMain .input,
+.adminShell .input,
+.ra-adminMain input,
+.ra-adminMain select,
+.ra-adminMain textarea,
+.adminShell input,
+.adminShell select,
+.adminShell textarea {
+  background: rgba(10, 15, 20, 0.85) !important;
+  color: #ffffff !important;
+  caret-color: #ffffff !important;
+
+  border: 1px solid rgba(255,255,255,0.18) !important;
+  border-radius: 10px !important;
+  outline: none !important;
+}
+
+/* placeholder 也要看得到 */
+.ra-adminMain input::placeholder,
+.ra-adminMain textarea::placeholder,
+.adminShell input::placeholder,
+.adminShell textarea::placeholder {
+  color: rgba(255,255,255,0.45) !important;
+}
+
+/* select 下拉箭頭/文字顏色 */
+.ra-adminMain select,
+.adminShell select {
+  color: #ffffff !important;
+}
+
+/* focus 更清楚 */
+.ra-adminMain .input:focus,
+.adminShell .input:focus,
+.ra-adminMain input:focus,
+.ra-adminMain select:focus,
+.ra-adminMain textarea:focus,
+.adminShell input:focus,
+.adminShell select:focus,
+.adminShell textarea:focus {
+  border-color: rgba(0, 255, 150, 0.55) !important;
+  box-shadow: 0 0 0 2px rgba(0, 255, 150, 0.15) !important;
+}
+
+/* =========================
+   ✅ FIX: 後台表格欄位對齊（adminTable）
+   - 解決：表頭/內容對不齊、欄位位移、被擠壓
+   - 只影響後台（adminShell 內）
+========================= */
+
+.ra-adminShell .adminTable,
+.adminShell .adminTable{
+  width: 100% !important;
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+
+  /* 讓欄位不要被硬擠到亂掉：不夠寬就水平滾動 */
+  min-width: 1100px !important;
+
+  /* ⚠️ 關鍵：強制回到 table 佈局 */
+  display: table !important;
+}
+
+.ra-adminShell .adminTable thead,
+.adminShell .adminTable thead{
+  display: table-header-group !important;
+}
+.ra-adminShell .adminTable tbody,
+.adminShell .adminTable tbody{
+  display: table-row-group !important;
+}
+
+.ra-adminShell .adminTable tr,
+.adminShell .adminTable tr{
+  display: table-row !important;
+}
+
+.ra-adminShell .adminTable th,
+.ra-adminShell .adminTable td,
+.adminShell .adminTable th,
+.adminShell .adminTable td{
+  display: table-cell !important;
+  vertical-align: middle !important;
+  padding: 10px 10px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  white-space: nowrap !important;
+}
+
+/* 表頭一致性 */
+.ra-adminShell .adminTable th,
+.adminShell .adminTable th{
+  font-weight: 1000 !important;
+  color: rgba(255,255,255,0.85) !important;
+  background: rgba(255,255,255,0.03) !important;
+  position: sticky;   /* 表頭固定（可選，但很好用） */
+  top: 0;
+  z-index: 2;
+}
+
+/* ✅ 讓欄位內 input/select 不會把 cell 撐爆造成位移 */
+.ra-adminShell .adminTable input,
+.ra-adminShell .adminTable select,
+.ra-adminShell .adminTable textarea,
+.adminShell .adminTable input,
+.adminShell .adminTable select,
+.adminShell .adminTable textarea{
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* ✅ 只有「操作」那格你原本用 flex 是正常的：保留它 */
+.ra-adminShell .adminTable td[style*="display: flex"],
+.adminShell .adminTable td[style*="display: flex"]{
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+/* ✅ 外層有 overflowX: auto 時，避免右側出現奇怪空白 */
+.ra-adminShell .ra-contentScroll,
+.adminShell .content{
+  overflow: auto !important;
+}
+
+/* ✅ 小螢幕時表格一律橫向滾動，不要自動擠壓欄位 */
+@media (max-width: 980px){
+  .ra-adminShell .adminTable,
+  .adminShell .adminTable{
+    min-width: 1200px !important;
+  }
+}
+
+/* ===== Promotion Preview FIX ===== */
+
+.adminPromoPreview {
+  margin-top: 20px;
+  padding: 20px;
+  background: #0b1118;
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 600px;
+}
+
+/* ⭐ 核心修正：圖片不再撐爆 */
+.adminPromoPreview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  margin: 12px auto;
+}
+
+/* 封面預覽 */
+.adminPromoCoverPreview {
+  max-width: 420px;
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.shopPanel {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.25);
+  border-radius: 16px;
+  padding: 16px;
+
+  height: 650px;      /* 控制可視高度 */
+  overflow-y: auto;   /* 允許上下滑 */
+  overflow-x: hidden;
+}
+
+.shopInnerBar {
+  width: 100%;        /* 撐滿父容器 */
+  max-width: 1500px;  /* 最大寬度 */
+  margin: 0 auto;     /* 置中 */
+}

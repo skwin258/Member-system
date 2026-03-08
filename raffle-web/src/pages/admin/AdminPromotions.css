@@ -1,0 +1,842 @@
+/* raffle-web/src/pages/admin/AdminPromotions.css */
+
+.apPage{
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 16px 22px;
+  color: #fff;
+}
+
+.apCard{
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 12px 36px rgba(0,0,0,0.18);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.apFormCard,
+.apPreviewCard,
+.apListCard{
+  padding: 18px;
+}
+
+.apCardHead{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.apTitle{
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 900;
+  color: rgba(255,255,255,0.98);
+}
+
+.apTitleSm{
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 900;
+  color: rgba(255,255,255,0.96);
+}
+
+.apSub{
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.60);
+}
+
+.apStatus{
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.apStatus.ok{
+  color: #00ff66;
+  background: rgba(0,255,102,0.12);
+  border-color: rgba(0,255,102,0.22);
+}
+
+.apStatus.bad{
+  color: #ff8aa1;
+  background: rgba(255,80,120,0.10);
+  border-color: rgba(255,80,120,0.18);
+}
+
+.apApiInfo{
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.20);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.72);
+  font-size: 13px;
+}
+
+.apField{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.apLabel{
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.84);
+}
+
+.apInput,
+.apSelect,
+.apTextarea{
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.24);
+  color: rgba(255,255,255,0.96);
+  outline: none;
+  font-size: 14px;
+  transition: .18s ease;
+}
+
+.apInput,
+.apSelect{
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.apTextarea{
+  min-height: 130px;
+  height: 130px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.apInput:focus,
+.apSelect:focus,
+.apTextarea:focus{
+  border-color: rgba(0,255,140,0.30);
+  box-shadow: 0 0 0 3px rgba(0,255,140,0.08);
+}
+
+.apGrid2{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 14px;
+}
+
+.apCheckRow{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+}
+
+.apCheckRow input{
+  width: 16px;
+  height: 16px;
+}
+
+.apUploadRow{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.apUploadBtn{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.94);
+  font-weight: 800;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.apUploadBtn input{
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.apUploadHint{
+  font-size: 13px;
+  color: rgba(255,255,255,0.62);
+}
+
+.apActionRow{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.apBtn{
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.95);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .18s ease;
+}
+
+.apBtn:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.10);
+}
+
+.apBtn:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.apBtnPrimary{
+  background: rgba(0,255,102,0.15);
+  border-color: rgba(0,255,102,0.28);
+  color: #00ff66;
+}
+
+.apBtnPrimary:hover{
+  background: rgba(0,255,102,0.20);
+}
+
+.apBtnGhost{
+  background: rgba(255,255,255,0.06);
+}
+
+.apBtnDanger{
+  background: rgba(255,90,120,0.10);
+  border-color: rgba(255,90,120,0.18);
+  color: #ff9db2;
+}
+
+.apBtnDanger:hover{
+  background: rgba(255,90,120,0.15);
+}
+
+.apMsg{
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.apMsg.success{
+  background: rgba(0,255,102,0.10);
+  border: 1px solid rgba(0,255,102,0.18);
+  color: #9affc3;
+}
+
+.apMsg.error{
+  background: rgba(255,80,120,0.10);
+  border: 1px solid rgba(255,80,120,0.18);
+  color: #ffb8c7;
+}
+
+/* 預覽 */
+.apPreviewBox{
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.22);
+  overflow: hidden;
+}
+
+.apPreviewImage{
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  background: rgba(255,255,255,0.03);
+}
+
+.apPreviewPlaceholder{
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.46);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+
+.apPreviewContent{
+  padding: 16px;
+}
+
+.apPreviewBadges,
+.apPromoBadges{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.apBadge{
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.apBadge.on{
+  color: #00ff66;
+  background: rgba(0,255,102,0.12);
+  border-color: rgba(0,255,102,0.20);
+}
+
+.apBadge.off{
+  color: #ff9db2;
+  background: rgba(255,90,120,0.10);
+  border-color: rgba(255,90,120,0.18);
+}
+
+.apPreviewTitle{
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: rgba(255,255,255,0.97);
+  margin-bottom: 8px;
+}
+
+.apPreviewSort{
+  font-size: 13px;
+  color: rgba(255,255,255,0.58);
+  margin-bottom: 14px;
+}
+
+.apPreviewHtml{
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.84);
+  line-height: 1.7;
+  min-height: 90px;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.apPreviewHtml span{
+  color: rgba(255,255,255,0.48);
+}
+
+/* 列表 */
+.apCount{
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.88);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.apEmpty{
+  padding: 28px 12px;
+  text-align: center;
+  color: rgba(255,255,255,0.58);
+  font-size: 14px;
+}
+
+.apListGrid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.apPromoItem{
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.20);
+  overflow: hidden;
+  min-height: 100%;
+}
+
+.apPromoThumbWrap{
+  width: 100%;
+}
+
+.apPromoThumb{
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background: rgba(255,255,255,0.03);
+}
+
+.apPromoThumbEmpty{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.46);
+}
+
+.apPromoBody{
+  padding: 14px;
+  flex: 1 1 auto;
+}
+
+.apPromoTitle{
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 900;
+  color: rgba(255,255,255,0.96);
+  margin-bottom: 10px;
+}
+
+.apPromoMeta{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.60);
+}
+
+.apPromoActions{
+  display: flex;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.apPromoActions .apBtn{
+  flex: 1 1 0;
+}
+
+/* 響應式 */
+@media (max-width: 1100px){
+  .apTopGrid{
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px){
+  .apPage{
+    padding: 14px 10px 18px;
+  }
+
+  .apTitle{
+    font-size: 24px;
+  }
+
+  .apTitleSm{
+    font-size: 20px;
+  }
+
+  .apGrid2{
+    grid-template-columns: 1fr;
+  }
+
+  .apCardHead{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .apActionRow,
+  .apPromoActions{
+    flex-direction: column;
+  }
+
+  .apBtn{
+    width: 100%;
+  }
+}
+
+.apFixedPage{
+  height: calc(100vh - 110px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ap3Panel{
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.apLeftPanel{
+  grid-column: 1 / 2;
+  grid-row: 1 / 3;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.apRightTop{
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.apRightBottom{
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.apPanelScroll{
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px;
+}
+
+/* 右下目前優惠改成單欄卡片流 */
+.apListGridSingle{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.apListGridSingle .apPromoItem{
+  min-height: auto;
+}
+
+/* 捲軸 */
+.apPanelScroll::-webkit-scrollbar{
+  width: 10px;
+}
+
+.apPanelScroll::-webkit-scrollbar-track{
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+}
+
+.apPanelScroll::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+
+.apPanelScroll::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,0.28);
+}
+
+/* 平板以下改單欄 */
+@media (max-width: 1100px){
+  .apFixedPage{
+    height: auto;
+    overflow: visible;
+  }
+
+  .ap3Panel{
+    height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .apLeftPanel,
+  .apRightTop,
+  .apRightBottom{
+    min-height: 420px;
+  }
+
+  .apPanelScroll{
+    height: auto;
+    max-height: none;
+  }
+}
+
+/* ===== 強制覆蓋：修正新增優惠頁輸入框過高 ===== */
+
+.apLeftPanel .apField > .apInput,
+.apLeftPanel .apField > .apSelect,
+.apLeftPanel .apGrid2 .apField > .apInput,
+.apLeftPanel .apGrid2 .apField > .apSelect{
+  display: block !important;
+  width: 100% !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  padding: 0 12px !important;
+  line-height: 40px !important;
+  box-sizing: border-box !important;
+}
+
+.apLeftPanel .apField > .apTextarea{
+  display: block !important;
+  width: 100% !important;
+  height: 126px !important;
+  min-height: 126px !important;
+  max-height: 126px !important;
+  padding: 12px !important;
+  line-height: 1.6 !important;
+  box-sizing: border-box !important;
+  resize: vertical !important;
+}
+
+/* 排序欄可以更短 */
+.apLeftPanel .apGrid2 .apField:last-child > .apInput{
+  width: 100% !important;
+}
+
+/* 兩欄不要被撐高 */
+.apLeftPanel .apGrid2{
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  gap: 12px;
+  align-items: end !important;
+}
+
+/* 每個欄位底部縮一點 */
+.apLeftPanel .apField{
+  margin-bottom: 12px !important;
+}
+
+.apCheckRow{
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.apLeftPanel .apField:has(.apCheckRow){
+  margin-bottom: 16px;
+}
+
+.apCheckRow input{
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+/* ===== AdminPromotions 美化修正 ===== */
+
+.apLeftPanel .apPanelScroll{
+  padding: 16px 16px 18px;
+}
+
+.apRightTop .apPanelScroll,
+.apRightBottom .apPanelScroll{
+  padding: 16px;
+}
+
+.apApiInfo{
+  margin-bottom: 14px;
+}
+
+.apLabel{
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.78);
+}
+
+.apLeftPanel .apField > .apInput,
+.apLeftPanel .apField > .apSelect,
+.apLeftPanel .apGrid2 .apField > .apInput,
+.apLeftPanel .apGrid2 .apField > .apSelect{
+  border-radius: 12px !important;
+}
+
+.apLeftPanel .apField > .apInput::placeholder,
+.apLeftPanel .apField > .apTextarea::placeholder{
+  color: rgba(255,255,255,0.34);
+}
+
+.apPreviewBox{
+  border-radius: 16px;
+}
+
+.apPreviewImage,
+.apPreviewPlaceholder{
+  height: 180px;
+}
+
+.apPreviewTitle{
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.apPreviewHtml{
+  min-height: 70px;
+  padding: 12px;
+}
+
+.apRightBottom .apPromoThumb{
+  height: 140px;
+}
+
+.apPromoBody{
+  padding: 12px;
+}
+
+.apPromoTitle{
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.apPromoMeta{
+  font-size: 12px;
+}
+
+.apPromoActions{
+  padding: 0 12px 12px;
+}
+
+/* 修正 checkbox 排版 */
+.apCheckRow{
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: fit-content;
+}
+
+.apCheckRow span{
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+/* ===== Promotion Position Manager ===== */
+
+.apPositionManager{
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+
+.apSectionTitle{
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.96);
+  margin-bottom: 6px;
+}
+
+.apSectionSub{
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.58);
+  margin-bottom: 12px;
+}
+
+.apActionRowTight{
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: none;
+}
+
+.apPositionList{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.apPositionItem{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.18);
+}
+
+.apPositionInfo{
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.apPositionNameRow{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.apPositionName{
+  font-size: 15px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.96);
+}
+
+.apPositionMeta{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.56);
+  line-height: 1.5;
+}
+
+.apPositionActions{
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.apDivider{
+  height: 1px;
+  margin: 16px 0;
+  background: rgba(255,255,255,0.08);
+}
+
+@media (max-width: 768px){
+  .apPositionItem{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .apPositionActions{
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .apPositionActions .apBtn{
+    width: 100%;
+  }
+}

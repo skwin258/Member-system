@@ -1,0 +1,245 @@
+.mPromoPage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.mPromoScroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 14px 0 110px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mPromoStateCard {
+  border-radius: 16px;
+  padding: 18px 14px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(255,255,255,0.88);
+  border: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(25,72,96,0.95), rgba(14,41,55,0.96));
+}
+
+.mPromoError {
+  color: #ffd7d7;
+}
+
+/* 每筆優惠自己的小卡 */
+.mPromoItem{
+  display:block;
+  padding:12px;
+
+  border-radius:18px;
+
+  border:1px solid rgba(255,255,255,0.15);
+
+  background:linear-gradient(
+    180deg,
+    #2e8f96 0%,
+    #1f6d73 100%
+  );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 6px 14px rgba(0,0,0,0.25);
+}
+
+.mPromoImageBtn{
+  all:unset;
+  display:block;
+  width:100%;
+  cursor:pointer;
+}
+
+.mPromoImage{
+  width:100%;
+  display:block;
+  border-radius:16px;
+}
+
+.mPromoImagePlaceholder {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.78);
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)),
+    linear-gradient(180deg, #17394b 0%, #102736 100%);
+}
+
+.mPromoCollapsedBar,
+.mPromoExpandHead {
+  width: 100%;
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mPromoCollapsedBar {
+  cursor: pointer;
+}
+
+.mPromoTitleRow,
+.mPromoExpandTitleRow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mPromoHorn {
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+
+.mPromoTitle,
+.mPromoExpandTitle {
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.5;
+  word-break: break-word;
+  text-align: left;
+}
+
+.mPromoAction {
+  flex: 0 0 auto;
+  min-width: 96px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #82ecf0 0%, #53c7d0 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    0 6px 14px rgba(0,0,0,0.12);
+  cursor: pointer;
+}
+
+.mPromoExpand {
+  margin-top: 14px;
+  padding: 14px 14px 16px;
+  border-radius: 18px;
+  background: rgba(16, 94, 112, 0.62);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.mPromoContent {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.95;
+  color: rgba(255,255,255,0.96);
+  word-break: break-word;
+  text-align: left;
+}
+
+.mPromoContent p {
+  margin: 0 0 14px;
+}
+
+.mPromoContent p:last-child {
+  margin-bottom: 0;
+}
+
+.mPromoContent img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 10px 0;
+}
+
+.mPromoContent h1,
+.mPromoContent h2,
+.mPromoContent h3,
+.mPromoContent h4,
+.mPromoContent h5,
+.mPromoContent h6 {
+  margin: 14px 0 10px;
+  line-height: 1.4;
+  color: #fff;
+}
+
+.mPromoContent ul,
+.mPromoContent ol {
+  padding-left: 20px;
+  margin: 12px 0;
+}
+
+.mPromoContent li {
+  margin-bottom: 8px;
+}
+
+.mPromoContent table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.mPromoContent iframe {
+  max-width: 100%;
+}
+
+.mPromoEmptyText {
+  margin-top: 14px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.74);
+  line-height: 1.7;
+}
+
+@media (max-width: 380px) {
+  .mPromoItem {
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .mPromoTitle,
+  .mPromoExpandTitle {
+    font-size: 15px;
+  }
+
+  .mPromoAction {
+    min-width: 88px;
+    font-size: 11px;
+    height: 34px;
+  }
+
+  .mPromoContent {
+    font-size: 13px;
+  }
+}

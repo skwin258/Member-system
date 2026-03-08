@@ -1,0 +1,738 @@
+/* raffle-web/src/pages/admin/adminUsers.css */
+
+.auZ{
+  padding: 18px 20px;
+  color: #fff;
+  height: calc(100vh - 110px);
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== 頂部 ===== */
+.auHead{
+  flex: 0 0 auto;
+  margin-bottom: 14px;
+}
+
+.auTitle{
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: .4px;
+  margin-bottom: 6px;
+  color: rgba(255,255,255,0.96);
+}
+
+.auSub{
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.62);
+  margin-bottom: 14px;
+}
+
+.auSearchBar{
+  margin-top: 14px;   /* ✅ 與上方 tabs 拉開 */
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.auSearch{
+  flex: 1 1 auto;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.26);
+  color: rgba(255,255,255,0.94);
+  padding: 0 14px;
+  outline: none;
+  font-size: 14px;
+}
+
+.auSearch::placeholder{
+  color: rgba(255,255,255,0.36);
+}
+
+.auSearch:focus{
+  border-color: rgba(0,255,140,0.28);
+  box-shadow: 0 0 0 3px rgba(0,255,140,0.08);
+}
+
+/* ===== 按鈕 ===== */
+.auBtn{
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.94);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: .18s ease;
+}
+
+.auBtn:hover{
+  background: rgba(255,255,255,0.10);
+}
+
+.auBtn.primary{
+  background: rgba(0,255,102,0.14);
+  border-color: rgba(0,255,102,0.28);
+  color: #00ff66;
+}
+
+.auBtn.primary:hover{
+  background: rgba(0,255,102,0.20);
+}
+
+.auBtn.danger{
+  background: rgba(255,90,120,0.10);
+  border-color: rgba(255,90,120,0.20);
+  color: rgba(255,170,190,0.96);
+}
+
+.auBtn.danger:hover{
+  background: rgba(255,90,120,0.15);
+}
+
+.auErr{
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,80,120,0.10);
+  border: 1px solid rgba(255,80,120,0.24);
+  color: rgba(255,180,200,0.95);
+}
+
+/* ===== 主體分欄 ===== */
+.auMainGrid{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+}
+
+/* ===== 左右容器共用 ===== */
+.auLeftPane,
+.auRightPane{
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ===== 左側 ===== */
+.auLeftPane{
+  display: flex;
+  flex-direction: column;
+}
+
+.auPaneHead{
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.auPaneTitle{
+  font-size: 17px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.95);
+}
+
+.auPaneSub{
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.56);
+}
+
+.auLeftList{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auItem{
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.18);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: .18s ease;
+}
+
+.auItem:hover{
+  border-color: rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.05);
+}
+
+.auItem.active{
+  border-color: rgba(0,255,140,0.48);
+  background: rgba(0,255,140,0.09);
+  box-shadow: inset 0 0 0 1px rgba(0,255,140,0.12);
+}
+
+.auItemTop{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.auIdBadge{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.86);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+}
+
+.auAccount{
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.94);
+}
+
+.auName{
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255,255,255,0.66);
+}
+
+.auEmpty{
+  padding: 16px;
+  text-align: center;
+  color: rgba(255,255,255,0.52);
+}
+
+/* ===== 右側 ===== */
+.auRightPane{
+  display: flex;
+  flex-direction: column;
+}
+
+.auRightScroll{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+
+.auRightEmpty{
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.56);
+  font-size: 15px;
+}
+
+/* ===== 區塊 ===== */
+.auSection{
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.auSectionTitle{
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 900;
+  margin-bottom: 14px;
+  color: rgba(255,255,255,0.96);
+}
+
+/* ===== 表單 ===== */
+.auGrid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 14px;
+  align-items: start;
+}
+
+.auField{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.auField.wide{
+  grid-column: 1 / -1;
+}
+
+.auLab{
+  font-size: 12px;
+  color: rgba(255,255,255,0.62);
+  font-weight: 700;
+}
+
+.auInp,
+.auStatic,
+.auSelect{
+  width: 100%;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.20);
+  color: rgba(255,255,255,0.94);
+  padding: 0 12px;
+  outline: none;
+  font-size: 14px;
+}
+
+.auInp:focus,
+.auSelect:focus{
+  border-color: rgba(0,255,140,0.30);
+  box-shadow: 0 0 0 3px rgba(0,255,140,0.08);
+}
+
+.auStatic{
+  display: flex;
+  align-items: center;
+}
+
+.auRow{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auRow .auInp{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.auMini{
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.88);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.auMini.on{
+  background: rgba(0,255,102,0.14);
+  border-color: rgba(0,255,102,0.25);
+  color: #00ff66;
+  font-weight: 900;
+}
+
+/* ===== 底部操作列 ===== */
+.auActionBar{
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(10,10,10,0.50);
+  backdrop-filter: blur(6px);
+}
+
+/* ===== 表格 ===== */
+.logWrap{
+  border-radius: 14px;
+  overflow: auto;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.22);
+}
+
+.logTable{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.logTable th,
+.logTable td{
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  vertical-align: top;
+}
+
+.logTable th{
+  text-align: left;
+  font-size: 12px;
+  color: rgba(255,255,255,0.62);
+  background: rgba(255,255,255,0.03);
+}
+
+.ok{
+  color: #00ff66;
+  font-weight: 900;
+}
+
+.fail{
+  color: rgba(255,120,150,0.95);
+  font-weight: 900;
+}
+
+.note{
+  color: rgba(255,255,255,0.70);
+}
+
+.empty{
+  text-align: center;
+  padding: 14px;
+  color: rgba(255,255,255,0.55);
+}
+
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+}
+
+/* ===== 捲軸 ===== */
+.auLeftList::-webkit-scrollbar,
+.auRightScroll::-webkit-scrollbar{
+  width: 10px;
+}
+
+.auLeftList::-webkit-scrollbar-track,
+.auRightScroll::-webkit-scrollbar-track{
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+}
+
+.auLeftList::-webkit-scrollbar-thumb,
+.auRightScroll::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+
+.auLeftList::-webkit-scrollbar-thumb:hover,
+.auRightScroll::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,0.28);
+}
+
+/* ===== 響應式 ===== */
+@media (max-width: 1200px){
+  .auMainGrid{
+    grid-template-columns: 280px minmax(0,1fr);
+  }
+}
+
+@media (max-width: 900px){
+  .auZ{
+    height: auto;
+    overflow: visible;
+  }
+
+  .auMainGrid{
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .auLeftPane,
+  .auRightPane{
+    min-height: 420px;
+  }
+
+  .auGrid{
+    grid-template-columns: 1fr;
+  }
+
+  .auSearchBar{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .auBtn{
+    width: 100%;
+  }
+}
+
+.auBalanceRow{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.18);
+  color: rgba(255,255,255,0.9);
+  font-size: 14px;
+}
+
+.auBalanceRow b{
+  color: rgba(255,255,255,0.98);
+  font-weight: 900;
+}
+
+.auBalanceRow .green{
+  color: #00ff66;
+}
+
+.auInlineActions{
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.auTabs{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+}
+
+.auTab{
+  padding:8px 16px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  color:#fff;
+  cursor:pointer;
+  transition:all .2s;
+}
+
+.auTab:hover{
+  background:rgba(255,255,255,0.12);
+}
+
+.auTab.active{
+  background:#1fa2ff;
+  border-color:#1fa2ff;
+}
+
+/* ================================
+   redeem panel 專用美化
+================================ */
+.auRedeemPanel{
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 18px; /* ✅ 跟搜尋卡片拉開 */
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    radial-gradient(circle at top left, rgba(70,120,255,0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(120,80,255,0.07), transparent 26%),
+    linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 14px 40px rgba(0,0,0,0.24);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.auRedeemPanelHead{
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+}
+
+.auRedeemTitle{
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: rgba(255,255,255,0.97);
+  letter-spacing: .3px;
+}
+
+.auRedeemSub{
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.58);
+}
+
+.auRedeemCount{
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.84);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.auRedeemTableWrap{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;   /* ✅ 下面這張卡片自己可滾動 */
+  overflow-x: auto;
+  padding: 16px 16px 18px;
+}
+
+/* 讓表格外層更像一張內卡 */
+.auRedeemTableWrap .auRedeemTable{
+  min-width: 920px;
+}
+
+.auRedeemTableWrap::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+
+.auRedeemTableWrap::-webkit-scrollbar-track{
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+}
+
+.auRedeemTableWrap::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+
+.auRedeemTableWrap::-webkit-scrollbar-thumb:hover{
+  background: rgba(255,255,255,0.28);
+}
+
+/* redeem table 視覺加強 */
+.auRedeemTable{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.22);
+}
+
+.auRedeemTable thead th{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 13px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: rgba(255,255,255,0.68);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+}
+
+.auRedeemTable tbody td{
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.90);
+  vertical-align: middle;
+}
+
+.auRedeemTable tbody tr{
+  transition: background .18s ease;
+}
+
+.auRedeemTable tbody tr:hover{
+  background: rgba(255,255,255,0.04);
+}
+
+.auRedeemTable tbody tr:last-child td{
+  border-bottom: none;
+}
+
+/* 商品欄看起來更像資訊標籤 */
+.auRedeemTable .note{
+  color: rgba(255,255,255,0.78);
+  font-weight: 700;
+}
+
+/* 成功狀態更像 badge */
+.auRedeemTable .ok,
+.auRedeemTable .fail{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 82px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.auRedeemTable .ok{
+  color: #00ff88;
+  background: rgba(0,255,136,0.10);
+  border: 1px solid rgba(0,255,136,0.20);
+}
+
+.auRedeemTable .fail{
+  color: rgba(255,150,170,0.96);
+  background: rgba(255,80,120,0.10);
+  border: 1px solid rgba(255,80,120,0.20);
+}
+
+/* 操作按鈕更小更精緻 */
+.auBtn.mini{
+  height: 36px;
+  min-width: 54px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+/* 小螢幕處理 */
+@media (max-width: 900px){
+  .auRedeemPanel{
+    margin-top: 16px;
+    min-height: 520px;
+  }
+
+  .auRedeemPanelHead{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .auRedeemCount{
+    align-self: flex-start;
+  }
+}
+
+.auRedeemPanel{
+  margin-top: 12px;  /* 調整這裡，減少上下間距 */
+}
+
+.auHead{
+  margin-bottom: 0;  /* 減少下面的間距，讓內容更緊密 */
+}
+
+.auMainGrid{
+  margin-top: 8px;  /* 調整內容區塊距離頂部的距離，讓按鈕位置上移 */
+}
+
+.auZ {
+  height: 82vh;  /* 或其他你需要的高度 */
+  overflow: hidden;  /* 隱藏滾動條 */
+  display: flex;
+  flex-direction: column;
+}
