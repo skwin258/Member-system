@@ -662,11 +662,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+  "Access-Control-Max-Age": "86400",
+};
 
     const withCors = (init = {}) => ({
       ...init,
@@ -677,6 +678,15 @@ export default {
     const text = (t, init = {}) => new Response(t, withCors(init));
     const corsEmpty = (status = 204) =>
       new Response(null, { status, headers: corsHeaders });
+		const applyCors = (res) => {
+  const headers = new Headers(res.headers);
+  Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v));
+  return new Response(res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers,
+  });
+};
 
     if (request.method === "OPTIONS") return corsEmpty(204);
 
@@ -1393,7 +1403,7 @@ if (url.pathname.startsWith("/r2/") && request.method === "GET") {
     return json({ success: false, error: "R2 binding missing" }, { status: 500 });
   }
 
-  const key = decodeURIComponent(url.pathname.slice("/r2/".length)); // 支援中文/空白
+  const key = decodeURIComponent(url.pathname.slice("/r2/".length));
   if (!key) return json({ success: false, error: "bad key" }, { status: 400 });
 
   const object = await bucket.get(key);
@@ -1403,7 +1413,7 @@ if (url.pathname.startsWith("/r2/") && request.method === "GET") {
   object.writeHttpMetadata(headers);
   headers.set("Cache-Control", "public, max-age=31536000, immutable");
 
-  return new Response(object.body, { headers });
+  return applyCors(new Response(object.body, { headers }));
 }
 
 // =========================
@@ -4219,29 +4229,19 @@ return json({
       }
 
       // ✅ 保險：有些前端會打 /draw-records 或 /draw_records
-      if ((url.pathname === "/draw-records" || url.pathname === "/draw_records") && request.method === "GET") {
-        // 直接導向同一套邏輯：改寫 pathname 再走一次
-        url.pathname = "/records";
-        // 這裡不能真正跳轉，只能重複呼叫一次邏輯（簡單做法：回 307 讓前端跟隨）
-        return new Response(null, {
-          status: 307,
-          headers: { Location: "/records", ...corsHeaders },
-        });
-      }
+if ((url.pathname === "/draw-records" || url.pathname === "/draw_records") && request.method === "GET") {
+  return applyCors(new Response(null, {
+    status: 307,
+    headers: { Location: "/records" },
+  }));
+}
 
       return json({ success: false, error: "Not Found" }, { status: 404 });
-    } catch (err) {
-      return Response.json(
-        { success: false, error: String(err?.message || err) },
-        {
-          status: 500,
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-          },
-        }
-      );
-    }
+} catch (err) {
+  return json(
+    { success: false, error: String(err?.message || err) },
+    { status: 500 }
+  );
+}
   },
 };
