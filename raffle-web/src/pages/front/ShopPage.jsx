@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import "./ShopPage.css";
 import "./shopPage.css";
 import { api } from "../../api";
 import ConfirmRedeemModal from "../../components/ConfirmRedeemModal.jsx";
