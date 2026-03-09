@@ -147,19 +147,15 @@ if (!ready) {
         flexDirection: "column",
       }}
     >
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
+      <img
+        src="/cat-loading.webp"
+        alt="loading"
         style={{
           width: "120px",
           height: "120px",
           objectFit: "contain",
         }}
-      >
-        <source src="/cat-loading.webp" type="video/webp" />
-      </video>
+      />
 
       <div
         style={{
