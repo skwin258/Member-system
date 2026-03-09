@@ -838,6 +838,43 @@ const toInt = (v, fb = 0) => {
   return Number.isFinite(n) ? Math.trunc(n) : fb;
 };
 
+const normalizeWalletAction = (raw = "") => {
+  const action = String(raw || "").trim();
+  const lower = action.toLowerCase();
+
+  const isSubtract =
+    action.includes("扣") ||
+    action.includes("減") ||
+    action.includes("刪") ||
+    lower === "subtract" ||
+    lower === "minus" ||
+    lower === "decrease" ||
+    lower === "deduct" ||
+    lower === "remove";
+
+  const isAdd =
+    action.includes("加") ||
+    action.includes("增") ||
+    action.includes("補") ||
+    lower === "add" ||
+    lower === "plus" ||
+    lower === "increase" ||
+    lower === "credit";
+
+  return {
+    raw: action || "調整",
+    isSubtract,
+    isAdd,
+  };
+};
+
+const normalizeWalletDeltaByAction = (rawValue, actionInfo) => {
+  const abs = Math.abs(toInt(rawValue, 0));
+  if (!abs) return 0;
+  if (actionInfo?.isSubtract) return -abs;
+  return abs;
+};
+
 const fetchUserRow = async (userId) => {
   return await db
     .prepare(
@@ -3362,20 +3399,12 @@ if (
   }
 
   const body = await safeJson(request);
-const action = String(body.action || "調整").trim() || "調整";
+  const actionInfo = normalizeWalletAction(body.action || "調整");
+  const action = actionInfo.raw;
 
-const rawS = Math.abs(toInt(body.delta_s, 0));
-const rawW = Math.abs(toInt(body.delta_welfare, 0));
-const rawD = Math.abs(toInt(body.delta_discount, 0));
-
-const isSubtract =
-  action.includes("扣") ||
-  action.includes("減") ||
-  action === "subtract";
-
-const delta_s = isSubtract ? -rawS : rawS;
-const delta_welfare = isSubtract ? -rawW : rawW;
-const delta_discount = isSubtract ? -rawD : rawD;
+  const delta_s = normalizeWalletDeltaByAction(body.delta_s, actionInfo);
+  const delta_welfare = normalizeWalletDeltaByAction(body.delta_welfare, actionInfo);
+  const delta_discount = normalizeWalletDeltaByAction(body.delta_discount, actionInfo);
   const note = String(body.note || "").trim();
 
   const r = await applyWalletDelta({
@@ -3731,9 +3760,10 @@ if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
         if (body.bank_branch !== undefined) setIf("bank_branch", String(body.bank_branch || "").trim());
         if (body.bank_account !== undefined) setIf("bank_account", String(body.bank_account || "").trim());
 
-        // ✅ wallet fields (optional: 允許後台直接改餘額)
-        if (body.discount_balance !== undefined) setIf("discount_balance", Number(body.discount_balance || 0));
-        if (body.s_balance !== undefined) setIf("s_balance", Number(body.s_balance || 0));
+        // ✅ wallet fields
+        // 這裡故意不允許 PATCH /admin/users/:id 直接改餘額，
+        // 避免前端表單把「異動金額」或舊餘額誤送成新餘額，造成扣款變加款。
+        // 錢包調整一律走 POST /admin/users/:id/wallet。
 
         if (fields.length === 0) return json({ success: true });
 
