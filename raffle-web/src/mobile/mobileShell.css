@@ -97,7 +97,7 @@ button {
   align-self: flex-start;
   padding: 5px 11px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: #fff;
   background: linear-gradient(180deg, #14dbff 0%, #0aa2e0 100%);
@@ -482,7 +482,7 @@ button {
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 2px;
-  padding-bottom: 70px;
+  padding-bottom: 18px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -501,11 +501,11 @@ button {
 .mbFloatBtn{
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  bottom: 10px;
   transform: translateX(-50%);
   z-index: 45;
-  width: 70px;
-  height: 70px;
+  width: 64px;
+  height: 64px;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -516,8 +516,8 @@ button {
 }
 
 .mbFloatBtnImg{
-  width: 70px;
-  height: 70px;
+  width: 64px;
+  height: 64px;
   display: block;
   object-fit: contain;
   pointer-events: none;
@@ -554,8 +554,8 @@ button {
   right: 0;
   bottom: 0;
   z-index: 40;
-  height: 74px;
-  padding: 8px 12px calc(6px + env(safe-area-inset-bottom));
+  height: 66px;
+  padding: 6px 12px calc(4px + env(safe-area-inset-bottom));
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -583,8 +583,8 @@ button {
 }
 
 .mbBottomNavCenterGap{
-  width: 78px;
-  flex: 0 0 78px;
+  width: 72px;
+  flex: 0 0 72px;
 }
 
 .mbBottomItem {
@@ -613,7 +613,7 @@ button {
   border: 0;
   background: transparent;
   color: rgba(255,255,255,0.82);
-  min-width: 54px;
+  min-width: 50px;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -627,8 +627,8 @@ button {
 }
 
 .mbBottomSvg{
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: block;
   color: rgba(255,255,255,0.86);
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.22));
@@ -736,7 +736,7 @@ button {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-bottom: calc(44px + env(safe-area-inset-bottom));
 }
 
 .mbPageBody {
@@ -744,7 +744,7 @@ button {
 }
 
 .mbPageBodyPlain {
-  padding: 0 0 calc(110px + env(safe-area-inset-bottom));
+  padding: 0 0 calc(44px + env(safe-area-inset-bottom));
   margin: 0;
   background: transparent;
   border: 0;

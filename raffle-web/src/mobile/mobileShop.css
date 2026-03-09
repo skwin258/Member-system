@@ -10,7 +10,7 @@
   min-height: 0;
 }
 
-/* 跑馬燈：不要卡片包覆感 */
+/* 跑馬燈：改成真正無縫輪播 */
 .mShopMarquee{
   margin: 4px 0 14px;
   padding: 4px 2px;
@@ -18,27 +18,33 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  overflow: hidden;
   position: relative;
   min-height: 28px;
   display: flex;
   align-items: center;
+  overflow: hidden;
 }
 
 .mShopMarqueeViewport{
   width: 100%;
+  min-width: 0;
   overflow: hidden;
   display: flex;
   align-items: center;
 }
 
 .mShopMarqueeTrack{
-  display: flex;
+  --mshop-gap: 48px;
+  --mshop-step: 0px;
+  --mshop-duration: 18s;
+  display: inline-flex;
   align-items: center;
+  flex-wrap: nowrap;
   width: max-content;
+  gap: var(--mshop-gap);
   white-space: nowrap;
-  animation: mShopMarqueeLoop 16s linear infinite;
   will-change: transform;
+  animation: mShopMarqueeLoop var(--mshop-duration) linear infinite;
 }
 
 .mShopMarqueeItem{
@@ -46,19 +52,18 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  padding-right: 48px;
   color: rgba(255,255,255,0.88);
   font-size: 13px;
   font-weight: 800;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 @keyframes mShopMarqueeLoop{
   0%{
-    transform: translateX(0);
+    transform: translate3d(0,0,0);
   }
   100%{
-    transform: translateX(-50%);
+    transform: translate3d(calc(-1 * var(--mshop-step)),0,0);
   }
 }
 

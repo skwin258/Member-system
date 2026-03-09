@@ -119,6 +119,15 @@ export default function MobileShopPage({
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [pick, setPick] = useState(null);
 
+  const marqueeViewportRef = useRef(null);
+  const marqueeItemRef = useRef(null);
+  const [marqueeStep, setMarqueeStep] = useState(0);
+  const [marqueeDuration, setMarqueeDuration] = useState(18);
+
+  const defaultMarquee =
+    "提醒：兌換後請至背包查看｜最新公告：折抵金商品上架中｜兌換後若未入帳請稍後重登或聯繫客服";
+  const marqueeText = marquee ? marquee : defaultMarquee;
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -145,6 +154,37 @@ export default function MobileShopPage({
       }
     })();
   }, []);
+
+  useEffect(() => {
+    const measure = () => {
+      const viewportEl = marqueeViewportRef.current;
+      const itemEl = marqueeItemRef.current;
+      if (!viewportEl || !itemEl) return;
+
+      const viewportWidth = Math.ceil(viewportEl.getBoundingClientRect().width || 0);
+      const itemWidth = Math.ceil(itemEl.getBoundingClientRect().width || 0);
+      const gap = 48;
+      const step = Math.max(itemWidth + gap, viewportWidth + gap);
+      setMarqueeStep(step);
+      setMarqueeDuration(Math.max(14, step / 42));
+    };
+
+    measure();
+
+    let ro;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => measure());
+      if (marqueeViewportRef.current) ro.observe(marqueeViewportRef.current);
+      if (marqueeItemRef.current) ro.observe(marqueeItemRef.current);
+    } else {
+      window.addEventListener("resize", measure);
+    }
+
+    return () => {
+      if (ro) ro.disconnect();
+      else window.removeEventListener("resize", measure);
+    };
+  }, [marqueeText]);
 
   const products = useMemo(() => {
     const list = Array.isArray(productsRaw) ? productsRaw : [];
@@ -203,21 +243,26 @@ export default function MobileShopPage({
   return (
     <div className="mShopPage">
 <div className="mShopMarquee">
-  <div className="mShopMarqueeViewport">
-    <div className="mShopMarqueeTrack">
-      <span className="mShopMarqueeItem">
-        {marquee
-          ? marquee
-          : "提醒：兌換後請至背包查看｜最新公告：折抵金商品上架中｜兌換後若未入帳請稍後重登或聯繫客服"}
-      </span>
-      <span className="mShopMarqueeItem" aria-hidden="true">
-        {marquee
-          ? marquee
-          : "提醒：兌換後請至背包查看｜最新公告：折抵金商品上架中｜兌換後若未入帳請稍後重登或聯繫客服"}
-      </span>
-    </div>
-  </div>
-</div>
+        <div className="mShopMarqueeViewport" ref={marqueeViewportRef}>
+          <div
+            className="mShopMarqueeTrack"
+            style={{
+              "--mshop-step": `${marqueeStep || 600}px`,
+              "--mshop-duration": `${marqueeDuration || 18}s`,
+            }}
+          >
+            <span className="mShopMarqueeItem" ref={marqueeItemRef}>
+              {marqueeText}
+            </span>
+            <span className="mShopMarqueeItem" aria-hidden="true">
+              {marqueeText}
+            </span>
+            <span className="mShopMarqueeItem" aria-hidden="true">
+              {marqueeText}
+            </span>
+          </div>
+        </div>
+      </div>
 
       <section className="mShopCard mShopInfoCard">
         <div className="mShopCardHead">
