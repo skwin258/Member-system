@@ -960,7 +960,7 @@ const applyWalletDelta = async ({
       };
 
             // ✅ DB schema/seed 初始化：同一個 isolate 只跑一次（大幅加速）
-      await ensureBootstrapped(db);
+      // await ensureBootstrapped(db);
 
 
       const getCachedUserSession = async (token) => {

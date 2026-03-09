@@ -223,7 +223,22 @@ export default function App() {
     );
   }
 
-  if (!ready) return null;
+  if (!ready) {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#050d16",
+      color: "#fff",
+      fontSize: "18px",
+      fontWeight: "700"
+    }}>
+      載入中...
+    </div>
+  );
+}
 
   return (
     <>
