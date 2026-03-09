@@ -527,7 +527,7 @@ button {
   flex-direction: column;
   padding-top: 64px;
   padding-bottom: 82px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .mbPageTopBar {
@@ -601,7 +601,10 @@ button {
   display: flex;
   flex-direction: column;
   padding-top: 14px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 28px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mbInnerPageCard {
@@ -777,7 +780,7 @@ button {
   flex-direction: column;
   padding-top: 64px;
   padding-bottom: 82px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .mbPageBodyPlain {
@@ -785,12 +788,14 @@ button {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding: 0 0 28px;
   margin: 0;
   background: transparent;
   border: 0;
   box-shadow: none;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mbPageBody {
@@ -1070,4 +1075,9 @@ button {
 
 .centerSpace{
   display: none !important;
+}
+
+.mbPageBody > *:last-child,
+.mbPageBodyPlain > *:last-child {
+  margin-bottom: 110px;
 }

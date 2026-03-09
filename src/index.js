@@ -1398,20 +1398,30 @@ if (url.pathname === "/support/line" && request.method === "GET") {
 // GET /r2/<key>
 // =========================
 if (url.pathname.startsWith("/r2/") && request.method === "GET") {
+
   const bucket = env.RAFFLE_R2;
+
   if (!bucket) {
-    return json({ success: false, error: "R2 binding missing" }, { status: 500 });
+    return new Response("R2 binding missing", { status: 500 });
   }
 
   const key = decodeURIComponent(url.pathname.slice("/r2/".length));
   if (!key) return json({ success: false, error: "bad key" }, { status: 400 });
 
   const object = await bucket.get(key);
-  if (!object) return json({ success: false, error: "Not found" }, { status: 404 });
+
+  if (!object) {
+    return new Response("File not found", { status: 404 });
+  }
 
   const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+
+  headers.set(
+    "Content-Type",
+    object.httpMetadata?.contentType || "application/octet-stream"
+  );
+
+  headers.set("Cache-Control", "public, max-age=31536000");
 
   return applyCors(new Response(object.body, { headers }));
 }
