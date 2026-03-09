@@ -598,6 +598,14 @@ export const api = {
       body: JSON.stringify(patch || {}),
     });
   },
+
+
+  async adminRemoveUser(id) {
+    return await request(`/admin/users/${id}`, {
+      method: "DELETE",
+      auth: "admin",
+    });
+  },
 // ✅ 0001 PATCH: 讀單一使用者（給新後台 modal 用）
 async adminGetUser(id) {
   return await request(`/admin/users/${id}`, { method: "GET", auth: "admin" });
@@ -653,17 +661,6 @@ async adminShopOrders(params = {}) {
 async adminToggleShopOrderReview(id) {
   return await request(`/admin/shop/orders/${id}/review`, {
     method: "POST",
-    auth: "admin",
-  });
-},
-
-async adminShopOrders(params = {}) {
-  const qs = new URLSearchParams();
-  qs.set("days", String(params.days ?? 90));
-  const query = qs.toString();
-
-  return await request(`/admin/shop/orders${query ? `?${query}` : ""}`, {
-    method: "GET",
     auth: "admin",
   });
 },

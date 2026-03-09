@@ -3586,6 +3586,93 @@ const row = await db
 return json({ success: true, row });
 }
 
+
+// ===== ADMIN: GET /admin/users/:id (single user detail) =====
+if (
+  url.pathname.startsWith("/admin/users/") &&
+  request.method === "GET" &&
+  !url.pathname.endsWith("/logs") &&
+  !url.pathname.endsWith("/orders") &&
+  !url.pathname.endsWith("/wallet") &&
+  !url.pathname.endsWith("/line-verify") &&
+  !url.pathname.endsWith("/activity-times")
+) {
+  if (!admin) return forbid("Unauthorized", 401);
+
+  const parts = url.pathname.split("/").filter(Boolean);
+  const userId = Number(parts[2] || 0);
+  if (!userId) return json({ success: false, error: "bad user id" }, { status: 400 });
+
+  const row = await db
+    .prepare(
+      `SELECT id, username, display_name, line_id, birthday,
+              bank_holder, bank_name, bank_branch, bank_account,
+              line_verified, num_authorized, uses_left, times_override,
+              welfare_balance, s_balance, discount_balance,
+              enabled, locked, created_by_admin_id, created_at
+       FROM users
+       WHERE id=?
+       LIMIT 1`
+    )
+    .bind(userId)
+    .first();
+
+  if (!row) return json({ success: false, error: "User not found" }, { status: 404 });
+
+  if (!isSuperAdmin(admin)) {
+    if (Number(row.created_by_admin_id || 0) !== Number(admin.admin_id || 0)) {
+      return forbid("Forbidden", 403);
+    }
+  }
+
+  const user = {
+    ...row,
+    account: row.username || "",
+    name: row.display_name || "",
+  };
+
+  return json({ success: true, user });
+}
+
+// ===== ADMIN: GET /admin/users/:id/orders =====
+if (
+  url.pathname.startsWith("/admin/users/") &&
+  url.pathname.endsWith("/orders") &&
+  request.method === "GET"
+) {
+  if (!admin) return forbid("Unauthorized", 401);
+
+  const parts = url.pathname.split("/").filter(Boolean);
+  const userId = Number(parts[2] || 0);
+  if (!userId) return json({ success: false, error: "bad user id" }, { status: 400 });
+
+  if (!isSuperAdmin(admin)) {
+    const owner = await db
+      .prepare("SELECT created_by_admin_id FROM users WHERE id=? LIMIT 1")
+      .bind(userId)
+      .first();
+    if (!owner || Number(owner.created_by_admin_id || 0) !== Number(admin.admin_id || 0)) {
+      return forbid("Forbidden", 403);
+    }
+  }
+
+  const days = Math.max(1, Math.min(365, Number(url.searchParams.get("days") || 90)));
+  const rows = await db
+    .prepare(
+      `SELECT id, created_at, user_id, username,
+              product_id, product_name, cost_s,
+              status, note, reviewed
+       FROM shop_orders
+       WHERE user_id=? AND created_at >= datetime('now', ?)
+       ORDER BY id DESC
+       LIMIT 300`
+    )
+    .bind(userId, `-${days} day`)
+    .all();
+
+  return json({ success: true, items: rows?.results || [] });
+}
+
 if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
         if (!admin) return forbid("Unauthorized", 401);
         const id = Number(url.pathname.split("/").pop() || 0);
