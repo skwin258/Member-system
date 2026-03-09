@@ -10,8 +10,8 @@ import { api, setToken, setAdminToken } from "./api";
 export default function LoginBox({ onLoggedIn, mode = "user" }) {
   const isAdmin = String(mode).toLowerCase() === "admin";
 
-  const [username, setUsername] = useState(isAdmin ? "" : "user1");
-  const [password, setPassword] = useState(isAdmin ? "" : "1111");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   // 註冊 modal
@@ -28,7 +28,7 @@ export default function LoginBox({ onLoggedIn, mode = "user" }) {
   const title = useMemo(() => (isAdmin ? "管理端登入" : "使用者登入"), [isAdmin]);
   const hint = useMemo(() => {
     if (isAdmin) return "請輸入管理員帳號密碼";
-    return "先用測試帳號：user1 / 1111";
+    return "請輸入帳號密碼登入";
   }, [isAdmin]);
 
   const resetRegisterForm = () => {
