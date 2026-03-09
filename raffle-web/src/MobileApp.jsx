@@ -158,7 +158,7 @@ if (!ready) {
           objectFit: "contain",
         }}
       >
-        <source src="/cat-loading.webm" type="video/webm" />
+        <source src="/cat-loading.webp" type="video/webp" />
       </video>
 
       <div
