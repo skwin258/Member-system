@@ -60,7 +60,7 @@ export default function MobileTreasurePage({
   if (tab === "number") {
     return (
       <div style={{ color: "#fff", padding: "20px 12px 120px", textAlign: "center" }}>
-        數字抽獎頁面下一步再接
+        數字抽獎尚未開放，請重新整理。
       </div>
     );
   }
