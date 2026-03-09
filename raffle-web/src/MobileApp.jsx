@@ -135,19 +135,43 @@ export default function MobileApp() {
     return () => clearInterval(timer);
   }, [me?.user?.id, me?.success, refreshMeOnly]);
 
-  if (!ready) {
+if (!ready) {
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "#050d16",
-      color: "#fff",
-      fontSize: "18px",
-      fontWeight: "700"
-    }}>
-      載入中...
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#050d16",
+        flexDirection: "column",
+      }}
+    >
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        style={{
+          width: "120px",
+          height: "120px",
+          objectFit: "contain",
+        }}
+      >
+        <source src="/cat-loading.webm" type="video/webm" />
+      </video>
+
+      <div
+        style={{
+          marginTop: "14px",
+          color: "#fff",
+          fontSize: "16px",
+          fontWeight: "700",
+          letterSpacing: "1px",
+        }}
+      >
+        載入中...
+      </div>
     </div>
   );
 }
