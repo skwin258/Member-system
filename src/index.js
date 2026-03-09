@@ -3362,10 +3362,17 @@ if (
   }
 
   const body = await safeJson(request);
-  const delta_s = toInt(body.delta_s, 0);
-  const delta_welfare = toInt(body.delta_welfare, 0);
-  const delta_discount = toInt(body.delta_discount, 0);
-  const action = String(body.action || "調整").trim() || "調整";
+const action = String(body.action || "調整").trim() || "調整";
+
+const rawS = Math.abs(toInt(body.delta_s, 0));
+const rawW = Math.abs(toInt(body.delta_welfare, 0));
+const rawD = Math.abs(toInt(body.delta_discount, 0));
+
+const isSubtract = action === "扣除";
+
+const delta_s = isSubtract ? -rawS : rawS;
+const delta_welfare = isSubtract ? -rawW : rawW;
+const delta_discount = isSubtract ? -rawD : rawD;
   const note = String(body.note || "").trim();
 
   const r = await applyWalletDelta({
