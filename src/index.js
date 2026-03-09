@@ -838,43 +838,6 @@ const toInt = (v, fb = 0) => {
   return Number.isFinite(n) ? Math.trunc(n) : fb;
 };
 
-const normalizeWalletAction = (raw = "") => {
-  const action = String(raw || "").trim();
-  const lower = action.toLowerCase();
-
-  const isSubtract =
-    action.includes("扣") ||
-    action.includes("減") ||
-    action.includes("刪") ||
-    lower === "subtract" ||
-    lower === "minus" ||
-    lower === "decrease" ||
-    lower === "deduct" ||
-    lower === "remove";
-
-  const isAdd =
-    action.includes("加") ||
-    action.includes("增") ||
-    action.includes("補") ||
-    lower === "add" ||
-    lower === "plus" ||
-    lower === "increase" ||
-    lower === "credit";
-
-  return {
-    raw: action || "調整",
-    isSubtract,
-    isAdd,
-  };
-};
-
-const normalizeWalletDeltaByAction = (rawValue, actionInfo) => {
-  const abs = Math.abs(toInt(rawValue, 0));
-  if (!abs) return 0;
-  if (actionInfo?.isSubtract) return -abs;
-  return abs;
-};
-
 const fetchUserRow = async (userId) => {
   return await db
     .prepare(
@@ -1734,8 +1697,11 @@ if (url.pathname === "/auth/user/register" && request.method === "POST") {
   const password = String(body.password || "").trim();
   const display_name = String(body.display_name || body.name || "").trim();
   const ref_code = String(
-  body.referral_code || body.ref_code || body.ref || ""
-).trim();
+    body.referral_code || body.ref_code || body.ref || ""
+  ).trim();
+
+  let inheritedAdminId = null;
+  let refOwner = null;
 
   if (!username || !password) {
     return json({ success: false, error: "缺少帳號或密碼" }, { status: 400 });
@@ -1753,35 +1719,49 @@ if (url.pathname === "/auth/user/register" && request.method === "POST") {
     return json({ success: false, error: "此帳號已存在" }, { status: 409 });
   }
 
-  // 建立 user
-await db
-  .prepare(
-    `INSERT INTO users
-      (username, password, display_name, welfare_balance, num_authorized, uses_left,
-       times_override, enabled, locked, created_by_admin_id, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))`
-  )
-  .bind(
-    username,
-    password,
-    display_name,
-    0,          // welfare_balance
-    0,          // num_authorized
-    0,          // uses_left
-    null,       // times_override
-    1,          // enabled
-    0,          // locked
-    null        // created_by_admin_id（public register 沒有 admin）
-  )
-  .run()
-    .catch(() => null);
+  // 若帶推薦碼，先找推薦人所屬管理員，讓新註冊者繼承同一位管理員
+  if (ref_code) {
+    refOwner = await db
+      .prepare(
+        `SELECT rc.user_id AS referrer_user_id,
+                u.username AS referrer_username,
+                u.created_by_admin_id AS referrer_admin_id
+         FROM referral_codes rc
+         JOIN users u ON u.id = rc.user_id
+         WHERE rc.code=?
+         LIMIT 1`
+      )
+      .bind(ref_code)
+      .first();
 
-  // 上面那段若你覺得 bind 奇怪，請用下面這段更乾淨（建議你用這段）
-  // await db.prepare(
-  //   `INSERT INTO users
-  //    (username, password, display_name, welfare_balance, s_balance, num_authorized, uses_left, times_override, enabled, locked, created_by_admin_id, created_at)
-  //    VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))`
-  // ).bind(username, password, display_name, 0, 0, 0, null, 1, 0, null).run();
+    const referrerAdminId = Number(refOwner?.referrer_admin_id || 0);
+    if (referrerAdminId > 0) {
+      inheritedAdminId = referrerAdminId;
+    }
+  }
+
+  // 建立 user：若有推薦碼且推薦人原本屬於某位管理員，則繼承該管理員
+  await db
+    .prepare(
+      `INSERT INTO users
+        (username, password, display_name, welfare_balance, num_authorized, uses_left,
+         times_override, enabled, locked, created_by_admin_id, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))`
+    )
+    .bind(
+      username,
+      password,
+      display_name,
+      0,               // welfare_balance
+      0,               // num_authorized
+      0,               // uses_left
+      null,            // times_override
+      1,               // enabled
+      0,               // locked
+      inheritedAdminId // created_by_admin_id
+    )
+    .run()
+    .catch(() => null);
 
   const newUser = await db
     .prepare("SELECT id, username FROM users WHERE username=? LIMIT 1")
@@ -1796,18 +1776,20 @@ await db
   // 若帶 ref_code：先綁定推薦關係，等 LINE ID 填寫完成並由後台驗證後才發放獎勵
   let refBound = false;
   if (ref_code) {
-    const refRow = await db
-      .prepare(
-        `SELECT rc.user_id AS referrer_user_id, u.username AS referrer_username
-         FROM referral_codes rc
-         JOIN users u ON u.id = rc.user_id
-         WHERE rc.code=?
-         LIMIT 1`
-      )
-      .bind(ref_code)
-      .first();
-
-    const referrerId = Number(refRow?.referrer_user_id || 0);
+    const referrerId = Number(
+      refOwner?.referrer_user_id ||
+      (
+        await db
+          .prepare(
+            `SELECT rc.user_id AS referrer_user_id
+             FROM referral_codes rc
+             WHERE rc.code=?
+             LIMIT 1`
+          )
+          .bind(ref_code)
+          .first()
+      )?.referrer_user_id || 0
+    );
 
     if (referrerId > 0 && referrerId !== newUserId) {
       const already = await db
@@ -1829,7 +1811,7 @@ await db
 
   return json({
     success: true,
-    user: { id: newUserId, username },
+    user: { id: newUserId, username, created_by_admin_id: inheritedAdminId },
     referral: { applied: !!ref_code, bound: refBound, rewarded: false },
   });
 }
@@ -3399,12 +3381,20 @@ if (
   }
 
   const body = await safeJson(request);
-  const actionInfo = normalizeWalletAction(body.action || "調整");
-  const action = actionInfo.raw;
+const action = String(body.action || "調整").trim() || "調整";
 
-  const delta_s = normalizeWalletDeltaByAction(body.delta_s, actionInfo);
-  const delta_welfare = normalizeWalletDeltaByAction(body.delta_welfare, actionInfo);
-  const delta_discount = normalizeWalletDeltaByAction(body.delta_discount, actionInfo);
+const rawS = Math.abs(toInt(body.delta_s, 0));
+const rawW = Math.abs(toInt(body.delta_welfare, 0));
+const rawD = Math.abs(toInt(body.delta_discount, 0));
+
+const isSubtract =
+  action.includes("扣") ||
+  action.includes("減") ||
+  action === "subtract";
+
+const delta_s = isSubtract ? -rawS : rawS;
+const delta_welfare = isSubtract ? -rawW : rawW;
+const delta_discount = isSubtract ? -rawD : rawD;
   const note = String(body.note || "").trim();
 
   const r = await applyWalletDelta({
@@ -3760,10 +3750,9 @@ if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
         if (body.bank_branch !== undefined) setIf("bank_branch", String(body.bank_branch || "").trim());
         if (body.bank_account !== undefined) setIf("bank_account", String(body.bank_account || "").trim());
 
-        // ✅ wallet fields
-        // 這裡故意不允許 PATCH /admin/users/:id 直接改餘額，
-        // 避免前端表單把「異動金額」或舊餘額誤送成新餘額，造成扣款變加款。
-        // 錢包調整一律走 POST /admin/users/:id/wallet。
+        // ✅ wallet fields (optional: 允許後台直接改餘額)
+        if (body.discount_balance !== undefined) setIf("discount_balance", Number(body.discount_balance || 0));
+        if (body.s_balance !== undefined) setIf("s_balance", Number(body.s_balance || 0));
 
         if (fields.length === 0) return json({ success: true });
 
