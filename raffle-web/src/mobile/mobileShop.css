@@ -1,25 +1,26 @@
 .mShopPage{
-  height: 100%;
-  padding: 12px 12px 108px;
+  min-height: 100%;
+  padding: 12px 12px 0;
   box-sizing: border-box;
   color: #fff;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
 }
 
 /* 跑馬燈：不要卡片包覆感 */
 .mShopMarquee{
   margin: 4px 0 14px;
-  padding: 0 2px;
+  padding: 4px 2px;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
   overflow: hidden;
   position: relative;
-  min-height: 22px;
+  min-height: 28px;
   display: flex;
   align-items: center;
 }
@@ -31,7 +32,7 @@
   color: rgba(255,255,255,0.88);
   font-size: 13px;
   font-weight: 800;
-  line-height: 22px;
+  line-height: 1.6;
   animation: mShopMarqueeMove 14s linear infinite;
   will-change: transform;
 }
@@ -245,7 +246,6 @@
 .mShopProductsScroll{
   flex: 1;
   min-height: 0;
-  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 6px;
