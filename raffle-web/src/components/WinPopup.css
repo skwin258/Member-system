@@ -88,8 +88,32 @@
 }
 
 .winpop-imgWrap{
+  position: relative;
   transform: translate3d(0,0,0);
   will-change: transform;
+  isolation: isolate;
+}
+
+/* 改用圓形光暈，避免手機板看起來像正方形 */
+.winpop-imgWrap::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform: translate(-50%, -50%);
+  width: 68%;
+  height: 68%;
+  border-radius: 50%;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255,220,120,.42) 0%,
+    rgba(255,200,0,.24) 35%,
+    rgba(255,170,0,.12) 55%,
+    rgba(255,170,0,0) 75%
+  );
+  filter: blur(18px);
 }
 
 /* ===== 圖片位移 ===== */
@@ -113,10 +137,9 @@
   display:block;
   height:auto;
   max-width:none !important;
-  filter:
-    drop-shadow(0 0 18px rgba(255,220,120,.85))
-    drop-shadow(0 0 38px rgba(255,200,0,.55))
-    drop-shadow(0 18px 44px rgba(0,0,0,.55));
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,.45));
 }
 
 /* ===== 圖片尺寸 ===== */
@@ -141,6 +164,7 @@
   align-items:baseline;
   white-space:nowrap;
   pointer-events:none;
+  z-index: 3;
 }
 
 /* ===== 各等級文字位置 / 間距 ===== */
@@ -285,6 +309,13 @@
     width: min(92vw, 360px);
   }
 
+  .winpop-imgWrap::before{
+    width: 62%;
+    height: 62%;
+    filter: blur(14px);
+    opacity: .9;
+  }
+
   .winpop-money,
   .winpop-num,
   .winpop-unit{
@@ -361,5 +392,12 @@
     --winpop-legendary-num-size: 66px;
     --winpop-legendary-unit-size: 60px;
     --winpop-legendary-gap: 5px;
+  }
+
+  .winpop-imgWrap::before{
+    width: 58%;
+    height: 58%;
+    filter: blur(12px);
+    opacity: .82;
   }
 }
