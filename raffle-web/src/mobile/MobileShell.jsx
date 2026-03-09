@@ -99,6 +99,16 @@ export default function MobileShell({
     return () => clearInterval(timer);
   }, [banners.length]);
 
+  // ✅ 修正：只要是訪客且網址/外層有推薦碼，就自動打開註冊視窗
+  useEffect(() => {
+    if (!isGuest) return;
+
+    const code = String(refCode || "").trim();
+    if (!code) return;
+
+    setShowRegister(true);
+  }, [isGuest, refCode]);
+
   const menu = useMemo(
     () => [
       { key: "promo", title: "活動", guestAllowed: true },

@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-export default function RegisterModal({ open, onClose, onSuccess, apiBase }) {
+export default function RegisterModal({
+  open,
+  onClose,
+  onSuccess,
+  apiBase,
+  referralCode = "",
+}) {
   const [realName, setRealName] = useState("");
   const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
@@ -10,21 +16,50 @@ export default function RegisterModal({ open, onClose, onSuccess, apiBase }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // ✅ 從網址自動抓推薦碼：/register/:code
+  // ✅ 打開註冊視窗時，自動抓推薦碼
+  // 支援：
+  // 1. 外層 prop referralCode
+  // 2. /register/:code
+  // 3. /:code
   useEffect(() => {
     if (!open) return;
 
-    // 例：/register/43dbdebf90
-    const path = window.location.pathname || "";
-    const m = path.match(/^\/register\/([^\/?#]+)/i);
-    const codeFromUrl = m?.[1] ? decodeURIComponent(m[1]) : "";
+    const codeFromProp = String(referralCode || "").trim();
 
-    // ✅ 只在 refCode 目前是空的時候才自動帶入，避免覆蓋使用者手動輸入
-    if (codeFromUrl && !refCode) {
-      setRefCode(codeFromUrl);
+    const path = window.location.pathname || "";
+    const registerMatch = path.match(/^\/register\/([^\/?#]+)/i);
+    const directMatch = path.match(/^\/([^\/?#]+)$/i);
+
+    let codeFromUrl = "";
+    if (registerMatch?.[1]) {
+      codeFromUrl = decodeURIComponent(registerMatch[1]);
+    } else if (directMatch?.[1]) {
+      const maybeCode = decodeURIComponent(directMatch[1]);
+      if (
+        maybeCode &&
+        ![
+          "promo",
+          "treasure",
+          "records",
+          "support",
+          "shop",
+          "invite",
+          "my",
+          "login",
+          "register",
+          "admin",
+        ].includes(maybeCode.toLowerCase())
+      ) {
+        codeFromUrl = maybeCode;
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+
+    const finalCode = codeFromProp || codeFromUrl;
+
+    if (finalCode && !String(refCode || "").trim()) {
+      setRefCode(finalCode);
+    }
+  }, [open, referralCode, refCode]);
 
   const canSubmit = useMemo(() => {
     if (!realName.trim()) return false;
@@ -39,6 +74,7 @@ export default function RegisterModal({ open, onClose, onSuccess, apiBase }) {
 
   const submit = async () => {
     setErr("");
+
     if (!canSubmit) {
       setErr("請填寫：本名、帳號、密碼");
       return;
@@ -49,17 +85,18 @@ export default function RegisterModal({ open, onClose, onSuccess, apiBase }) {
       phone: normalizePhone(phone),
       username: username.trim(),
       password: password,
-      // ✅ 推薦碼：優先用 refCode（可能來自網址），空則 null
-      referral_code: (refCode || "").trim() || null,
+      referral_code: String(refCode || "").trim() || null,
     };
 
     try {
       setLoading(true);
+
       const res = await fetch(`${apiBase}/auth/user/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data?.success) {
@@ -69,12 +106,12 @@ export default function RegisterModal({ open, onClose, onSuccess, apiBase }) {
       onSuccess?.(data);
       onClose?.();
 
-      // 清空（但保留：如果目前就在 /register/:code，下一次打開還是會自動帶入）
       setRealName("");
       setPhone("");
       setUsername("");
       setPassword("");
       setRefCode("");
+      setErr("");
     } catch (e) {
       setErr(String(e?.message || e));
     } finally {
@@ -93,19 +130,45 @@ export default function RegisterModal({ open, onClose, onSuccess, apiBase }) {
         <div style={styles.hint}>本名務必填入本名，避免後續核對問題</div>
 
         <label style={styles.label}>本名（務必填入本名）</label>
-        <input style={styles.input} value={realName} onChange={(e) => setRealName(e.target.value)} placeholder="例：王小明" />
+        <input
+          style={styles.input}
+          value={realName}
+          onChange={(e) => setRealName(e.target.value)}
+          placeholder="例：王小明"
+        />
 
         <label style={styles.label}>電話</label>
-        <input style={styles.input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="例：0912345678" />
+        <input
+          style={styles.input}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="例：0912345678"
+        />
 
         <label style={styles.label}>帳號</label>
-        <input style={styles.input} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="例：user123" />
+        <input
+          style={styles.input}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="例：user123"
+        />
 
         <label style={styles.label}>密碼</label>
-        <input style={styles.input} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="至少 6 碼" />
+        <input
+          style={styles.input}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="至少 6 碼"
+        />
 
         <label style={styles.label}>推薦碼（可不填）</label>
-        <input style={styles.input} value={refCode} onChange={(e) => setRefCode(e.target.value)} placeholder="例：ABCD1234" />
+        <input
+          style={styles.input}
+          value={refCode}
+          onChange={(e) => setRefCode(e.target.value)}
+          placeholder="例：ABCD1234"
+        />
 
         {err ? <div style={styles.err}>{err}</div> : null}
 
@@ -141,8 +204,16 @@ const styles = {
     padding: 18,
     color: "#fff",
   },
-  titleRow: { display: "flex", alignItems: "center", justifyContent: "space-between" },
-  title: { fontSize: 18, fontWeight: 800, letterSpacing: 1 },
+  titleRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 800,
+    letterSpacing: 1,
+  },
   xBtn: {
     border: "none",
     background: "transparent",
@@ -151,8 +222,19 @@ const styles = {
     cursor: "pointer",
     lineHeight: 1,
   },
-  hint: { fontSize: 12, opacity: 0.75, marginTop: 6, marginBottom: 10 },
-  label: { display: "block", fontSize: 12, opacity: 0.85, marginTop: 10, marginBottom: 6 },
+  hint: {
+    fontSize: 12,
+    opacity: 0.75,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  label: {
+    display: "block",
+    fontSize: 12,
+    opacity: 0.85,
+    marginTop: 10,
+    marginBottom: 6,
+  },
   input: {
     width: "100%",
     height: 42,
@@ -164,7 +246,11 @@ const styles = {
     outline: "none",
     fontSize: 14,
   },
-  err: { marginTop: 10, fontSize: 12, color: "#ff6b6b" },
+  err: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#ff6b6b",
+  },
   submitBtn: {
     marginTop: 14,
     width: "100%",
