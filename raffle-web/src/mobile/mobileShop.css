@@ -25,24 +25,40 @@
   align-items: center;
 }
 
+.mShopMarqueeViewport{
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
 .mShopMarqueeTrack{
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  width: max-content;
   white-space: nowrap;
-  padding-left: 100%;
+  animation: mShopMarqueeLoop 16s linear infinite;
+  will-change: transform;
+}
+
+.mShopMarqueeItem{
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding-right: 48px;
   color: rgba(255,255,255,0.88);
   font-size: 13px;
   font-weight: 800;
   line-height: 1.6;
-  animation: mShopMarqueeMove 14s linear infinite;
-  will-change: transform;
 }
 
-@keyframes mShopMarqueeMove{
+@keyframes mShopMarqueeLoop{
   0%{
     transform: translateX(0);
   }
   100%{
-    transform: translateX(-100%);
+    transform: translateX(-50%);
   }
 }
 

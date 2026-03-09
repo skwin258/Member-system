@@ -202,13 +202,22 @@ export default function MobileShopPage({
 
   return (
     <div className="mShopPage">
-      <div className="mShopMarquee">
-        <div className="mShopMarqueeTrack">
-          {marquee
-            ? marquee
-            : "提醒：兌換後請至背包查看｜最新公告：折抵金商品上架中｜兌換後若未入帳請稍後重登或聯繫客服"}
-        </div>
-      </div>
+<div className="mShopMarquee">
+  <div className="mShopMarqueeViewport">
+    <div className="mShopMarqueeTrack">
+      <span className="mShopMarqueeItem">
+        {marquee
+          ? marquee
+          : "提醒：兌換後請至背包查看｜最新公告：折抵金商品上架中｜兌換後若未入帳請稍後重登或聯繫客服"}
+      </span>
+      <span className="mShopMarqueeItem" aria-hidden="true">
+        {marquee
+          ? marquee
+          : "提醒：兌換後請至背包查看｜最新公告：折抵金商品上架中｜兌換後若未入帳請稍後重登或聯繫客服"}
+      </span>
+    </div>
+  </div>
+</div>
 
       <section className="mShopCard mShopInfoCard">
         <div className="mShopCardHead">
