@@ -4,6 +4,9 @@
   box-sizing: border-box;
   color: #fff;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* 跑馬燈：不要卡片包覆感 */
@@ -15,7 +18,10 @@
   background: transparent;
   box-shadow: none;
   overflow: hidden;
-  white-space: nowrap;
+  position: relative;
+  min-height: 22px;
+  display: flex;
+  align-items: center;
 }
 
 .mShopMarqueeTrack{
@@ -25,8 +31,9 @@
   color: rgba(255,255,255,0.88);
   font-size: 13px;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 22px;
   animation: mShopMarqueeMove 14s linear infinite;
+  will-change: transform;
 }
 
 @keyframes mShopMarqueeMove{
@@ -236,10 +243,13 @@
 
 /* 只有商品區可以滑 */
 .mShopProductsScroll{
-  max-height: 420px;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 6px;
+  padding-bottom: 8px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(55,255,150,0.85) rgba(255,255,255,0.08);
@@ -342,4 +352,3 @@
   filter: grayscale(0.1);
   box-shadow: none;
 }
-

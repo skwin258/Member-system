@@ -521,7 +521,7 @@ button {
   display: block;
   object-fit: contain;
   pointer-events: none;
-  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.34));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
 }
 
 /* ===== 底部導航 ===== */
