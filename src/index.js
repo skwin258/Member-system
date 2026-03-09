@@ -3368,7 +3368,10 @@ const rawS = Math.abs(toInt(body.delta_s, 0));
 const rawW = Math.abs(toInt(body.delta_welfare, 0));
 const rawD = Math.abs(toInt(body.delta_discount, 0));
 
-const isSubtract = action === "扣除";
+const isSubtract =
+  action.includes("扣") ||
+  action.includes("減") ||
+  action === "subtract";
 
 const delta_s = isSubtract ? -rawS : rawS;
 const delta_welfare = isSubtract ? -rawW : rawW;
