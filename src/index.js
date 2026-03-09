@@ -409,6 +409,8 @@ await ensureTable({
 // index
 await tryRun("CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_user_id)");
 await tryRun("CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code)");
+await tryRun("ALTER TABLE referrals ADD COLUMN verified_rewarded_at TEXT");
+await tryRun("ALTER TABLE users ADD COLUMN first_wheel_forced_done INTEGER NOT NULL DEFAULT 0");
 
 // ---- promotions（優惠內容：列表圖片 + 點擊彈窗顯示 HTML）
 // 位置：referrals / referral_codes index 之後，seed activities 之前
@@ -1105,6 +1107,105 @@ const applyWalletDelta = async ({
         return { ok: true, left: Math.max(0, Number(row?.times_left || 0)) };
       };
 
+      const grantReferralVerificationRewardsIfEligible = async (verifiedUserId) => {
+        const user = await db
+          .prepare(
+            `SELECT id, username, line_id, line_verified
+             FROM users
+             WHERE id=?
+             LIMIT 1`
+          )
+          .bind(Number(verifiedUserId))
+          .first();
+
+        if (!user) return { ok: false, reason: "user_not_found" };
+        if (Number(user.line_verified || 0) !== 1) return { ok: false, reason: "line_not_verified" };
+        if (!String(user.line_id || "").trim()) return { ok: false, reason: "line_id_missing" };
+
+        const ref = await db
+          .prepare(
+            `SELECT r.id, r.referrer_user_id, r.referred_user_id, r.code, r.verified_rewarded_at,
+                    u.username AS referrer_username
+             FROM referrals r
+             JOIN users u ON u.id = r.referrer_user_id
+             WHERE r.referred_user_id=?
+             LIMIT 1`
+          )
+          .bind(Number(verifiedUserId))
+          .first();
+
+        if (!ref) return { ok: false, reason: "no_referral" };
+        if (String(ref.verified_rewarded_at || "").trim()) return { ok: true, already_rewarded: true };
+
+        const referrerId = Number(ref.referrer_user_id || 0);
+        if (!referrerId) return { ok: false, reason: "bad_referrer" };
+
+        await ensureUsageRow(referrerId, "redpacket");
+        await ensureUsageRow(referrerId, "wheel");
+        await ensureUsageRow(Number(verifiedUserId), "wheel");
+
+        await db
+          .prepare(
+            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='redpacket'"
+          )
+          .bind(nowIso(), referrerId)
+          .run();
+
+        await db
+          .prepare(
+            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='wheel'"
+          )
+          .bind(nowIso(), referrerId)
+          .run();
+
+        await db
+          .prepare(
+            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='wheel'"
+          )
+          .bind(nowIso(), Number(verifiedUserId))
+          .run();
+
+        await addDrawRecord({
+          activity_key: "redpacket",
+          user_id: referrerId,
+          username: String(ref?.referrer_username || ""),
+          status: "win",
+          prize_title: "推薦驗證獎勵-紅包次數+1",
+          prize_amount: 0,
+          note: "referral_verify_bonus",
+          meta: { code: ref.code, referred_user: String(user.username || "") },
+        });
+
+        await addDrawRecord({
+          activity_key: "wheel",
+          user_id: referrerId,
+          username: String(ref?.referrer_username || ""),
+          status: "win",
+          prize_title: "推薦驗證獎勵-輪盤次數+1",
+          prize_amount: 0,
+          note: "referral_verify_bonus",
+          meta: { code: ref.code, referred_user: String(user.username || "") },
+        });
+
+        await addDrawRecord({
+          activity_key: "wheel",
+          user_id: Number(verifiedUserId),
+          username: String(user.username || ""),
+          status: "win",
+          prize_title: "LINE驗證獎勵-輪盤次數+1",
+          prize_amount: 0,
+          note: "line_verify_bonus",
+          meta: { code: ref.code, referrer_user: String(ref?.referrer_username || "") },
+        });
+
+        await db
+          .prepare("UPDATE referrals SET verified_rewarded_at=datetime('now') WHERE id=?")
+          .bind(Number(ref.id))
+          .run();
+
+        return { success: true, referrerId, referredUserId: Number(verifiedUserId) };
+      };
+
       const addDrawRecord = async ({
   activity_key,
   user_id,
@@ -1655,8 +1756,8 @@ await db
     return json({ success: false, error: "註冊失敗" }, { status: 500 });
   }
 
-  // 若帶 ref_code：給推薦人獎勵
-  let refRewarded = false;
+  // 若帶 ref_code：先綁定推薦關係，等 LINE ID 填寫完成並由後台驗證後才發放獎勵
+  let refBound = false;
   if (ref_code) {
     const refRow = await db
       .prepare(
@@ -1671,9 +1772,7 @@ await db
 
     const referrerId = Number(refRow?.referrer_user_id || 0);
 
-    // 不能自推（雖然新註冊通常不會）
     if (referrerId > 0 && referrerId !== newUserId) {
-      // 確保這個新用戶沒有被綁過（referred_user_id UNIQUE）
       const already = await db
         .prepare("SELECT id FROM referrals WHERE referred_user_id=? LIMIT 1")
         .bind(newUserId)
@@ -1686,49 +1785,7 @@ await db
           )
           .bind(referrerId, newUserId, ref_code)
           .run();
-
-        // ✅ 推薦人獎勵：紅包 +1、輪盤 +1
-        await ensureUsageRow(referrerId, "redpacket");
-        await ensureUsageRow(referrerId, "wheel");
-
-        await db
-          .prepare(
-            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='redpacket'"
-          )
-          .bind(nowIso(), referrerId)
-          .run();
-
-        await db
-          .prepare(
-            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='wheel'"
-          )
-          .bind(nowIso(), referrerId)
-          .run();
-
-        // （可選）把「推薦獎勵」寫進 draw_records，方便你在紀錄看到
-        await addDrawRecord({
-          activity_key: "redpacket",
-          user_id: referrerId,
-          username: String(refRow?.referrer_username || ""),
-          status: "win",
-          prize_title: "推薦獎勵-紅包次數+1",
-          prize_amount: 0,
-          note: "referral_bonus",
-          meta: { ref_code, referred_user: username },
-        });
-
-        await addDrawRecord({
-          activity_key: "wheel",
-          user_id: referrerId,
-          username: String(refRow?.referrer_username || ""),
-          status: "win",
-          prize_title: "推薦獎勵-輪盤次數+1",
-          prize_amount: 0,
-          note: "referral_bonus",
-          meta: { ref_code, referred_user: username },
-        });
-
-        refRewarded = true;
+        refBound = true;
       }
     }
   }
@@ -1736,7 +1793,7 @@ await db
   return json({
     success: true,
     user: { id: newUserId, username },
-    referral: { applied: !!ref_code, rewarded: refRewarded },
+    referral: { applied: !!ref_code, bound: refBound, rewarded: false },
   });
 }
 
@@ -3272,6 +3329,10 @@ await db
   .run();
         }
 
+        if (line_verified === 1) {
+          await grantReferralVerificationRewardsIfEligible(id > 0 ? id : Number((await db.prepare("SELECT id FROM users WHERE username=? LIMIT 1").bind(username).first())?.id || 0));
+        }
+
         return json({ success: true });
       }
 
@@ -3402,6 +3463,10 @@ if (
     .prepare("UPDATE users SET line_verified=? WHERE id=?")
     .bind(v, userId)
     .run();
+
+  if (v === 1) {
+    await grantReferralVerificationRewardsIfEligible(userId);
+  }
 
   await insertWalletLog({
     user_id: userId,
@@ -3581,6 +3646,10 @@ if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
           .prepare(`UPDATE users SET ${fields.join(", ")} WHERE id=?`)
           .bind(...binds)
           .run();
+
+        if (body.line_verified !== undefined && Number(body.line_verified) === 1) {
+          await grantReferralVerificationRewardsIfEligible(id);
+        }
 
         return json({ success: true });
       }
@@ -3994,17 +4063,51 @@ if (url.pathname === "/wheel/history" && request.method === "GET") {
         // 本次抽獎使用的獎項順序（前端輪盤對齊用）
         const order_ids = prizes.map((p) => Number(p.id));
 
-        // 權重抽獎
-        let total = 0;
-        for (const p of prizes) total += Math.max(1, Number(p.weight || 1));
+        let pick = null;
 
-        let r = Math.random() * total;
-        let pick = prizes[0];
-        for (const p of prizes) {
-          r -= Math.max(1, Number(p.weight || 1));
-          if (r <= 0) {
-            pick = p;
-            break;
+        const userRow = await db
+          .prepare("SELECT id, created_by_admin_id, first_wheel_forced_done FROM users WHERE id=? LIMIT 1")
+          .bind(Number(sess.user_id))
+          .first();
+
+        const isSelfRegisteredUser = Number(userRow?.created_by_admin_id || 0) === 0;
+        const needForcedFirstWheel = isSelfRegisteredUser && Number(userRow?.first_wheel_forced_done || 0) !== 1;
+
+        if (needForcedFirstWheel) {
+          pick = prizes.find((p) => {
+            const title = String(p?.title || "");
+            const type = String(p?.prize_type || "").toLowerCase();
+            const amount = Number(p?.amount || 0);
+            return (type === "discount" || title.includes("折抵")) && amount === 5000;
+          }) || {
+            id: -5000,
+            title: "5000折抵金",
+            amount: 5000,
+            weight: 0,
+            prize_type: "discount",
+            prize_text: "",
+            image_url: "",
+          };
+
+          await db
+            .prepare("UPDATE users SET first_wheel_forced_done=1 WHERE id=?")
+            .bind(Number(sess.user_id))
+            .run();
+        }
+
+        if (!pick) {
+          // 權重抽獎
+          let total = 0;
+          for (const p of prizes) total += Math.max(1, Number(p.weight || 1));
+
+          let r = Math.random() * total;
+          pick = prizes[0];
+          for (const p of prizes) {
+            r -= Math.max(1, Number(p.weight || 1));
+            if (r <= 0) {
+              pick = p;
+              break;
+            }
           }
         }
 

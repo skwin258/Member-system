@@ -533,7 +533,7 @@ export default function RecordsPage({ me, initialView = "raffle" }) {
                     {(orders || []).map((o, idx) => (
                       <tr key={o.id || idx}>
                         <td>{String(o.created_at || "-").slice(0, 19).replace("T", " ")}</td>
-                        <td>{o.title || o.product_title || "-"}</td>
+                        <td>{o.product_name || o.title || o.product_title || "-"}</td>
                         <td>{o.price_s ?? o.cost_s ?? "-"}</td>
                         <td>{o.status || "-"}</td>
                       </tr>

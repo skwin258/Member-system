@@ -392,7 +392,7 @@ export default function MobileRecordsPage({ me, initialView = "raffle" }) {
                 <div className="mRecTag">{o.status || "-"}</div>
               </div>
 
-              <div className="mRecMainPrize">{o.title || o.product_title || "-"}</div>
+              <div className="mRecMainPrize">{o.product_name || o.title || o.product_title || "-"}</div>
 
               <div className="mRecMetaStack">
                 <div className="mRecMetaLine">
