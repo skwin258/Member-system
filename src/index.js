@@ -31,6 +31,19 @@ function hotCacheDel(prefix) {
   }
 }
 
+const USER_INACTIVITY_LIMIT_MS = 10 * 60 * 1000;
+
+function parseClientActivityHeader(request) {
+  const raw = String(request.headers.get("x-client-activity-at") || "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const now = Date.now();
+  if (n > now + 60 * 1000) return null;
+  if (n < now - 365 * 24 * 60 * 60 * 1000) return null;
+  return Math.trunc(n);
+}
+
 async function ensureBootstrapped(db) {
   if (__BOOTSTRAP_STATE__.promise) return __BOOTSTRAP_STATE__.promise;
 
@@ -230,12 +243,16 @@ await ensureTable({
     token TEXT PRIMARY KEY,
     user_id INTEGER NOT NULL,
     username TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT,
+    last_client_activity_at INTEGER
   )`,
   addCols: [
     { col: "user_id", sql: "ALTER TABLE user_sessions ADD COLUMN user_id INTEGER" },
     { col: "username", sql: "ALTER TABLE user_sessions ADD COLUMN username TEXT" },
     { col: "created_at", sql: "ALTER TABLE user_sessions ADD COLUMN created_at TEXT" },
+    { col: "last_seen_at", sql: "ALTER TABLE user_sessions ADD COLUMN last_seen_at TEXT" },
+    { col: "last_client_activity_at", sql: "ALTER TABLE user_sessions ADD COLUMN last_client_activity_at INTEGER" },
   ],
   rebuildIfMissing: ["token", "user_id", "username"],
   requiredCols: ["token", "user_id", "username", "created_at"],
@@ -667,7 +684,8 @@ export default {
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-Requested-With, Accept, Origin, x-client-activity-at, x-admin-token",
   "Access-Control-Max-Age": "86400",
 };
 
@@ -960,7 +978,7 @@ const applyWalletDelta = async ({
       };
 
             // ✅ DB schema/seed 初始化：同一個 isolate 只跑一次（大幅加速）
-      // await ensureBootstrapped(db);
+      await ensureBootstrapped(db);
 
 
       const getCachedUserSession = async (token) => {
@@ -970,7 +988,7 @@ const applyWalletDelta = async ({
 
         const sess = await db
           .prepare(
-            `SELECT token, user_id, username, created_at
+            `SELECT token, user_id, username, created_at, last_seen_at, last_client_activity_at
              FROM user_sessions
              WHERE token=?
              LIMIT 1`
@@ -1043,7 +1061,41 @@ const applyWalletDelta = async ({
       const requireUser = async () => {
         const token = getAuth(request);
         if (!token) return null;
-        return await getCachedUserSession(token);
+
+        const sess = await getCachedUserSession(token);
+        if (!sess) return null;
+
+        const lastClientActivityAt = Number(sess.last_client_activity_at || 0);
+        const nowMs = Date.now();
+
+        if (lastClientActivityAt > 0 && nowMs - lastClientActivityAt > USER_INACTIVITY_LIMIT_MS) {
+          await db.prepare("DELETE FROM user_sessions WHERE token=?").bind(token).run();
+          hotCacheDel(`user_session:${String(token || '')}`);
+          return null;
+        }
+
+        const clientActivityAt = parseClientActivityHeader(request);
+        const updates = [];
+        const binds = [];
+
+        updates.push("last_seen_at=?");
+        binds.push(nowIso());
+
+        if (clientActivityAt && clientActivityAt > lastClientActivityAt) {
+          updates.push("last_client_activity_at=?");
+          binds.push(clientActivityAt);
+          sess.last_client_activity_at = clientActivityAt;
+        }
+
+        if (updates.length > 0) {
+          await db
+            .prepare(`UPDATE user_sessions SET ${updates.join(", ")} WHERE token=?`)
+            .bind(...binds, token)
+            .run();
+          hotCacheDel(`user_session:${String(token || '')}`);
+        }
+
+        return sess;
       };
 
       const ensureUsageRow = async (userId, activityKey) => {
@@ -1854,11 +1906,23 @@ if (url.pathname === "/auth/user/login" && request.method === "POST") {
   }
 
   const token = randToken();
+  const clientActivityAt = parseClientActivityHeader(request) || Date.now();
+
+  // 同一個使用者帳號只保留最新一個裝置/登入
+  await db.prepare("DELETE FROM user_sessions WHERE user_id=?").bind(Number(user.id)).run();
+
   await db
     .prepare(
-      "INSERT INTO user_sessions (token, user_id, username, created_at) VALUES (?,?,?,datetime('now'))"
+      "INSERT INTO user_sessions (token, user_id, username, created_at, last_seen_at, last_client_activity_at) VALUES (?,?,?,?,?,?)"
     )
-    .bind(token, Number(user.id), String(user.username))
+    .bind(
+      token,
+      Number(user.id),
+      String(user.username),
+      nowIso(),
+      nowIso(),
+      clientActivityAt
+    )
     .run();
 
   return json({
@@ -3704,7 +3768,9 @@ if (
 
 if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
         if (!admin) return forbid("Unauthorized", 401);
-        const id = Number(url.pathname.split("/").pop() || 0);
+        const parts = url.pathname.split("/").filter(Boolean);
+        const id = Number(parts[2] || 0);
+        if (!id) return json({ success: false, error: "bad user id" }, { status: 400 });
         const body = await safeJson(request);
 
         const cur = await db
@@ -3730,7 +3796,18 @@ if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
         };
 
         if (body.username !== undefined) setIf("username", String(body.username || "").trim());
-        if (body.password !== undefined) setIf("password", String(body.password || "").trim());
+        if (body.password !== undefined) {
+          const nextPassword = String(body.password ?? "").trim();
+          if (nextPassword) setIf("password", nextPassword);
+        }
+        if (body.new_password !== undefined) {
+          const nextPassword = String(body.new_password ?? "").trim();
+          if (nextPassword) setIf("password", nextPassword);
+        }
+        if (body.newPassword !== undefined) {
+          const nextPassword = String(body.newPassword ?? "").trim();
+          if (nextPassword) setIf("password", nextPassword);
+        }
         if (body.display_name !== undefined) setIf("display_name", String(body.display_name || ""));
         if (body.name !== undefined) setIf("display_name", String(body.name || ""));
         if (body.uses_left !== undefined) setIf("uses_left", Number(body.uses_left || 0));
