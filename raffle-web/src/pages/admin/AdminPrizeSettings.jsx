@@ -796,6 +796,9 @@ export default function AdminPrizeSettings() {
                         <input
                           className="input"
                           type="number"
+                          min="0"
+                          step="0.00001"
+                          inputMode="decimal"
                           value={Number(row.probability || 0)}
                           onChange={(e) => setWheelPrizes((prev) => prev.map((x, i) => (i === idx ? { ...x, probability: Number(e.target.value) } : x)))}
                           style={{ width: 80 }}
