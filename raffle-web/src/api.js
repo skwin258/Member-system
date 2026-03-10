@@ -4,6 +4,8 @@ const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
 
 const LS_TOKEN = "sk_token";
 const LS_ADMIN_TOKEN = "sk_admin_token";
+const LS_USER_LAST_ACTIVE_AT = "sk_user_last_active_at";
+const USER_IDLE_LIMIT_MS = 10 * 60 * 1000;
 
 const __GET_MEMO__ = new Map();
 
@@ -60,6 +62,25 @@ export function setToken(t) {
 }
 export function clearToken() {
   localStorage.removeItem(LS_TOKEN);
+  localStorage.removeItem(LS_USER_LAST_ACTIVE_AT);
+}
+
+export function getUserLastActiveAt() {
+  const n = Number(localStorage.getItem(LS_USER_LAST_ACTIVE_AT) || 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+export function touchUserActivity(ts = Date.now()) {
+  const n = Number(ts || 0);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  localStorage.setItem(LS_USER_LAST_ACTIVE_AT, String(Math.trunc(n)));
+  return Math.trunc(n);
+}
+
+export function isUserIdleExpired(now = Date.now()) {
+  const last = getUserLastActiveAt();
+  if (!last) return false;
+  return now - last >= USER_IDLE_LIMIT_MS;
 }
 
 export function getAdminToken() {
@@ -89,6 +110,8 @@ async function request(path, opts = {}) {
   if (auth === "user") {
     const t = getToken();
     if (t) headers.Authorization = `Bearer ${t}`;
+    const lastActiveAt = getUserLastActiveAt();
+    if (lastActiveAt > 0) headers["X-Client-Activity-At"] = String(lastActiveAt);
   } else if (auth === "admin") {
     const t = getAdminToken();
     if (t) headers.Authorization = `Bearer ${t}`;
@@ -186,7 +209,10 @@ export const api = {
       body: JSON.stringify({ username, password }),
     });
     const t = r?.token || r?.access_token || r?.data?.token || "";
-    if (r?.success && t) setToken(t);
+    if (r?.success && t) {
+      setToken(t);
+      touchUserActivity();
+    }
     return r;
   },
 

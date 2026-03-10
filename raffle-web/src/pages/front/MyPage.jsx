@@ -328,7 +328,7 @@ export default function MyPage({ me, onRefreshMe, goPage }) {
 
           <div className="myWalletRow">
             <div className="myWalletLeft">
-              <div className="myWalletLabel">福利金額</div>
+              <div className="myWalletLabel">福利金</div>
               <div className="myWalletAmount">{fmtNum(u.welfare_balance)}</div>
             </div>
             <button
@@ -336,7 +336,7 @@ export default function MyPage({ me, onRefreshMe, goPage }) {
               type="button"
               onClick={() => handleUseWallet("welfare_balance")}
             >
-              兌換
+              提現
             </button>
           </div>
 

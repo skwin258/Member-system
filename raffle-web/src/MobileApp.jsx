@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, clearToken, getToken } from "./api";
+import { api, clearToken, getToken, touchUserActivity, isUserIdleExpired } from "./api";
 import MobileShell from "./mobile/MobileShell.jsx";
 
 function isLikelyRefCode(code) {
@@ -134,6 +134,28 @@ export default function MobileApp() {
 
     return () => clearInterval(timer);
   }, [me?.user?.id, me?.success, refreshMeOnly]);
+
+  useEffect(() => {
+    if (!getToken()) return;
+
+    const markActive = () => touchUserActivity();
+    const events = ["pointerdown", "keydown", "touchstart", "scroll"];
+    events.forEach((evt) => window.addEventListener(evt, markActive, { passive: true }));
+    touchUserActivity();
+
+    const timer = setInterval(() => {
+      if (!getToken()) return;
+      if (!isUserIdleExpired()) return;
+      clearToken();
+      setMe(null);
+      window.alert("已超過 10 分鐘未操作，系統已自動登出");
+    }, 5000);
+
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, markActive));
+      clearInterval(timer);
+    };
+  }, [me?.success]);
 
 if (!ready) {
   return (

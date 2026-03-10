@@ -7,6 +7,8 @@ import {
   getAdminToken,
   setAdminToken,
   clearAdminToken,
+  touchUserActivity,
+  isUserIdleExpired,
 } from "./api";
 
 import AdminDashboard from "./pages/AdminDashboard.jsx";
@@ -149,6 +151,29 @@ export default function App() {
     return () => clearInterval(timer);
   }, [me?.user?.id, me?.success, refreshMeOnly]);
 
+  useEffect(() => {
+    if (isAdminPath()) return;
+    if (!getToken()) return;
+
+    const markActive = () => touchUserActivity();
+    const events = ["pointerdown", "keydown", "touchstart", "scroll"];
+    events.forEach((evt) => window.addEventListener(evt, markActive, { passive: true }));
+    touchUserActivity();
+
+    const timer = setInterval(() => {
+      if (!getToken()) return;
+      if (!isUserIdleExpired()) return;
+      clearToken();
+      setMe(null);
+      window.alert("已超過 10 分鐘未操作，系統已自動登出");
+    }, 5000);
+
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, markActive));
+      clearInterval(timer);
+    };
+  }, [me?.success]);
+
   const loadAdmin = useCallback(async () => {
     try {
       setAdminLoading(true);
@@ -197,6 +222,7 @@ export default function App() {
           <LoginBox
             mode="admin"
             onLoggedIn={async (loginRes) => {
+              touchUserActivity();
               const t = loginRes?.token || loginRes?.data?.token || loginRes?.access_token || "";
               if (!t) {
                 alert("後台登入成功但沒有拿到 token（請確認 api.adminLogin 回傳 token）");
