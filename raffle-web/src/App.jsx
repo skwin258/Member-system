@@ -115,10 +115,13 @@ export default function App() {
       if (!silent) setLoading(true);
 
       if (getToken()) {
-        const [meRes, actRes] = await Promise.all([
-          api.me({ force }),
-          api.activities({ force }),
-        ]);
+const [meResult, actResult] = await Promise.allSettled([
+  api.me({ force }),
+  api.activities({ force }),
+]);
+
+const meRes = meResult.status === "fulfilled" ? meResult.value : null;
+const actRes = actResult.status === "fulfilled" ? actResult.value : null;
         if (meRes?.success) setMe(meRes);
         else {
           clearToken();
