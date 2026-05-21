@@ -689,7 +689,7 @@ const banners = useMemo(
     <TechIcon type="treasure" />
     <div>
       <strong>奪寶專區</strong>
-      <span>紅包與輪盤活動</span>
+      <span>紅包 / 輪盤</span>
     </div>
   </button>
 
@@ -697,7 +697,7 @@ const banners = useMemo(
     <TechIcon type="shop" />
     <div>
       <strong>積分商城</strong>
-      <span>電子積分商城</span>
+      <span>商品兌換專區</span>
     </div>
   </button>
 
@@ -705,7 +705,7 @@ const banners = useMemo(
     <TechIcon type="invite" />
     <div>
       <strong>邀請好友</strong>
-      <span>好友邀請獎勵</span>
+      <span>推廣獎勵入口</span>
     </div>
   </button>
 
