@@ -277,8 +277,8 @@ export default function MobileShell({
 const banners = useMemo(
   () => [
     "/img/BANNER1.png?v=2",
-    "/img/BANNER2.png?v=1",
-    "/img/BANNER3.png?v=1",
+    "/img/BANNER2.png?v=2",
+    "/img/BANNER3.png?v=2",
   ],
   []
 );
