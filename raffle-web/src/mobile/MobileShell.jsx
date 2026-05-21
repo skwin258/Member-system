@@ -632,7 +632,7 @@ const banners = useMemo(
 
   <div className="mbInfoStats">
     <button className="mbInfoStatItem" type="button" onClick={() => handleGo("my")}>
-      <span>福利金額</span>
+      <span>福利金</span>
       <strong>{money(me?.user?.welfare_balance)}</strong>
     </button>
 
