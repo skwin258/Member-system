@@ -3,7 +3,7 @@ import "./mobileShell.css";
 import MobilePageFrame from "./MobilePageFrame.jsx";
 import { api } from "../api";
 import LoginBox from "../LoginBox";
-import RegisterModal from "../components/RegisterModal.jsx";
+// import RegisterModal from "../components/RegisterModal.jsx";
 
 import MobilePromoPage from "./MobilePromoPage.jsx";
 import TreasurePage from "./MobileTreasurePage.jsx";
@@ -271,7 +271,6 @@ export default function MobileShell({
   const [treasureTab, setTreasureTab] = useState("redpacket");
 
 const [showGuestAuth, setShowGuestAuth] = useState(false);
-const [showRegister, setShowRegister] = useState(false);
 
 const [electronicStatus, setElectronicStatus] = useState({
   loading: false,
@@ -312,12 +311,12 @@ const banners = useMemo(
     return () => clearInterval(timer);
   }, [banners.length]);
 
-  useEffect(() => {
-    if (!isGuest) return;
-    const code = String(refCode || "").trim();
-    if (!code) return;
-    setShowRegister(true);
-  }, [isGuest, refCode]);
+useEffect(() => {
+  if (!isGuest) return;
+  const code = String(refCode || "").trim();
+  if (!code) return;
+  setShowGuestAuth(true);
+}, [isGuest, refCode]);
 
   useEffect(() => {
   let alive = true;
@@ -605,13 +604,14 @@ const banners = useMemo(
   const authModal = showGuestAuth ? (
     <div className="mbAuthOverlay" onClick={() => setShowGuestAuth(false)}>
       <div className="mbAuthBox" onClick={(e) => e.stopPropagation()}>
-        <LoginBox
-          mode="user"
-          onLoggedIn={async () => {
-            setShowGuestAuth(false);
-            await onUserLoggedIn?.();
-          }}
-        />
+<LoginBox
+  mode="user"
+  referralCode={refCode || ""}
+  onLoggedIn={async () => {
+    setShowGuestAuth(false);
+    await onUserLoggedIn?.();
+  }}
+/>
       </div>
     </div>
   ) : null;
@@ -623,19 +623,6 @@ const electronicBadgeNumber = (() => {
   return String(Math.max(0, Number(electronicStatus.uses_left || 0)));
 })();
 
-  const registerModal = (
-    <RegisterModal
-      open={showRegister}
-      apiBase={import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787"}
-      referralCode={refCode || ""}
-      onClose={() => setShowRegister(false)}
-      onSuccess={() => {
-        setShowRegister(false);
-        window.location.href = "/";
-      }}
-    />
-  );
-
   if (activeKey !== "home") {
     return (
       <>
@@ -645,7 +632,6 @@ const electronicBadgeNumber = (() => {
           {renderBottomNav()}
         </div>
         {authModal}
-        {registerModal}
       </>
     );
   }
@@ -715,13 +701,13 @@ const electronicBadgeNumber = (() => {
         >
           登入
         </button>
-        <button
-          className="mbInfoBtn"
-          type="button"
-          onClick={() => setShowRegister(true)}
-        >
-          註冊
-        </button>
+<button
+  className="mbInfoBtn"
+  type="button"
+  onClick={() => setShowGuestAuth(true)}
+>
+  註冊
+</button>
       </>
     )}
   </div>
@@ -846,7 +832,6 @@ const electronicBadgeNumber = (() => {
       </div>
 
       {authModal}
-      {registerModal}
     </>
   );
 }
