@@ -198,7 +198,64 @@ export const api = {
     });
   },
 
+    /* -----------------
+   * Electronic Room Module
+   * 電子外掛選房權限
+  ----------------- */
 
+  // 會員查詢自己是否可使用電子外掛選房
+  async getElectronicRoomStatus() {
+    return await request("/module/electronic-room/status", {
+      method: "GET",
+      auth: "user",
+    });
+  },
+
+  // 會員使用一次電子外掛選房，成功後後端會扣 1 次
+  async useElectronicRoom() {
+    const res = await request("/module/electronic-room/use", {
+      method: "POST",
+      auth: "user",
+      body: JSON.stringify({}),
+    });
+
+    clearMemo([
+      memoKey("/auth/me", "user"),
+      memoKey("/me", "user"),
+      memoKey("/module/electronic-room/status", "user"),
+    ]);
+
+    return res;
+  },
+
+  // 建立電子老虎機通行 ticket
+async createElectronicRoomTicket() {
+  return await request("/module/electronic-room/ticket/create", {
+    method: "POST",
+    auth: "user",
+    body: JSON.stringify({}),
+  });
+},
+
+  // 後台設定會員電子外掛選房權限
+  async adminUpdateElectronicRoom(payload) {
+    return await request("/admin/module/electronic-room/update", {
+      method: "POST",
+      auth: "admin",
+      body: JSON.stringify(payload || {}),
+    });
+  },
+
+    // 後台查詢指定會員電子外掛選房權限
+  async adminGetElectronicRoomStatus(userId) {
+    return await request(
+      `/admin/module/electronic-room/status?user_id=${encodeURIComponent(userId)}`,
+      {
+        method: "GET",
+        auth: "admin",
+      }
+    );
+  },
 
   /* -----------------
    * User Auth
