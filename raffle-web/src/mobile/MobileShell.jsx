@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import "./mobileShell.css";
 import MobilePageFrame from "./MobilePageFrame.jsx";
+import { api } from "../api";
 import LoginBox from "../LoginBox";
 import RegisterModal from "../components/RegisterModal.jsx";
 
@@ -11,6 +12,7 @@ import SupportPage from "../pages/front/SupportPage.jsx";
 import MobileShopPage from "./MobileShopPage.jsx";
 import InvitePage from "../pages/front/InvitePage.jsx";
 import MobileMyPage from "./MobileMyPage.jsx";
+import MobileElectronicRoomPage from "./MobileElectronicRoomPage.jsx";
 
 function BottomNavIcon({ type, active = false }) {
   const cls = active ? "mbBottomSvg isActive" : "mbBottomSvg";
@@ -268,11 +270,20 @@ export default function MobileShell({
   const [recordsView, setRecordsView] = useState("raffle");
   const [treasureTab, setTreasureTab] = useState("redpacket");
 
-  const [showGuestAuth, setShowGuestAuth] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
+const [showGuestAuth, setShowGuestAuth] = useState(false);
+const [showRegister, setShowRegister] = useState(false);
 
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const bannerTrackRef = useRef(null);
+const [electronicStatus, setElectronicStatus] = useState({
+  loading: false,
+  loaded: false,
+  allowed: false,
+  uses_left: 0,
+  unlimited: 0,
+  message: "",
+});
+
+const [bannerIndex, setBannerIndex] = useState(0);
+const bannerTrackRef = useRef(null);
 
 const banners = useMemo(
   () => [
@@ -308,6 +319,73 @@ const banners = useMemo(
     setShowRegister(true);
   }, [isGuest, refCode]);
 
+  useEffect(() => {
+  let alive = true;
+
+  async function loadElectronicStatus() {
+    if (isGuest) {
+      setElectronicStatus({
+        loading: false,
+        loaded: true,
+        allowed: false,
+        uses_left: 0,
+        unlimited: 0,
+        message: "未登入",
+      });
+      return;
+    }
+
+    setElectronicStatus((prev) => ({
+      ...prev,
+      loading: true,
+    }));
+
+    try {
+      const res = await api.getElectronicRoomStatus();
+
+      if (!alive) return;
+
+      if (!res?.success) {
+        setElectronicStatus({
+          loading: false,
+          loaded: true,
+          allowed: false,
+          uses_left: 0,
+          unlimited: 0,
+          message: res?.error || "讀取失敗",
+        });
+        return;
+      }
+
+      setElectronicStatus({
+        loading: false,
+        loaded: true,
+        allowed: !!res.allowed,
+        uses_left: Number(res.uses_left || 0),
+        unlimited: Number(res.unlimited || 0),
+        message: res.message || "",
+      });
+    } catch (err) {
+      if (!alive) return;
+
+      setElectronicStatus({
+        loading: false,
+        loaded: true,
+        allowed: false,
+        uses_left: 0,
+        unlimited: 0,
+        message: "讀取失敗",
+      });
+    }
+  }
+
+  loadElectronicStatus();
+
+  return () => {
+    alive = false;
+  };
+}, [isGuest, me?.user?.id]);
+
   const menu = useMemo(
     () => [
       { key: "promo", title: "活動", guestAllowed: true },
@@ -316,6 +394,7 @@ const banners = useMemo(
       { key: "support", title: "客服", guestAllowed: true },
       { key: "shop", title: "商城", guestAllowed: true },
       { key: "invite", title: "邀請", guestAllowed: false },
+      { key: "electronicRoom", title: "電子老虎機", guestAllowed: false },
       { key: "my", title: "我的", guestAllowed: false },
     ],
     []
@@ -488,6 +567,16 @@ const banners = useMemo(
       );
     }
 
+    if (activeKey === "electronicRoom") {
+  if (isGuest) return null;
+
+  return (
+    <MobilePageFrame title="電子老虎機" onBack={() => setActiveKey("home")} plain={true}>
+      <MobileElectronicRoomPage onRefreshMe={onRefreshMe || onRefresh} />
+    </MobilePageFrame>
+  );
+}
+
     if (activeKey === "my") {
       if (isGuest) return null;
       return (
@@ -526,6 +615,13 @@ const banners = useMemo(
       </div>
     </div>
   ) : null;
+
+const electronicBadgeNumber = (() => {
+  if (electronicStatus.loading) return "...";
+  if (isGuest) return "0";
+  if (electronicStatus.unlimited) return "∞";
+  return String(Math.max(0, Number(electronicStatus.uses_left || 0)));
+})();
 
   const registerModal = (
     <RegisterModal
@@ -632,7 +728,7 @@ const banners = useMemo(
 
   <div className="mbInfoStats">
     <button className="mbInfoStatItem" type="button" onClick={() => handleGo("my")}>
-      <span>福利金</span>
+      <span>福利金額</span>
       <strong>{money(me?.user?.welfare_balance)}</strong>
     </button>
 
@@ -674,14 +770,40 @@ const banners = useMemo(
     <strong>運彩</strong>
   </button>
 
-  <button
-    className="mbAiCard blue"
-    type="button"
-    onClick={() => alert("尚在開發中")}
-  >
-    <TechIcon type="game" />
-    <strong>電子老虎機</strong>
-  </button>
+<button
+  className="mbAiCard blue"
+  type="button"
+  onClick={() => handleGo("electronicRoom")}
+>
+<span className="mbAiFlameBadge" aria-hidden="true">
+  <span className="mbAiFlameGlow" />
+
+  <svg className="mbAiFlameIcon" viewBox="0 0 64 64" fill="none">
+    <defs>
+      <linearGradient id="mbAiFlameGradRed" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#fff3b0" />
+        <stop offset="35%" stopColor="#ffb347" />
+        <stop offset="70%" stopColor="#ff5a36" />
+        <stop offset="100%" stopColor="#ff1f1f" />
+      </linearGradient>
+    </defs>
+
+    <path
+      d="M36 8c2 8-2 12-6 17-4 4-8 8-8 15 0 8 6 14 14 14s14-6 14-14c0-10-7-14-9-22-1 3-3 5-5 8 1-8-3-13-7-18h-3Z"
+      fill="url(#mbAiFlameGradRed)"
+    />
+    <path
+      d="M33 26c1 5-2 7-4 10-2 2-3 4-3 7 0 5 4 9 9 9s9-4 9-9c0-6-4-9-6-13-1 2-2 3-3 5 0-4-2-7-5-9h3Z"
+      fill="rgba(255,255,255,0.28)"
+    />
+  </svg>
+
+  <span className="mbAiFlameCount">{electronicBadgeNumber}</span>
+</span>
+
+  <TechIcon type="game" />
+  <strong>電子老虎機</strong>
+</button>
 </section>
 
 <section className="mbFeatureGrid">
@@ -689,7 +811,7 @@ const banners = useMemo(
     <TechIcon type="treasure" />
     <div>
       <strong>奪寶專區</strong>
-      <span>紅包 / 輪盤</span>
+      <span>紅包與輪盤活動</span>
     </div>
   </button>
 
@@ -697,7 +819,7 @@ const banners = useMemo(
     <TechIcon type="shop" />
     <div>
       <strong>積分商城</strong>
-      <span>商品兌換專區</span>
+      <span>電子積分商城</span>
     </div>
   </button>
 
@@ -705,7 +827,7 @@ const banners = useMemo(
     <TechIcon type="invite" />
     <div>
       <strong>邀請好友</strong>
-      <span>推廣獎勵入口</span>
+      <span>好友邀請獎勵</span>
     </div>
   </button>
 
