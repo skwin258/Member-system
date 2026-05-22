@@ -99,26 +99,39 @@ const handleLineLogin = async () => {
     const idToken = await getLineIdToken();
     if (!idToken) return;
 
-    // 先嘗試 LINE 登入
-    let data = await api.lineLogin({
-      id_token: idToken,
-    });
+    let data = null;
+    let loginErrMsg = "";
 
-    // 如果尚未註冊，自動改走 LINE 註冊
+    // 先嘗試 LINE 登入
+    try {
+      data = await api.lineLogin({
+        id_token: idToken,
+      });
+    } catch (loginErr) {
+      loginErrMsg = String(loginErr?.message || loginErr || "");
+      data = {
+        success: false,
+        error: loginErrMsg,
+      };
+    }
+
+    // 如果登入失敗，判斷是不是尚未註冊
     if (!data?.success) {
-      const msg = String(data?.error || data?.message || "");
+      const msg = String(data?.error || data?.message || loginErrMsg || "");
 
       const needRegister =
         msg.includes("尚未註冊") ||
         msg.includes("未註冊") ||
         msg.includes("not registered") ||
         msg.includes("找不到") ||
-        msg.includes("不存在");
+        msg.includes("不存在") ||
+        msg.includes("not found");
 
       if (!needRegister) {
         throw new Error(msg || "LINE登入失敗");
       }
 
+      // 尚未註冊 → 自動 LINE 註冊
       const referral_code = referralCode || getReferralCodeFromUrl();
 
       data = await api.lineRegister({
