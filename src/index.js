@@ -1521,7 +1521,7 @@ const user = await db
 
   if (!user) return forbid("User not found", 404);
 
-  const DEFAULT_SUPPORT_LINE_URL = "https://lin.ee/nJbstol";
+  const DEFAULT_SUPPORT_LINE_URL = "https://lin.ee/O3KwM94";
 
 let support_line_url = DEFAULT_SUPPORT_LINE_URL;
 

@@ -4,7 +4,7 @@ import "./SupportPage.css";
 export default function SupportPage({ me }) {
   const lineUrl = useMemo(() => {
     const raw = String(me?.user?.support_line_url || "").trim();
-    return raw || "https://lin.ee/nJbstol";
+    return raw || "https://lin.ee/O3KwM94";
   }, [me?.user?.support_line_url]);
 
   const openLine = () => {
