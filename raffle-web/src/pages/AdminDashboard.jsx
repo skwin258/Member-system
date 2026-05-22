@@ -12,6 +12,7 @@ import AdminWinners from "./admin/AdminWinners.jsx";
 import AdminChangePassword from "./admin/AdminChangePassword.jsx";
 import AdminPromotions from "./admin/AdminPromotions.jsx";
 import AdminShopPage from "./admin/AdminShopPage.jsx";
+import AdminAiControl from "./admin/AdminAiControl.jsx";
 
 function isAdminPath() {
   const p = window.location.pathname || "/";
@@ -47,6 +48,7 @@ export default function AdminDashboard({ adminMe, onAdminLogout }) {
       { key: "activity", title: "活動設定", desc: "活動時間・狀態與開關" },
       { key: "prizes", title: "獎項設定", desc: "獎率/獎項/輪盤設定" },
       { key: "users", title: "使用者控制", desc: "授權/停用/用量管理" },
+      { key: "aiControl", title: "AI控制", desc: "電子外掛/AI權限管理" },
       { key: "createUser", title: "新增使用者", desc: "建立帳號與初始權限" },
       { key: "promotions", title: "新增優惠", desc: "優惠圖/內容管理" },
       { key: "shop", title: "商城管理", desc: "跑馬燈/商品列表管理" },
@@ -187,6 +189,8 @@ export default function AdminDashboard({ adminMe, onAdminLogout }) {
           {tab === "prizes" && <AdminPrizeSettings adminMe={adminMe} />}
 
           {tab === "users" && <AdminUserControl adminMe={adminMe} />}
+
+          {tab === "aiControl" && <AdminAiControl adminMe={adminMe} />}
 
           {tab === "usersWallet" && <AdminUsers adminMe={adminMe} />}
 
