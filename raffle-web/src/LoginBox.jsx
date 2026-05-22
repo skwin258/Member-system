@@ -209,13 +209,13 @@ const handleLineLogin = async () => {
 
           {!isAdmin ? (
             <>
-              <button
-                onClick={handleLineLogin}
-                disabled={loading || lineLoading}
-                style={styles.lineBtn(lineLoading)}
-              >
-                {lineLoading ? "處理中..." : "LINE登入 / 註冊"}
-              </button>
+<button
+  onClick={handleLineRegister}
+  disabled={loading || lineLoading}
+  style={styles.lineBtn(lineLoading)}
+>
+  {lineLoading ? "處理中..." : "LINE登入 / 註冊"}
+</button>
 
               <button
                 onClick={() => {
