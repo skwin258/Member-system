@@ -236,6 +236,86 @@ await ensureTable({
   requiredCols: ["id", "username", "password", "enabled", "locked"],
 });
 
+await ensureTable({
+  name: "user_modules",
+  createSql: `CREATE TABLE IF NOT EXISTS user_modules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    module_key TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 0,
+    uses_left INTEGER NOT NULL DEFAULT 0,
+    unlimited INTEGER NOT NULL DEFAULT 0,
+    expire_at TEXT,
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
+  )`,
+  addCols: [
+    { col: "user_id", sql: "ALTER TABLE user_modules ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0" },
+    { col: "module_key", sql: "ALTER TABLE user_modules ADD COLUMN module_key TEXT NOT NULL DEFAULT ''" },
+    { col: "enabled", sql: "ALTER TABLE user_modules ADD COLUMN enabled INTEGER NOT NULL DEFAULT 0" },
+    { col: "uses_left", sql: "ALTER TABLE user_modules ADD COLUMN uses_left INTEGER NOT NULL DEFAULT 0" },
+    { col: "unlimited", sql: "ALTER TABLE user_modules ADD COLUMN unlimited INTEGER NOT NULL DEFAULT 0" },
+    { col: "expire_at", sql: "ALTER TABLE user_modules ADD COLUMN expire_at TEXT" },
+    { col: "note", sql: "ALTER TABLE user_modules ADD COLUMN note TEXT" },
+    { col: "created_at", sql: "ALTER TABLE user_modules ADD COLUMN created_at TEXT" },
+    { col: "updated_at", sql: "ALTER TABLE user_modules ADD COLUMN updated_at TEXT" },
+  ],
+  rebuildIfMissing: ["id", "user_id", "module_key"],
+  requiredCols: ["id", "user_id", "module_key", "enabled", "uses_left", "unlimited"],
+});
+
+await db.prepare(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_user_modules_user_module
+  ON user_modules(user_id, module_key)
+`).run();
+
+await db.prepare(`
+  CREATE INDEX IF NOT EXISTS idx_user_modules_user_id
+  ON user_modules(user_id)
+`).run();
+
+await db.prepare(`
+  CREATE INDEX IF NOT EXISTS idx_user_modules_module_key
+  ON user_modules(module_key)
+`).run();
+
+await ensureTable({
+  name: "module_tickets",
+  createSql: `CREATE TABLE IF NOT EXISTS module_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket TEXT UNIQUE NOT NULL,
+    user_id INTEGER NOT NULL,
+    module_key TEXT NOT NULL,
+    revoked INTEGER NOT NULL DEFAULT 0,
+    expires_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at TEXT
+  )`,
+  addCols: [
+    { col: "ticket", sql: "ALTER TABLE module_tickets ADD COLUMN ticket TEXT" },
+    { col: "user_id", sql: "ALTER TABLE module_tickets ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0" },
+    { col: "module_key", sql: "ALTER TABLE module_tickets ADD COLUMN module_key TEXT NOT NULL DEFAULT ''" },
+    { col: "revoked", sql: "ALTER TABLE module_tickets ADD COLUMN revoked INTEGER NOT NULL DEFAULT 0" },
+    { col: "expires_at", sql: "ALTER TABLE module_tickets ADD COLUMN expires_at TEXT" },
+    { col: "created_at", sql: "ALTER TABLE module_tickets ADD COLUMN created_at TEXT" },
+    { col: "last_used_at", sql: "ALTER TABLE module_tickets ADD COLUMN last_used_at TEXT" },
+    { col: "cycle_end_at", sql: "ALTER TABLE module_tickets ADD COLUMN cycle_end_at INTEGER NOT NULL DEFAULT 0" },
+  ],
+  rebuildIfMissing: ["id", "ticket", "user_id", "module_key"],
+  requiredCols: ["id", "ticket", "user_id", "module_key", "revoked"],
+});
+
+await db.prepare(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_module_tickets_ticket
+  ON module_tickets(ticket)
+`).run();
+
+await db.prepare(`
+  CREATE INDEX IF NOT EXISTS idx_module_tickets_user_module
+  ON module_tickets(user_id, module_key)
+`).run();
+
 // ---- user_sessions
 await ensureTable({
   name: "user_sessions",
@@ -1386,20 +1466,744 @@ return json({
 });
 };
 
-      /* =========================
-       * Routes
-       * ========================= */
-      if (url.pathname === "/" && request.method === "GET") return text("OK");
+/* =========================
+ * Routes
+ * ========================= */
+if (url.pathname === "/" && request.method === "GET") return text("OK");
 
-      // PUBLIC activities
-      if (url.pathname === "/activities" && request.method === "GET") {
-        const rows = await db
-          .prepare(
-            "SELECT activity_key, activity_name, enabled, default_times, start_at, end_at, updated_at FROM activities ORDER BY id ASC"
-          )
-          .all();
-        return json({ success: true, activities: rows?.results || [] });
-      }
+// =========================
+// MODULE: electronic room status
+// GET /module/electronic-room/status
+// 會員查詢自己是否有電子外掛選房權限
+// =========================
+if (url.pathname === "/module/electronic-room/status" && request.method === "GET") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+  const userId = Number(sess.user_id || 0);
+  if (!userId) {
+    return json({ success: false, error: "Bad session user_id" }, { status: 401 });
+  }
+
+  const moduleKey = "electronic_room";
+
+  const row = await db
+    .prepare(
+      `SELECT id, user_id, module_key, enabled, uses_left, unlimited, expire_at, note, updated_at
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  if (!row) {
+    return json({
+      success: true,
+      module_key: moduleKey,
+      enabled: 0,
+      allowed: false,
+      uses_left: 0,
+      unlimited: 0,
+      expire_at: "",
+      expired: false,
+      note: "",
+      message: "尚未開通電子外掛選房",
+    });
+  }
+
+  const expireAt = String(row.expire_at || "").trim();
+  const expireMs = expireAt ? parseTaipeiDateTimeToUtcMs(expireAt) : NaN;
+  const expired = Number.isFinite(expireMs) ? Date.now() > expireMs : false;
+
+  const enabled = Number(row.enabled || 0) === 1;
+  const unlimited = Number(row.unlimited || 0) === 1;
+  const usesLeft = Math.max(0, Number(row.uses_left || 0));
+
+  const allowed = enabled && !expired && (unlimited || usesLeft > 0);
+
+  return json({
+    success: true,
+    module_key: moduleKey,
+    enabled: enabled ? 1 : 0,
+    allowed,
+    uses_left: usesLeft,
+    unlimited: unlimited ? 1 : 0,
+    expire_at: expireAt,
+    expired,
+    note: String(row.note || ""),
+    message: allowed
+      ? "電子外掛選房可使用"
+      : !enabled
+        ? "尚未開通電子外掛選房"
+        : expired
+          ? "電子外掛選房權限已到期"
+          : "電子外掛選房使用次數不足",
+  });
+}
+
+// =========================
+// ADMIN: update electronic room permission
+// POST /admin/module/electronic-room/update
+// 後台設定會員電子外掛選房權限
+// =========================
+if (url.pathname === "/admin/module/electronic-room/update" && request.method === "POST") {
+  const admin = await requireAdmin();
+  if (!admin) return forbid("Admin Unauthorized", 401);
+
+  const body = await safeJson(request);
+
+  const userId = Number(body.user_id || body.userId || 0);
+  const enabled = Number(body.enabled || 0) === 1 ? 1 : 0;
+  const usesLeft = Math.max(0, Number(body.uses_left || body.usesLeft || 0));
+  const unlimited = Number(body.unlimited || 0) === 1 ? 1 : 0;
+  const expireAt = String(body.expire_at || body.expireAt || "").trim();
+  const note = String(body.note || "").trim();
+
+  if (!userId) {
+    return json({ success: false, error: "缺少 user_id" }, { status: 400 });
+  }
+
+  const user = await db
+    .prepare("SELECT id, username, display_name FROM users WHERE id=? LIMIT 1")
+    .bind(userId)
+    .first();
+
+  if (!user) {
+    return json({ success: false, error: "找不到會員" }, { status: 404 });
+  }
+
+  const moduleKey = "electronic_room";
+
+  await db
+    .prepare(
+      `INSERT INTO user_modules
+       (user_id, module_key, enabled, uses_left, unlimited, expire_at, note, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+       ON CONFLICT(user_id, module_key)
+       DO UPDATE SET
+         enabled=excluded.enabled,
+         uses_left=excluded.uses_left,
+         unlimited=excluded.unlimited,
+         expire_at=excluded.expire_at,
+         note=excluded.note,
+         updated_at=datetime('now')`
+    )
+    .bind(
+      userId,
+      moduleKey,
+      enabled,
+      usesLeft,
+      unlimited,
+      expireAt || null,
+      note
+    )
+    .run();
+
+  const row = await db
+    .prepare(
+      `SELECT id, user_id, module_key, enabled, uses_left, unlimited, expire_at, note, updated_at
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  return json({
+    success: true,
+    message: "電子外掛選房權限已更新",
+    user: {
+      id: Number(user.id),
+      username: String(user.username || ""),
+      display_name: String(user.display_name || ""),
+    },
+    module: {
+      module_key: moduleKey,
+      enabled: Number(row.enabled || 0),
+      uses_left: Number(row.uses_left || 0),
+      unlimited: Number(row.unlimited || 0),
+      expire_at: String(row.expire_at || ""),
+      note: String(row.note || ""),
+      updated_at: toTaipeiStringFromUtc(row.updated_at),
+    },
+  });
+}
+
+// =========================
+// MODULE: electronic room use
+// POST /module/electronic-room/use
+// 會員使用一次電子外掛選房，成功才扣次數
+// =========================
+if (url.pathname === "/module/electronic-room/use" && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+  const userId = Number(sess.user_id || 0);
+  if (!userId) {
+    return json({ success: false, error: "Bad session user_id" }, { status: 401 });
+  }
+
+  const moduleKey = "electronic_room";
+
+  const row = await db
+    .prepare(
+      `SELECT id, user_id, module_key, enabled, uses_left, unlimited, expire_at, note
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  if (!row) {
+    return json({
+      success: false,
+      error: "尚未開通電子外掛選房",
+      code: "MODULE_NOT_OPENED",
+    }, { status: 403 });
+  }
+
+  const enabled = Number(row.enabled || 0) === 1;
+  if (!enabled) {
+    return json({
+      success: false,
+      error: "電子外掛選房尚未開通",
+      code: "MODULE_DISABLED",
+    }, { status: 403 });
+  }
+
+  const expireAt = String(row.expire_at || "").trim();
+  const expireMs = expireAt ? parseTaipeiDateTimeToUtcMs(expireAt) : NaN;
+  const expired = Number.isFinite(expireMs) ? Date.now() > expireMs : false;
+
+  if (expired) {
+    return json({
+      success: false,
+      error: "電子外掛選房權限已到期",
+      code: "MODULE_EXPIRED",
+      expire_at: expireAt,
+    }, { status: 403 });
+  }
+
+  const unlimited = Number(row.unlimited || 0) === 1;
+
+  // 無限使用：不扣次數，直接通過
+  if (unlimited) {
+    return json({
+      success: true,
+      message: "電子外掛選房可使用",
+      module_key: moduleKey,
+      unlimited: 1,
+      uses_left: Number(row.uses_left || 0),
+      deducted: 0,
+    });
+  }
+
+  const usesLeft = Math.max(0, Number(row.uses_left || 0));
+
+  if (usesLeft <= 0) {
+    return json({
+      success: false,
+      error: "電子外掛選房使用次數不足",
+      code: "NO_USES_LEFT",
+      uses_left: 0,
+    }, { status: 403 });
+  }
+
+  const upd = await db
+    .prepare(
+      `UPDATE user_modules
+       SET uses_left = uses_left - 1,
+           updated_at = datetime('now')
+       WHERE user_id=? 
+         AND module_key=?
+         AND enabled=1
+         AND unlimited=0
+         AND uses_left > 0`
+    )
+    .bind(userId, moduleKey)
+    .run();
+
+  if (Number(upd?.meta?.changes || 0) <= 0) {
+    return json({
+      success: false,
+      error: "扣除次數失敗，請重新整理後再試",
+      code: "DEDUCT_FAILED",
+    }, { status: 409 });
+  }
+
+  const after = await db
+    .prepare(
+      `SELECT uses_left, unlimited, expire_at
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  return json({
+    success: true,
+    message: "電子外掛選房使用成功，已扣除 1 次",
+    module_key: moduleKey,
+    unlimited: Number(after?.unlimited || 0),
+    uses_left: Math.max(0, Number(after?.uses_left || 0)),
+    expire_at: String(after?.expire_at || ""),
+    deducted: 1,
+  });
+}
+
+// =========================
+// ADMIN: get electronic room permission
+// GET /admin/module/electronic-room/status?user_id=123
+// 後台查詢指定會員電子外掛選房權限
+// =========================
+if (url.pathname === "/admin/module/electronic-room/status" && request.method === "GET") {
+  const admin = await requireAdmin();
+  if (!admin) return forbid("Admin Unauthorized", 401);
+
+  const userId = Number(url.searchParams.get("user_id") || url.searchParams.get("userId") || 0);
+
+  if (!userId) {
+    return json({ success: false, error: "缺少 user_id" }, { status: 400 });
+  }
+
+  const user = await db
+    .prepare("SELECT id, username, display_name FROM users WHERE id=? LIMIT 1")
+    .bind(userId)
+    .first();
+
+  if (!user) {
+    return json({ success: false, error: "找不到會員" }, { status: 404 });
+  }
+
+  const moduleKey = "electronic_room";
+
+  const row = await db
+    .prepare(
+      `SELECT id, user_id, module_key, enabled, uses_left, unlimited, expire_at, note, updated_at
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  return json({
+    success: true,
+    user: {
+      id: Number(user.id),
+      username: String(user.username || ""),
+      display_name: String(user.display_name || ""),
+    },
+    module: row
+      ? {
+          module_key: moduleKey,
+          enabled: Number(row.enabled || 0),
+          uses_left: Number(row.uses_left || 0),
+          unlimited: Number(row.unlimited || 0),
+          expire_at: String(row.expire_at || ""),
+          note: String(row.note || ""),
+          updated_at: toTaipeiStringFromUtc(row.updated_at),
+        }
+      : {
+          module_key: moduleKey,
+          enabled: 0,
+          uses_left: 0,
+          unlimited: 0,
+          expire_at: "",
+          note: "",
+          updated_at: "",
+        },
+  });
+}
+
+// =========================
+// MODULE: create electronic room ticket
+// POST /module/electronic-room/ticket/create
+// SKCLUB 會員點電子老虎機時，產生短效 ticket 給 seth-site 使用
+// =========================
+if (url.pathname === "/module/electronic-room/ticket/create" && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+  const userId = Number(sess.user_id || 0);
+  if (!userId) return forbid("Unauthorized", 401);
+
+  const moduleKey = "electronic_room";
+
+  const row = await db
+    .prepare(
+      `SELECT id, enabled, uses_left, unlimited, expire_at
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  if (!row || Number(row.enabled || 0) !== 1) {
+    return json({
+      success: false,
+      error: "尚未開通電子老虎機權限",
+      code: "MODULE_NOT_OPENED",
+    }, { status: 403 });
+  }
+
+  const expireAt = String(row.expire_at || "").trim();
+  const expireMs = expireAt ? parseTaipeiDateTimeToUtcMs(expireAt) : NaN;
+  const expired = Number.isFinite(expireMs) ? Date.now() > expireMs : false;
+
+  if (expired) {
+    return json({
+      success: false,
+      error: "電子老虎機權限已到期",
+      code: "MODULE_EXPIRED",
+    }, { status: 403 });
+  }
+
+  const unlimited = Number(row.unlimited || 0) === 1;
+  const usesLeft = Math.max(0, Number(row.uses_left || 0));
+
+  if (!unlimited && usesLeft <= 0) {
+    return json({
+      success: false,
+      error: "電子老虎機使用次數不足",
+      code: "NO_USES_LEFT",
+      uses_left: 0,
+    }, { status: 403 });
+  }
+
+  const ticket = randToken() + randToken();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
+
+  await db
+    .prepare(
+      `INSERT INTO module_tickets
+       (ticket, user_id, module_key, revoked, expires_at, created_at)
+       VALUES (?, ?, ?, 0, ?, datetime('now'))`
+    )
+    .bind(ticket, userId, moduleKey, expiresAt)
+    .run();
+
+  return json({
+    success: true,
+    ticket,
+    expires_at: expiresAt,
+    uses_left: usesLeft,
+    unlimited: unlimited ? 1 : 0,
+  });
+}
+
+// =========================
+// MODULE: use electronic room ticket
+// POST /module/electronic-room/ticket/use
+// seth-site 使用 ticket 登入 SKCLUB 電子選房
+// 規則：
+// 1. 同一會員 5 分鐘內重新進入，不扣次數
+// 2. 沒有有效 5 分鐘週期時，才扣 1 次並開新 5 分鐘
+// =========================
+if (url.pathname === "/module/electronic-room/ticket/use" && request.method === "POST") {
+  const body = await safeJson(request);
+  const ticket = String(body.ticket || "").trim();
+
+  if (!ticket) {
+    return json({ success: false, error: "缺少 ticket" }, { status: 400 });
+  }
+
+  const moduleKey = "electronic_room";
+  const nowMs = Date.now();
+  const cycleMs = 5 * 60 * 1000;
+
+  const tk = await db
+    .prepare(
+      `SELECT id, ticket, user_id, module_key, revoked, expires_at, last_used_at, cycle_end_at
+       FROM module_tickets
+       WHERE ticket=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(ticket, moduleKey)
+    .first();
+
+  if (!tk || Number(tk.revoked || 0) === 1) {
+    return json({
+      success: false,
+      error: "通行碼無效",
+      code: "BAD_TICKET",
+    }, { status: 401 });
+  }
+
+  const ticketExpireMs = tk.expires_at
+    ? Date.parse(String(tk.expires_at).replace(" ", "T") + "Z")
+    : NaN;
+
+  if (Number.isFinite(ticketExpireMs) && nowMs > ticketExpireMs) {
+    return json({
+      success: false,
+      error: "通行碼已過期，請從 SKCLUB 重新進入",
+      code: "TICKET_EXPIRED",
+    }, { status: 401 });
+  }
+
+  const userId = Number(tk.user_id || 0);
+
+  if (!userId) {
+    return json({
+      success: false,
+      error: "通行碼會員資料錯誤",
+      code: "BAD_USER",
+    }, { status: 401 });
+  }
+
+  const user = await db
+    .prepare(
+      `SELECT id, username, display_name, enabled, locked
+       FROM users
+       WHERE id=?
+       LIMIT 1`
+    )
+    .bind(userId)
+    .first();
+
+  if (!user) {
+    return json({
+      success: false,
+      error: "找不到會員",
+      code: "USER_NOT_FOUND",
+    }, { status: 404 });
+  }
+
+  if (Number(user.enabled || 0) !== 1 || Number(user.locked || 0) === 1) {
+    return json({
+      success: false,
+      error: "會員已停用或鎖定",
+      code: "USER_DISABLED",
+    }, { status: 403 });
+  }
+
+  const row = await db
+    .prepare(
+      `SELECT id, enabled, uses_left, unlimited, expire_at
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  if (!row || Number(row.enabled || 0) !== 1) {
+    return json({
+      success: false,
+      error: "電子老虎機權限未開通或已停用",
+      code: "MODULE_DISABLED",
+    }, { status: 403 });
+  }
+
+  const expireAt = String(row.expire_at || "").trim();
+  const expireMs = expireAt ? parseTaipeiDateTimeToUtcMs(expireAt) : NaN;
+  const expired = Number.isFinite(expireMs) ? nowMs > expireMs : false;
+
+  if (expired) {
+    return json({
+      success: false,
+      error: "電子老虎機權限已到期",
+      code: "MODULE_EXPIRED",
+    }, { status: 403 });
+  }
+
+  const unlimited = Number(row.unlimited || 0) === 1;
+
+  // ✅ 這裡是重點：
+  // 不能只看目前 ticket，因為每次從 SKCLUB 首頁點進來都會建立新 ticket。
+  // 要查同一個 user_id 是否已經有尚未過期的 cycle_end_at。
+  const activeCycle = await db
+    .prepare(
+      `SELECT id, cycle_end_at
+       FROM module_tickets
+       WHERE user_id=?
+         AND module_key=?
+         AND revoked=0
+         AND cycle_end_at IS NOT NULL
+         AND cycle_end_at > ?
+       ORDER BY cycle_end_at DESC
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey, nowMs)
+    .first();
+
+  if (activeCycle?.cycle_end_at) {
+    const activeCycleEndAt = Number(activeCycle.cycle_end_at || 0);
+
+    // 把這次新 ticket 也同步到目前有效倒數
+    await db
+      .prepare(
+        `UPDATE module_tickets
+         SET last_used_at=datetime('now'),
+             cycle_end_at=?
+         WHERE id=?`
+      )
+      .bind(activeCycleEndAt, Number(tk.id))
+      .run();
+
+    const currentModule = await db
+      .prepare(
+        `SELECT uses_left, unlimited
+         FROM user_modules
+         WHERE user_id=? AND module_key=?
+         LIMIT 1`
+      )
+      .bind(userId, moduleKey)
+      .first();
+
+    const displayName =
+      String(user.display_name || "").trim() ||
+      String(user.username || "").trim() ||
+      `SKCLUB會員${userId}`;
+
+    return json({
+      success: true,
+      message: "目前仍在 5 分鐘使用時間內，不扣次數",
+      user_id: userId,
+      username: String(user.username || ""),
+      name: displayName,
+      display_name: displayName,
+      module_key: moduleKey,
+      unlimited: Number(currentModule?.unlimited || 0),
+      uses_left: Math.max(0, Number(currentModule?.uses_left || 0)),
+      cycle_ms: cycleMs,
+      cycle_end_at: activeCycleEndAt,
+      reused: 1,
+      deducted: 0,
+    });
+  }
+
+  // ✅ 沒有有效 5 分鐘週期，才開始扣次數
+  if (unlimited) {
+    const nextCycleEndAt = nowMs + cycleMs;
+
+    await db
+      .prepare(
+        `UPDATE module_tickets
+         SET last_used_at=datetime('now'),
+             cycle_end_at=?
+         WHERE id=?`
+      )
+      .bind(nextCycleEndAt, Number(tk.id))
+      .run();
+
+    const displayName =
+      String(user.display_name || "").trim() ||
+      String(user.username || "").trim() ||
+      `SKCLUB會員${userId}`;
+
+    return json({
+      success: true,
+      message: "使用成功",
+      user_id: userId,
+      username: String(user.username || ""),
+      name: displayName,
+      display_name: displayName,
+      module_key: moduleKey,
+      unlimited: 1,
+      uses_left: Number(row.uses_left || 0),
+      cycle_ms: cycleMs,
+      cycle_end_at: nextCycleEndAt,
+      reused: 0,
+      deducted: 0,
+    });
+  }
+
+  const usesLeft = Math.max(0, Number(row.uses_left || 0));
+
+  if (usesLeft <= 0) {
+    return json({
+      success: false,
+      error: "電子老虎機使用次數不足",
+      code: "NO_USES_LEFT",
+      uses_left: 0,
+    }, { status: 403 });
+  }
+
+  const upd = await db
+    .prepare(
+      `UPDATE user_modules
+       SET uses_left = uses_left - 1,
+           updated_at = datetime('now')
+       WHERE user_id=?
+         AND module_key=?
+         AND enabled=1
+         AND unlimited=0
+         AND uses_left > 0`
+    )
+    .bind(userId, moduleKey)
+    .run();
+
+  if (Number(upd?.meta?.changes || 0) <= 0) {
+    return json({
+      success: false,
+      error: "電子老虎機使用次數不足",
+      code: "NO_USES_LEFT",
+      uses_left: 0,
+    }, { status: 403 });
+  }
+
+  const after = await db
+    .prepare(
+      `SELECT uses_left, unlimited
+       FROM user_modules
+       WHERE user_id=? AND module_key=?
+       LIMIT 1`
+    )
+    .bind(userId, moduleKey)
+    .first();
+
+  const nextCycleEndAt = nowMs + cycleMs;
+
+  await db
+    .prepare(
+      `UPDATE module_tickets
+       SET last_used_at=datetime('now'),
+           cycle_end_at=?
+       WHERE id=?`
+    )
+    .bind(nextCycleEndAt, Number(tk.id))
+    .run();
+
+  const displayName =
+    String(user.display_name || "").trim() ||
+    String(user.username || "").trim() ||
+    `SKCLUB會員${userId}`;
+
+  return json({
+    success: true,
+    message: "使用成功，已扣除 1 次",
+    user_id: userId,
+    username: String(user.username || ""),
+    name: displayName,
+    display_name: displayName,
+    module_key: moduleKey,
+    unlimited: Number(after?.unlimited || 0),
+    uses_left: Math.max(0, Number(after?.uses_left || 0)),
+    cycle_ms: cycleMs,
+    cycle_end_at: nextCycleEndAt,
+    reused: 0,
+    deducted: 1,
+  });
+}
+
+// PUBLIC activities
+if (url.pathname === "/activities" && request.method === "GET") {
+  const rows = await db
+    .prepare(
+      "SELECT activity_key, activity_name, enabled, default_times, start_at, end_at, updated_at FROM activities ORDER BY id ASC"
+    )
+    .all();
+  return json({ success: true, activities: rows?.results || [] });
+}
 
 // =========================
 // SHOP (public): products list
