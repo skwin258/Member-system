@@ -1,5 +1,5 @@
 // raffle-web/src/LoginBox.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, setToken, setAdminToken } from "./api";
 
 /**
@@ -13,7 +13,12 @@ import { api, setToken, setAdminToken } from "./api";
  * 3. 前台「註冊」不再開放帳號密碼註冊，只顯示「使用 LINE 註冊」
  * 4. 後台管理員登入不顯示 LINE登入 / 註冊
  */
-export default function LoginBox({ onLoggedIn, mode = "user", referralCode = "" }) {
+export default function LoginBox({
+  onLoggedIn,
+  mode = "user",
+  referralCode = "",
+  defaultView = "login",
+}) {
   const isAdmin = String(mode).toLowerCase() === "admin";
 
   const [username, setUsername] = useState("");
@@ -24,10 +29,23 @@ export default function LoginBox({ onLoggedIn, mode = "user", referralCode = "" 
   const [lineLoading, setLineLoading] = useState(false);
   const [registerErr, setRegisterErr] = useState("");
 
+useEffect(() => {
+  if (isAdmin) return;
+
+  if (defaultView === "register") {
+    setOpenRegister(true);
+    setRegisterErr("");
+    return;
+  }
+
+  setOpenRegister(false);
+  setRegisterErr("");
+}, [defaultView, isAdmin]);
+
   const title = useMemo(() => (isAdmin ? "管理端登入" : "會員登入"), [isAdmin]);
   const hint = useMemo(() => {
     if (isAdmin) return "請輸入管理員帳號密碼";
-    return "舊會員與後台建立會員可使用帳號密碼登入，新會員請使用 LINE 註冊";
+    return "已註冊會員可使用帳號密碼登入，新會員請使用 LINE 註冊";
   }, [isAdmin]);
 
   const saveLoginToken = (data) => {
@@ -267,7 +285,7 @@ const handleLineLogin = async () => {
               <div style={styles.registerTextBox}>
                 <div style={styles.registerTitle}>使用 LINE 註冊</div>
                 <div style={styles.registerDesc}>
-                  使用 LINE 授權建立會員資料。舊會員與後台建立會員請回登入畫面使用帳號密碼登入。
+                  使用 LINE 授權建立會員資料。已註冊會員請回登入畫面使用帳號密碼登入。
                 </div>
               </div>
             </div>

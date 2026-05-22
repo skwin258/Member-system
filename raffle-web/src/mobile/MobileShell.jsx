@@ -271,6 +271,7 @@ export default function MobileShell({
   const [treasureTab, setTreasureTab] = useState("redpacket");
 
 const [showGuestAuth, setShowGuestAuth] = useState(false);
+const [authDefaultView, setAuthDefaultView] = useState("login");
 
 const [electronicStatus, setElectronicStatus] = useState({
   loading: false,
@@ -315,6 +316,7 @@ useEffect(() => {
   if (!isGuest) return;
   const code = String(refCode || "").trim();
   if (!code) return;
+  setAuthDefaultView("register");
   setShowGuestAuth(true);
 }, [isGuest, refCode]);
 
@@ -404,10 +406,11 @@ useEffect(() => {
     return n.toLocaleString("en-US");
   }
 
-  function needLogin() {
-    alert("請先登入");
-    setShowGuestAuth(true);
-  }
+function needLogin() {
+  alert("請先登入");
+  setAuthDefaultView("login");
+  setShowGuestAuth(true);
+}
 
   function handleGo(key) {
     const target = menu.find((m) => m.key === key);
@@ -607,8 +610,10 @@ useEffect(() => {
 <LoginBox
   mode="user"
   referralCode={refCode || ""}
+  defaultView={authDefaultView}
   onLoggedIn={async () => {
     setShowGuestAuth(false);
+    setAuthDefaultView("login");
     await onUserLoggedIn?.();
   }}
 />
@@ -694,17 +699,24 @@ const electronicBadgeNumber = (() => {
       </>
     ) : (
       <>
-        <button
-          className="mbInfoBtn"
-          type="button"
-          onClick={() => setShowGuestAuth(true)}
-        >
-          登入
-        </button>
 <button
   className="mbInfoBtn"
   type="button"
-  onClick={() => setShowGuestAuth(true)}
+  onClick={() => {
+    setAuthDefaultView("login");
+    setShowGuestAuth(true);
+  }}
+>
+  登入
+</button>
+
+<button
+  className="mbInfoBtn"
+  type="button"
+  onClick={() => {
+    setAuthDefaultView("register");
+    setShowGuestAuth(true);
+  }}
 >
   註冊
 </button>
