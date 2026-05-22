@@ -509,6 +509,13 @@ await tryRun("CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_cod
 await tryRun("ALTER TABLE referrals ADD COLUMN verified_rewarded_at TEXT");
 await tryRun("ALTER TABLE users ADD COLUMN first_wheel_forced_done INTEGER NOT NULL DEFAULT 0");
 
+// LINE Login / LIFF 專用欄位
+await tryRun("ALTER TABLE users ADD COLUMN line_user_id TEXT");
+await tryRun("ALTER TABLE users ADD COLUMN line_display_name TEXT");
+await tryRun("ALTER TABLE users ADD COLUMN line_picture_url TEXT");
+await tryRun("ALTER TABLE users ADD COLUMN login_provider TEXT DEFAULT 'password'");
+await tryRun("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_line_user_id ON users(line_user_id) WHERE line_user_id IS NOT NULL AND line_user_id != ''");
+
 // ---- promotions（優惠內容：列表圖片 + 點擊彈窗顯示 HTML）
 // 位置：referrals / referral_codes index 之後，seed activities 之前
 await ensureTable({
@@ -896,6 +903,127 @@ const safeJson = async (req) => {
       const randToken = () => {
         const a = crypto.getRandomValues(new Uint8Array(16));
         return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
+      };
+
+      const getLineChannelId = () =>
+        String(
+          env.LINE_LOGIN_CHANNEL_ID ||
+          env.LINE_CHANNEL_ID ||
+          env.VITE_LINE_CHANNEL_ID ||
+          ""
+        ).trim();
+
+      const verifyLineIdToken = async (idToken) => {
+        const token = String(idToken || "").trim();
+        const clientId = getLineChannelId();
+
+        if (!clientId) {
+          return {
+            ok: false,
+            error: "尚未設定 LINE_LOGIN_CHANNEL_ID，請先在 Cloudflare Worker 環境變數設定 LINE Login Channel ID",
+          };
+        }
+
+        if (!token) {
+          return { ok: false, error: "缺少 LINE id_token" };
+        }
+
+        const body = new URLSearchParams();
+        body.set("id_token", token);
+        body.set("client_id", clientId);
+
+        const res = await fetch("https://api.line.me/oauth2/v2.1/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+        });
+
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (_) {
+          data = null;
+        }
+
+        if (!res.ok || !data?.sub) {
+          return {
+            ok: false,
+            error: data?.error_description || data?.error || "LINE 授權驗證失敗",
+            raw: data,
+          };
+        }
+
+        return {
+          ok: true,
+          lineUser: {
+            sub: String(data.sub || "").trim(),
+            name: String(data.name || "LINE會員").trim(),
+            picture: String(data.picture || "").trim(),
+            email: String(data.email || "").trim(),
+          },
+        };
+      };
+
+      const makeLineUsername = async (lineUserId) => {
+        const clean = String(lineUserId || "")
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .slice(-12) || randToken().slice(0, 10);
+
+        let base = `line_${clean}`.toLowerCase();
+        if (base.length < 8) base = `line_${randToken().slice(0, 10)}`;
+
+        for (let i = 0; i < 20; i++) {
+          const candidate = i === 0 ? base : `${base}_${i}`;
+          const exists = await db
+            .prepare("SELECT id FROM users WHERE username=? LIMIT 1")
+            .bind(candidate)
+            .first();
+          if (!exists) return candidate;
+        }
+
+        return `line_${randToken().slice(0, 16)}`;
+      };
+
+      const createUserLoginSession = async (user) => {
+        const token = randToken();
+        const userId = Number(user.id || user.user_id || 0);
+        const username = String(user.username || "");
+        const clientActivityAt = parseClientActivityHeader(request) || Date.now();
+
+        await db.prepare("DELETE FROM user_sessions WHERE user_id=?").bind(userId).run();
+
+        await db
+          .prepare(
+            "INSERT INTO user_sessions (token, user_id, username, created_at, last_seen_at, last_client_activity_at) VALUES (?,?,?,?,?,?)"
+          )
+          .bind(token, userId, username, nowIso(), nowIso(), clientActivityAt)
+          .run();
+
+        return json({
+          success: true,
+          token,
+          user: {
+            user_id: userId,
+            username,
+            display_name: user.display_name || user.line_display_name || "",
+            welfare_balance: Number(user.welfare_balance || 0),
+            discount_balance: Number(user.discount_balance || 0),
+            s_balance: Number(user.s_balance || 0),
+            line_id: user.line_id || "",
+            line_user_id: user.line_user_id || "",
+            line_display_name: user.line_display_name || "",
+            line_picture_url: user.line_picture_url || "",
+            birthday: user.birthday || "",
+            bank_holder: user.bank_holder || "",
+            bank_name: user.bank_name || "",
+            bank_branch: user.bank_branch || "",
+            bank_account: user.bank_account || "",
+            line_verified: Number(user.line_verified || 0),
+            num_authorized: Number(user.num_authorized || 0),
+            uses_left: Number(user.uses_left || 0),
+            times_override: user.times_override === null ? null : Number(user.times_override || 0),
+          },
+        });
       };
 
       const getAuth = (req) => {
@@ -2540,6 +2668,227 @@ return json({
     created_at: toTaipeiStringFromUtc(r.created_at),
   })),
 });
+}
+
+// =========================
+// AUTH: LINE login
+// POST /auth/line/login
+// body: { id_token }
+// =========================
+if (url.pathname === "/auth/line/login" && request.method === "POST") {
+  const body = await safeJson(request);
+  const verified = await verifyLineIdToken(body.id_token || body.idToken);
+
+  if (!verified.ok) {
+    return json({ success: false, error: verified.error, raw: verified.raw || null }, { status: 401 });
+  }
+
+  const lineUserId = String(verified.lineUser.sub || "").trim();
+  const user = await db
+    .prepare(
+      `SELECT id, username, password, display_name,
+              welfare_balance, discount_balance, s_balance,
+              line_id, line_user_id, line_display_name, line_picture_url,
+              birthday, bank_holder, bank_name, bank_branch, bank_account,
+              line_verified, num_authorized, uses_left, times_override,
+              enabled, locked
+       FROM users
+       WHERE line_user_id=?
+       LIMIT 1`
+    )
+    .bind(lineUserId)
+    .first();
+
+  if (!user) {
+    return json(
+      { success: false, error: "尚未使用 LINE 註冊，請先點註冊並使用 LINE 註冊", code: "LINE_NOT_REGISTERED" },
+      { status: 404 }
+    );
+  }
+
+  if (Number(user.enabled || 0) !== 1) {
+    return json({ success: false, error: "帳號已停用" }, { status: 403 });
+  }
+  if (Number(user.locked || 0) === 1) {
+    return json({ success: false, error: "帳號已鎖定" }, { status: 403 });
+  }
+
+  // 同步最新 LINE 顯示名稱/頭像
+  await db
+    .prepare("UPDATE users SET line_display_name=?, line_picture_url=? WHERE id=?")
+    .bind(verified.lineUser.name || "", verified.lineUser.picture || "", Number(user.id))
+    .run();
+
+  return await createUserLoginSession({
+    ...user,
+    line_display_name: verified.lineUser.name || user.line_display_name || "",
+    line_picture_url: verified.lineUser.picture || user.line_picture_url || "",
+  });
+}
+
+// =========================
+// AUTH: LINE register
+// POST /auth/line/register
+// body: { id_token, referral_code }
+// 說明：若從推薦連結進來，LINE 註冊成功後也會寫入 referrals，推薦人數會計算到。
+// =========================
+if (url.pathname === "/auth/line/register" && request.method === "POST") {
+  const body = await safeJson(request);
+  const ref_code = String(body.referral_code || body.ref_code || body.ref || "").trim();
+  const verified = await verifyLineIdToken(body.id_token || body.idToken);
+
+  if (!verified.ok) {
+    return json({ success: false, error: verified.error, raw: verified.raw || null }, { status: 401 });
+  }
+
+  const lineUserId = String(verified.lineUser.sub || "").trim();
+  const displayName = String(verified.lineUser.name || "LINE會員").trim();
+  const pictureUrl = String(verified.lineUser.picture || "").trim();
+
+  const existed = await db
+    .prepare(
+      `SELECT id, username, password, display_name,
+              welfare_balance, discount_balance, s_balance,
+              line_id, line_user_id, line_display_name, line_picture_url,
+              birthday, bank_holder, bank_name, bank_branch, bank_account,
+              line_verified, num_authorized, uses_left, times_override,
+              enabled, locked
+       FROM users
+       WHERE line_user_id=?
+       LIMIT 1`
+    )
+    .bind(lineUserId)
+    .first();
+
+  if (existed) {
+    if (Number(existed.enabled || 0) !== 1) {
+      return json({ success: false, error: "帳號已停用" }, { status: 403 });
+    }
+    if (Number(existed.locked || 0) === 1) {
+      return json({ success: false, error: "帳號已鎖定" }, { status: 403 });
+    }
+
+    await db
+      .prepare("UPDATE users SET line_display_name=?, line_picture_url=? WHERE id=?")
+      .bind(displayName, pictureUrl, Number(existed.id))
+      .run();
+
+    return await createUserLoginSession({
+      ...existed,
+      line_display_name: displayName,
+      line_picture_url: pictureUrl,
+    });
+  }
+
+  let inheritedAdminId = null;
+  let refOwner = null;
+
+  if (ref_code) {
+    refOwner = await db
+      .prepare(
+        `SELECT rc.user_id AS referrer_user_id,
+                u.username AS referrer_username,
+                u.created_by_admin_id AS referrer_admin_id
+         FROM referral_codes rc
+         JOIN users u ON u.id = rc.user_id
+         WHERE rc.code=?
+         LIMIT 1`
+      )
+      .bind(ref_code)
+      .first();
+
+    const referrerAdminId = Number(refOwner?.referrer_admin_id || 0);
+    if (referrerAdminId > 0) inheritedAdminId = referrerAdminId;
+  }
+
+  const username = await makeLineUsername(lineUserId);
+  const randomPassword = randToken() + randToken();
+
+  await db
+    .prepare(
+      `INSERT INTO users
+        (username, password, display_name,
+         welfare_balance, discount_balance, s_balance,
+         line_id, line_user_id, line_display_name, line_picture_url,
+         line_verified, login_provider,
+         num_authorized, uses_left, times_override, enabled, locked,
+         created_by_admin_id, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))`
+    )
+    .bind(
+      username,
+      randomPassword,
+      displayName,
+      0,
+      0,
+      0,
+      lineUserId,      // 舊欄位 line_id 也寫入，讓既有 LINE 驗證/推薦獎勵邏輯可沿用
+      lineUserId,
+      displayName,
+      pictureUrl,
+      1,               // LINE id_token 驗證成功，視為已驗證
+      "line",
+      0,
+      0,
+      null,
+      1,
+      0,
+      inheritedAdminId
+    )
+    .run();
+
+  const newUser = await db
+    .prepare(
+      `SELECT id, username, password, display_name,
+              welfare_balance, discount_balance, s_balance,
+              line_id, line_user_id, line_display_name, line_picture_url,
+              birthday, bank_holder, bank_name, bank_branch, bank_account,
+              line_verified, num_authorized, uses_left, times_override,
+              enabled, locked
+       FROM users
+       WHERE line_user_id=?
+       LIMIT 1`
+    )
+    .bind(lineUserId)
+    .first();
+
+  const newUserId = Number(newUser?.id || 0);
+  if (!newUserId) {
+    return json({ success: false, error: "LINE 註冊失敗" }, { status: 500 });
+  }
+
+  let refBound = false;
+  let refRewarded = false;
+
+  if (ref_code) {
+    const referrerId = Number(refOwner?.referrer_user_id || 0);
+
+    if (referrerId > 0 && referrerId !== newUserId) {
+      const already = await db
+        .prepare("SELECT id FROM referrals WHERE referred_user_id=? LIMIT 1")
+        .bind(newUserId)
+        .first();
+
+      if (!already) {
+        await db
+          .prepare(
+            "INSERT INTO referrals (referrer_user_id, referred_user_id, code, created_at) VALUES (?,?,?,datetime('now'))"
+          )
+          .bind(referrerId, newUserId, ref_code)
+          .run();
+        refBound = true;
+
+        // LINE 註冊已經完成官方 id_token 驗證，因此可直接沿用原本推薦驗證獎勵邏輯。
+        const reward = await grantReferralVerificationRewardsIfEligible(newUserId).catch(() => null);
+        refRewarded = !!reward?.success || !!reward?.already_rewarded;
+      }
+    }
+  }
+
+  const res = await createUserLoginSession(newUser);
+  res.headers.set("X-SK-Referral-Bound", refBound ? "1" : "0");
+  res.headers.set("X-SK-Referral-Rewarded", refRewarded ? "1" : "0");
+  return res;
 }
 
 // =========================

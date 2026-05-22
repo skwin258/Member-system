@@ -277,6 +277,34 @@ async createElectronicRoomTicket() {
     return await api.login(username, password);
   },
 
+  async lineLogin(payload = {}) {
+    const r = await request("/auth/line/login", {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+    const t = r?.token || r?.access_token || r?.data?.token || "";
+    if (r?.success && t) {
+      setToken(t);
+      touchUserActivity();
+      clearMemo([memoKey("/auth/me", "user"), memoKey("/me", "user")]);
+    }
+    return r;
+  },
+
+  async lineRegister(payload = {}) {
+    const r = await request("/auth/line/register", {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    });
+    const t = r?.token || r?.access_token || r?.data?.token || "";
+    if (r?.success && t) {
+      setToken(t);
+      touchUserActivity();
+      clearMemo([memoKey("/auth/me", "user"), memoKey("/me", "user")]);
+    }
+    return r;
+  },
+
   /* -----------------
    * User Register
   ----------------- */
