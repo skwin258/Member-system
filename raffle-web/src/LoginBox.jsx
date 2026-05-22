@@ -13,7 +13,7 @@ import { api, setToken, setAdminToken } from "./api";
  * 3. 前台「註冊」不再開放帳號密碼註冊，只顯示「使用 LINE 註冊」
  * 4. 後台管理員登入不顯示 LINE登入 / 註冊
  */
-export default function LoginBox({ onLoggedIn, mode = "user" }) {
+export default function LoginBox({ onLoggedIn, mode = "user", referralCode = "" }) {
   const isAdmin = String(mode).toLowerCase() === "admin";
 
   const [username, setUsername] = useState("");
@@ -84,29 +84,56 @@ export default function LoginBox({ onLoggedIn, mode = "user" }) {
     return idToken;
   }
 
-  const handleLineLogin = async () => {
-    if (isAdmin) return;
+const handleLineLogin = async () => {
+  if (isAdmin) return;
 
-    try {
-      setLineLoading(true);
-      setRegisterErr("");
+  try {
+    setLineLoading(true);
+    setRegisterErr("");
 
-      if (typeof api.lineLogin !== "function") {
-        alert("LINE登入前端按鈕已完成，下一步需要在 api.js 與 Worker 後端新增 /auth/line/login。");
-        return;
+    if (typeof api.lineLogin !== "function" || typeof api.lineRegister !== "function") {
+      alert("LINE 登入/註冊功能尚未完整串接 api.js 與 Worker 後端。");
+      return;
+    }
+
+    const idToken = await getLineIdToken();
+    if (!idToken) return;
+
+    // 先嘗試 LINE 登入
+    let data = await api.lineLogin({
+      id_token: idToken,
+    });
+
+    // 如果尚未註冊，自動改走 LINE 註冊
+    if (!data?.success) {
+      const msg = String(data?.error || data?.message || "");
+
+      const needRegister =
+        msg.includes("尚未註冊") ||
+        msg.includes("未註冊") ||
+        msg.includes("not registered") ||
+        msg.includes("找不到") ||
+        msg.includes("不存在");
+
+      if (!needRegister) {
+        throw new Error(msg || "LINE登入失敗");
       }
 
-      const idToken = await getLineIdToken();
-      if (!idToken) return;
+      const referral_code = referralCode || getReferralCodeFromUrl();
 
-      const data = await api.lineLogin({ id_token: idToken });
-      saveLoginToken(data);
-    } catch (e) {
-      alert("LINE登入失敗：" + (e?.message || String(e)));
-    } finally {
-      setLineLoading(false);
+      data = await api.lineRegister({
+        id_token: idToken,
+        referral_code,
+      });
     }
-  };
+
+    saveLoginToken(data);
+  } catch (e) {
+    alert("LINE登入失敗：" + (e?.message || String(e)));
+  } finally {
+    setLineLoading(false);
+  }
+};
 
   const handleLineRegister = async () => {
     if (isAdmin) return;
@@ -174,7 +201,7 @@ export default function LoginBox({ onLoggedIn, mode = "user" }) {
                 disabled={loading || lineLoading}
                 style={styles.lineBtn(lineLoading)}
               >
-                {lineLoading ? "處理中..." : "LINE登入"}
+                {lineLoading ? "處理中..." : "LINE登入 / 註冊"}
               </button>
 
               <button
