@@ -521,6 +521,83 @@ async createElectronicRoomTicket() {
     }, force ? 0 : 1200);
   },
 
+    /* -----------------
+   * Football Penalty
+  ----------------- */
+  async footballConfig({ force = false } = {}) {
+    const key = memoKey("/football/config", "user");
+    if (force) clearMemo([key]);
+
+    return await memoizedGet(
+      "/football/config",
+      {
+        method: "GET",
+        auth: "user",
+      },
+      force ? 0 : 1200
+    );
+  },
+
+  async footballStart() {
+    const res = await request("/football/start", {
+      method: "POST",
+      auth: "user",
+      body: JSON.stringify({}),
+    });
+
+    clearMemo([
+      memoKey("/auth/me", "user"),
+      memoKey("/me", "user"),
+      memoKey("/football/config", "user"),
+    ]);
+
+    return res;
+  },
+
+    async footballStartShoot() {
+    const res = await request("/football/start-shoot", {
+      method: "POST",
+      auth: "user",
+      body: JSON.stringify({}),
+    });
+
+    clearMemo([
+      memoKey("/auth/me", "user"),
+      memoKey("/me", "user"),
+      memoKey("/football/config", "user"),
+    ]);
+
+    return res;
+  },
+
+  async footballShoot(game_id) {
+    return await request("/football/shoot", {
+      method: "POST",
+      auth: "user",
+      body: JSON.stringify({
+        game_id: Number(game_id || 0),
+      }),
+    });
+  },
+
+  async footballClaim(game_id) {
+    const res = await request("/football/claim", {
+      method: "POST",
+      auth: "user",
+      body: JSON.stringify({
+        game_id: Number(game_id || 0),
+      }),
+    });
+
+    clearMemo([
+      memoKey("/auth/me", "user"),
+      memoKey("/me", "user"),
+      memoKey("/football/config", "user"),
+    ]);
+
+    return res;
+  },
+
   /* -----------------
    * Number Lottery
   ----------------- */

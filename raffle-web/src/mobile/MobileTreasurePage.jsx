@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import RedPacketPage from "./RedPacketPage.jsx";
 import MobileWheelPage from "./MobileWheelPage.jsx";
+import MobileFootballPenaltyPage from "./MobileFootballPenaltyPage.jsx";
 import WinPopup from "../components/WinPopup";
 
 export default function MobileTreasurePage({
@@ -49,6 +50,19 @@ export default function MobileTreasurePage({
     return (
       <MobileWheelPage
         me={me}
+        onRefreshMe={onRefreshMe}
+        onTabChange={onTabChange}
+        isGuest={isGuest}
+        onNeedLogin={onNeedLogin}
+      />
+    );
+  }
+
+  if (tab === "football") {
+    return (
+      <MobileFootballPenaltyPage
+        me={me}
+        activities={activities}
         onRefreshMe={onRefreshMe}
         onTabChange={onTabChange}
         isGuest={isGuest}

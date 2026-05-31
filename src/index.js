@@ -387,6 +387,62 @@ await ensureTable({
   requiredCols: ["id", "title", "amount", "weight", "enabled"],
 });
 
+// ---- football_prizes
+await ensureTable({
+  name: "football_prizes",
+  createSql: `CREATE TABLE IF NOT EXISTS football_prizes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ball_no INTEGER NOT NULL DEFAULT 1,
+    title TEXT NOT NULL DEFAULT '',
+    reward_s INTEGER NOT NULL DEFAULT 0,
+    probability REAL NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    sort INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  addCols: [
+    { col: "ball_no", sql: "ALTER TABLE football_prizes ADD COLUMN ball_no INTEGER NOT NULL DEFAULT 1" },
+    { col: "title", sql: "ALTER TABLE football_prizes ADD COLUMN title TEXT NOT NULL DEFAULT ''" },
+    { col: "reward_s", sql: "ALTER TABLE football_prizes ADD COLUMN reward_s INTEGER NOT NULL DEFAULT 0" },
+    { col: "probability", sql: "ALTER TABLE football_prizes ADD COLUMN probability REAL NOT NULL DEFAULT 0" },
+    { col: "enabled", sql: "ALTER TABLE football_prizes ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1" },
+    { col: "sort", sql: "ALTER TABLE football_prizes ADD COLUMN sort INTEGER NOT NULL DEFAULT 0" },
+    { col: "updated_at", sql: "ALTER TABLE football_prizes ADD COLUMN updated_at TEXT" },
+    { col: "created_at", sql: "ALTER TABLE football_prizes ADD COLUMN created_at TEXT" },
+  ],
+  rebuildIfMissing: ["id", "ball_no", "title", "reward_s", "probability"],
+  requiredCols: ["id", "ball_no", "title", "reward_s", "probability", "enabled"],
+});
+
+// ---- football_games
+await ensureTable({
+  name: "football_games",
+  createSql: `CREATE TABLE IF NOT EXISTS football_games (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    username TEXT NOT NULL DEFAULT '',
+    bet_amount INTEGER NOT NULL DEFAULT 1000,
+    current_step INTEGER NOT NULL DEFAULT 0,
+    current_win INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'playing',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  addCols: [
+    { col: "user_id", sql: "ALTER TABLE football_games ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0" },
+    { col: "username", sql: "ALTER TABLE football_games ADD COLUMN username TEXT NOT NULL DEFAULT ''" },
+    { col: "bet_amount", sql: "ALTER TABLE football_games ADD COLUMN bet_amount INTEGER NOT NULL DEFAULT 1000" },
+    { col: "current_step", sql: "ALTER TABLE football_games ADD COLUMN current_step INTEGER NOT NULL DEFAULT 0" },
+    { col: "current_win", sql: "ALTER TABLE football_games ADD COLUMN current_win INTEGER NOT NULL DEFAULT 0" },
+    { col: "status", sql: "ALTER TABLE football_games ADD COLUMN status TEXT NOT NULL DEFAULT 'playing'" },
+    { col: "created_at", sql: "ALTER TABLE football_games ADD COLUMN created_at TEXT" },
+    { col: "updated_at", sql: "ALTER TABLE football_games ADD COLUMN updated_at TEXT" },
+  ],
+  rebuildIfMissing: ["id", "user_id", "status"],
+  requiredCols: ["id", "user_id", "bet_amount", "current_step", "current_win", "status"],
+});
+
 // ---- redpacket_config
 await ensureTable({
   name: "redpacket_config",
@@ -718,7 +774,40 @@ const seedActivities = [
   { key: "redpacket", name: "紅包抽獎", default_times: 0 },
   { key: "wheel", name: "輪盤抽獎", default_times: 0 },
   { key: "number", name: "數字抽獎", default_times: 0 },
+  { key: "football", name: "足球射門", default_times: 0 },
 ];
+
+// ---- seed football prizes
+const footballPrizeSeeds = [
+  { ball_no: 1, title: "第一球", reward_s: 2000, probability: 50, sort: 1 },
+  { ball_no: 2, title: "第二球", reward_s: 4000, probability: 50, sort: 2 },
+  { ball_no: 3, title: "第三球", reward_s: 8000, probability: 30, sort: 3 },
+  { ball_no: 4, title: "第四球", reward_s: 16000, probability: 10, sort: 4 },
+  { ball_no: 5, title: "第五球", reward_s: 32000, probability: 1, sort: 5 },
+];
+
+const footballPrizeCount = await db
+  .prepare("SELECT COUNT(*) AS c FROM football_prizes")
+  .first();
+
+if (Number(footballPrizeCount?.c || 0) <= 0) {
+  for (const p of footballPrizeSeeds) {
+    await db
+      .prepare(
+        `INSERT INTO football_prizes
+         (ball_no, title, reward_s, probability, enabled, sort, updated_at, created_at)
+         VALUES (?,?,?,?,1,?,datetime('now'),datetime('now'))`
+      )
+      .bind(
+        Number(p.ball_no),
+        String(p.title),
+        Number(p.reward_s),
+        Number(p.probability),
+        Number(p.sort)
+      )
+      .run();
+  }
+}
 
 for (const a of seedActivities) {
   await db
@@ -1234,17 +1323,76 @@ const applyWalletDelta = async ({
         return hotCacheSet(cacheKey, row || {}, 2500);
       };
 
-      const getCachedWheelPrizes = async () => {
-        const cacheKey = "cfg:wheel_prizes";
-        const cached = hotCacheGet(cacheKey);
-        if (cached) return cached;
+const getCachedFootballPrizes = async () => {
+  const cacheKey = "cfg:football_prizes";
+  const cached = hotCacheGet(cacheKey);
+  if (cached) return cached;
 
-        const prizesRes = await db
-          .prepare("SELECT id, title, amount, weight, prize_type, prize_text, image_url, sort FROM wheel_prizes WHERE enabled=1 ORDER BY sort ASC, id ASC")
-          .all();
+  const rows = await db
+    .prepare(
+      `SELECT id, ball_no, title, reward_s, probability, enabled, sort
+       FROM football_prizes
+       WHERE enabled=1
+       ORDER BY ball_no ASC, sort ASC, id ASC`
+    )
+    .all();
 
-        return hotCacheSet(cacheKey, prizesRes?.results || [], 2500);
-      };
+  const list = rows?.results || [];
+  hotCacheSet(cacheKey, list, 3000);
+  return list;
+};
+
+const getFootballActivityDirect = async () => {
+  const row = await db
+    .prepare(
+      `SELECT *
+       FROM activities
+       WHERE activity_key = ?
+       LIMIT 1`
+    )
+    .bind("football")
+    .first();
+
+  if (!row) {
+    return {
+      enabled: 0,
+      activity_name: "足球射門",
+    };
+  }
+
+  const raw =
+    row.enabled ??
+    row.is_enabled ??
+    row.open ??
+    row.status ??
+    row.is_open ??
+    0;
+
+  const enabled =
+    Number(raw) === 1 ||
+    String(raw).trim() === "開啟" ||
+    String(raw).trim().toLowerCase() === "true";
+
+  return {
+    ...row,
+    enabled: enabled ? 1 : 0,
+    activity_name: row.activity_name || row.name || "足球射門",
+  };
+};
+
+const getCachedWheelPrizes = async () => {
+  const cacheKey = "cfg:wheel_prizes";
+  const cached = hotCacheGet(cacheKey);
+  if (cached) return cached;
+
+  const prizesRes = await db
+    .prepare(
+      "SELECT id, title, amount, weight, prize_type, prize_text, image_url, sort FROM wheel_prizes WHERE enabled=1 ORDER BY sort ASC, id ASC"
+    )
+    .all();
+
+  return hotCacheSet(cacheKey, prizesRes?.results || [], 2500);
+};
 
       /* =========================
        * Auth guards
@@ -5389,6 +5537,439 @@ if (url.pathname === "/wheel/history" && request.method === "GET") {
       { status: 500 }
     );
   }
+}
+
+// =========================
+// football config
+// GET /football/config
+// =========================
+if (url.pathname === "/football/config" && request.method === "GET") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+  const act = await getFootballActivityDirect();
+  const prizes = await getCachedFootballPrizes();
+
+  const user = await db
+    .prepare("SELECT id, username, s_balance FROM users WHERE id=? LIMIT 1")
+    .bind(Number(sess.user_id))
+    .first();
+
+  return json({
+    success: true,
+    activity: {
+      enabled: Number(act?.enabled || 0) === 1 ? 1 : 0,
+      activity_key: "football",
+      activity_name: act?.activity_name || "足球射門",
+    },
+    bet_amount: 1000,
+    s_balance: Number(user?.s_balance || 0),
+    prizes: prizes.map((p) => ({
+      id: Number(p.id),
+      ball_no: Number(p.ball_no),
+      title: String(p.title || ""),
+      reward_s: Number(p.reward_s || 0),
+      probability: Number(p.probability || 0),
+      enabled: Number(p.enabled || 0),
+      sort: Number(p.sort || 0),
+    })),
+  });
+}
+
+// =========================
+// football start
+// POST /football/start
+// =========================
+if (url.pathname === "/football/start" && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+const act = await getFootballActivityDirect();
+if (Number(act?.enabled || 0) !== 1) {
+  return forbid("活動未開放", 403);
+}
+
+  const betAmount = 1000;
+
+  const upd = await db
+    .prepare(
+      `UPDATE users
+       SET s_balance = COALESCE(s_balance,0) - ?
+       WHERE id=? AND COALESCE(s_balance,0) >= ?`
+    )
+    .bind(Number(betAmount), Number(sess.user_id), Number(betAmount))
+    .run();
+
+  if (Number(upd?.meta?.changes || 0) <= 0) {
+    return json({ success: false, error: "S幣不足" }, { status: 400 });
+  }
+
+  const ins = await db
+    .prepare(
+      `INSERT INTO football_games
+       (user_id, username, bet_amount, current_step, current_win, status, created_at, updated_at)
+       VALUES (?,?,?,?,?,'playing',datetime('now'),datetime('now'))`
+    )
+    .bind(
+      Number(sess.user_id),
+      String(sess.username || ""),
+      Number(betAmount),
+      0,
+      0
+    )
+    .run();
+
+  await insertWalletLog({
+    user_id: Number(sess.user_id),
+    username: String(sess.username || ""),
+    category: "raffle",
+    action: "football_start",
+    status: "success",
+    delta_s: -Number(betAmount),
+    delta_welfare: 0,
+    delta_discount: 0,
+    result: `足球射門投注 ${Number(betAmount)} S幣`,
+    note: "足球射門開始遊戲",
+  });
+
+  const user = await db
+    .prepare("SELECT s_balance FROM users WHERE id=? LIMIT 1")
+    .bind(Number(sess.user_id))
+    .first();
+
+  return json({
+    success: true,
+    game_id: Number(ins?.meta?.last_row_id || 0),
+    bet_amount: betAmount,
+    current_step: 0,
+    current_win: 0,
+    s_balance: Number(user?.s_balance || 0),
+  });
+}
+
+// =========================
+// football start + first shoot
+// POST /football/start-shoot
+// 第一球專用：扣 S幣、建立遊戲、直接判斷第一球結果
+// =========================
+if (url.pathname === "/football/start-shoot" && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+  const act = await getFootballActivityDirect();
+  if (Number(act?.enabled || 0) !== 1) {
+    return forbid("活動未開放", 403);
+  }
+
+  const betAmount = 1000;
+
+  const prizes = await getCachedFootballPrizes();
+  const prize = prizes.find((p) => Number(p.ball_no) === 1);
+
+  if (!prize) {
+    return json({ success: false, error: "第一球尚未設定" }, { status: 400 });
+  }
+
+  const probability = Number(prize.probability || 0);
+  const rewardS = Number(prize.reward_s || 0);
+  const isGoal = Math.random() * 100 < probability;
+
+  const upd = await db
+    .prepare(
+      `UPDATE users
+       SET s_balance = COALESCE(s_balance,0) - ?
+       WHERE id=? AND COALESCE(s_balance,0) >= ?`
+    )
+    .bind(Number(betAmount), Number(sess.user_id), Number(betAmount))
+    .run();
+
+  if (Number(upd?.meta?.changes || 0) <= 0) {
+    return json({ success: false, error: "S幣不足" }, { status: 400 });
+  }
+
+  const nextStatus = isGoal ? "playing" : "lost";
+  const currentStep = isGoal ? 1 : 0;
+  const currentWin = isGoal ? rewardS : 0;
+
+  const ins = await db
+    .prepare(
+      `INSERT INTO football_games
+       (user_id, username, bet_amount, current_step, current_win, status, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))`
+    )
+    .bind(
+      Number(sess.user_id),
+      String(sess.username || ""),
+      Number(betAmount),
+      Number(currentStep),
+      Number(currentWin),
+      String(nextStatus)
+    )
+    .run();
+
+  const gameId = Number(ins?.meta?.last_row_id || 0);
+
+  await insertWalletLog({
+    user_id: Number(sess.user_id),
+    username: String(sess.username || ""),
+    category: "raffle",
+    action: "football_start_shoot",
+    status: "success",
+    delta_s: -Number(betAmount),
+    delta_welfare: 0,
+    delta_discount: 0,
+    result: `足球射門投注 ${Number(betAmount)} S幣`,
+    note: "足球射門第一球",
+  });
+
+  if (!isGoal) {
+    await addDrawRecord({
+      activity_key: "football",
+      user_id: Number(sess.user_id),
+      username: String(sess.username || ""),
+      status: "lose",
+      prize_title: "足球射門第1球失敗",
+      prize_amount: 0,
+      note: "football_first_miss",
+      meta: {
+        game_id: Number(gameId),
+        ball_no: 1,
+        probability,
+      },
+    });
+  }
+
+  const user = await db
+    .prepare("SELECT s_balance FROM users WHERE id=? LIMIT 1")
+    .bind(Number(sess.user_id))
+    .first();
+
+  return json({
+    success: true,
+    result: isGoal ? "goal" : "save",
+    is_goal: Boolean(isGoal),
+    game_id: Number(gameId),
+    ball_no: 1,
+    bet_amount: Number(betAmount),
+    current_step: Number(currentStep),
+    current_win: Number(currentWin),
+    probability,
+    game_over: !isGoal,
+    s_balance: Number(user?.s_balance || 0),
+  });
+}
+
+// =========================
+// football shoot
+// POST /football/shoot
+// body: { game_id }
+// =========================
+if (url.pathname === "/football/shoot" && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+const act = await getFootballActivityDirect();
+if (Number(act?.enabled || 0) !== 1) {
+  return forbid("活動未開放", 403);
+}
+
+  const body = await request.json().catch(() => ({}));
+  const gameId = Number(body?.game_id || 0);
+  if (!gameId) return json({ success: false, error: "缺少 game_id" }, { status: 400 });
+
+  const game = await db
+    .prepare(
+      `SELECT * FROM football_games
+       WHERE id=? AND user_id=? AND status='playing'
+       LIMIT 1`
+    )
+    .bind(Number(gameId), Number(sess.user_id))
+    .first();
+
+  if (!game) {
+    return json({ success: false, error: "遊戲不存在或已結束" }, { status: 400 });
+  }
+
+  const nextBallNo = Number(game.current_step || 0) + 1;
+  if (nextBallNo > 5) {
+    return json({ success: false, error: "已完成 5 球，請領取" }, { status: 400 });
+  }
+
+  const prizes = await getCachedFootballPrizes();
+  const prize = prizes.find((p) => Number(p.ball_no) === Number(nextBallNo));
+
+  if (!prize) {
+    return json({ success: false, error: `第 ${nextBallNo} 球尚未設定` }, { status: 400 });
+  }
+
+  const probability = Number(prize.probability || 0);
+  const rewardS = Number(prize.reward_s || 0);
+
+  const r = Math.random() * 100;
+  const isGoal = r < probability;
+
+  if (!isGoal) {
+    await db
+      .prepare(
+        `UPDATE football_games
+         SET current_win=0, status='lost', updated_at=datetime('now')
+         WHERE id=? AND user_id=?`
+      )
+      .bind(Number(gameId), Number(sess.user_id))
+      .run();
+
+    await addDrawRecord({
+      activity_key: "football",
+      user_id: Number(sess.user_id),
+      username: String(sess.username || ""),
+      status: "lose",
+      prize_title: `足球射門第${nextBallNo}球失敗`,
+      prize_amount: 0,
+      note: "football_miss",
+      meta: {
+        game_id: Number(gameId),
+        ball_no: Number(nextBallNo),
+        probability,
+      },
+    });
+
+    return json({
+      success: true,
+      result: "save",
+      is_goal: false,
+      game_id: Number(gameId),
+      ball_no: Number(nextBallNo),
+      current_step: Number(game.current_step || 0),
+      current_win: 0,
+      probability,
+      game_over: true,
+    });
+  }
+
+  await db
+    .prepare(
+      `UPDATE football_games
+       SET current_step=?, current_win=?, updated_at=datetime('now')
+       WHERE id=? AND user_id=?`
+    )
+    .bind(
+      Number(nextBallNo),
+      Number(rewardS),
+      Number(gameId),
+      Number(sess.user_id)
+    )
+    .run();
+
+  return json({
+    success: true,
+    result: "goal",
+    is_goal: true,
+    game_id: Number(gameId),
+    ball_no: Number(nextBallNo),
+    current_step: Number(nextBallNo),
+    current_win: Number(rewardS),
+    probability,
+    game_over: Number(nextBallNo) >= 5,
+  });
+}
+
+// =========================
+// football claim
+// POST /football/claim
+// body: { game_id }
+// =========================
+if (url.pathname === "/football/claim" && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+
+  const body = await request.json().catch(() => ({}));
+  const gameId = Number(body?.game_id || 0);
+  if (!gameId) return json({ success: false, error: "缺少 game_id" }, { status: 400 });
+
+  const game = await db
+    .prepare(
+      `SELECT * FROM football_games
+       WHERE id=? AND user_id=? AND status='playing'
+       LIMIT 1`
+    )
+    .bind(Number(gameId), Number(sess.user_id))
+    .first();
+
+  if (!game) {
+    return json({ success: false, error: "遊戲不存在或已結束" }, { status: 400 });
+  }
+
+  const winAmount = Number(game.current_win || 0);
+  if (winAmount <= 0) {
+    return json({ success: false, error: "目前沒有可領取獎金" }, { status: 400 });
+  }
+
+  await db
+    .prepare("UPDATE users SET s_balance = COALESCE(s_balance,0) + ? WHERE id=?")
+    .bind(Number(winAmount), Number(sess.user_id))
+    .run();
+
+  await db
+    .prepare(
+      `UPDATE football_games
+       SET status='claimed', updated_at=datetime('now')
+       WHERE id=? AND user_id=?`
+    )
+    .bind(Number(gameId), Number(sess.user_id))
+    .run();
+
+  await insertWalletLog({
+    user_id: Number(sess.user_id),
+    username: String(sess.username || ""),
+    category: "raffle",
+    action: "football_claim",
+    status: "success",
+    delta_s: Number(winAmount),
+    delta_welfare: 0,
+    delta_discount: 0,
+    result: `足球射門領取 ${Number(winAmount)} S幣`,
+    note: `足球射門第 ${Number(game.current_step || 0)} 球領取`,
+  });
+
+  await addDrawRecord({
+    activity_key: "football",
+    user_id: Number(sess.user_id),
+    username: String(sess.username || ""),
+    status: "win",
+    prize_title: `足球射門第${Number(game.current_step || 0)}球領取`,
+    prize_amount: Number(winAmount),
+    note: "football_claim",
+    meta: {
+      game_id: Number(gameId),
+      current_step: Number(game.current_step || 0),
+    },
+  });
+
+  await db
+    .prepare(
+      "INSERT INTO winners (activity_key, user_id, username, prize_title, prize_amount, meta_json, created_at) VALUES (?,?,?,?,?,?,datetime('now'))"
+    )
+    .bind(
+      "football",
+      Number(sess.user_id),
+      String(sess.username || ""),
+      `足球射門第${Number(game.current_step || 0)}球領取`,
+      Number(winAmount),
+      JSON.stringify({ game_id: Number(gameId) })
+    )
+    .run();
+
+  const user = await db
+    .prepare("SELECT s_balance FROM users WHERE id=? LIMIT 1")
+    .bind(Number(sess.user_id))
+    .first();
+
+  return json({
+    success: true,
+    amount: Number(winAmount),
+    game_id: Number(gameId),
+    s_balance: Number(user?.s_balance || 0),
+  });
 }
 
       if (url.pathname === "/wheel/spin" && request.method === "POST") {

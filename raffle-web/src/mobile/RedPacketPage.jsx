@@ -297,21 +297,6 @@ setTimeout(() => {
               </div>
 
               <div className="mRpFeedSelectWrap">
-                <select
-                  className="mRpFeedSelect"
-                  value={feedType}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setFeedType(v);
-                    if (v === "redpacket") onTabChange?.("redpacket");
-                    if (v === "wheel") onTabChange?.("wheel");
-                    if (v === "number") onTabChange?.("number");
-                  }}
-                >
-                  <option value="redpacket">紅包</option>
-                  <option value="wheel">輪盤</option>
-                  <option value="number">數字抽獎</option>
-                </select>
               </div>
             </section>
 

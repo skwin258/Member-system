@@ -508,21 +508,40 @@ function needLogin() {
       );
     }
 
-    if (activeKey === "treasure") {
-      return (
-        <MobilePageFrame title="奪寶專區" onBack={() => setActiveKey("home")} plain={true}>
-          <TreasurePage
-            me={me}
-            activities={activities}
-            onRefreshMe={onRefreshMe || onRefresh}
-            tab={treasureTab}
-            onTabChange={setTreasureTab}
-            isGuest={isGuest}
-            onNeedLogin={needLogin}
-          />
-        </MobilePageFrame>
-      );
-    }
+if (activeKey === "treasure") {
+  return (
+    <MobilePageFrame
+      title={
+        <div className="mbTreasureTopTitle">
+          <span className="mbTreasureTopText">奪寶專區</span>
+
+          <select
+            className="mbTreasureTopSelect"
+            value={treasureTab}
+            onChange={(e) => setTreasureTab(e.target.value)}
+          >
+            <option value="redpacket">紅包</option>
+            <option value="wheel">輪盤</option>
+            <option value="football">足球射門</option>
+            <option value="number">數字抽獎</option>
+          </select>
+        </div>
+      }
+      onBack={() => setActiveKey("home")}
+      plain={true}
+    >
+      <TreasurePage
+        me={me}
+        activities={activities}
+        onRefreshMe={onRefreshMe || onRefresh}
+        tab={treasureTab}
+        onTabChange={setTreasureTab}
+        isGuest={isGuest}
+        onNeedLogin={needLogin}
+      />
+    </MobilePageFrame>
+  );
+}
 
     if (activeKey === "records") {
       if (isGuest) return null;

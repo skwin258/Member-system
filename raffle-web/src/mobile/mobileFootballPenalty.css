@@ -1,0 +1,584 @@
+.mFootPage {
+  min-height: calc(100vh - 90px);
+  padding: 12px 12px 120px;
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.86)),
+    url("/images/stadium-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  overflow-x: hidden;
+}
+
+.mFootIntro {
+  padding: 18px 10px;
+  text-align: center;
+}
+
+.mFootGameTitle {
+  margin: 8px auto 14px;
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: #87ff72;
+  background: rgba(66, 255, 80, 0.1);
+  border: 1px solid rgba(112, 255, 120, 0.3);
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.mFootIntroGoal {
+  height: 210px;
+  position: relative;
+  margin: 4px 0 14px;
+}
+
+.mFootIntroGoalImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 24px rgba(120, 255, 70, 0.35));
+}
+
+.mFootIntro h1 {
+  color: #75ff67;
+  font-size: 25px;
+  margin: 12px 0 10px;
+}
+
+.mFootIntro p {
+  color: #dce7dc;
+  line-height: 1.7;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.mFootOddsLine {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+  margin: 18px 0;
+}
+
+.mFootOddBox {
+  padding: 9px 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.065);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.mFootOddBox small {
+  display: block;
+  color: #98a4b3;
+  font-size: 10px;
+}
+
+.mFootOddBox strong {
+  display: block;
+  margin-top: 3px;
+  color: #72ff65;
+  font-size: 17px;
+}
+
+.mFootOddBox em {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.mFootMainBtn,
+.mFootConfirmBtn {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 15px 18px;
+  color: white;
+  font-size: 17px;
+  font-weight: 1000;
+  background: linear-gradient(180deg, #59d850, #247d24);
+  box-shadow: 0 12px 25px rgba(49, 255, 58, 0.18);
+}
+
+.mFootBalanceCard {
+  margin-top: 16px;
+  padding: 13px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #d7e1db;
+  font-weight: 900;
+}
+
+.mFootTeamScreen {
+  padding: 18px 10px 120px;
+  text-align: center;
+}
+
+.mFootTeamScreen h2 {
+  margin: 4px 0 18px;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.mFootTeamGrid {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.mFootTeamCard {
+  height: 82px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.25);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.mFootTeamLogo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.18));
+}
+
+.mFootTeamCard b {
+  font-size: 13px;
+}
+
+.mFootTeamCard.active {
+  border-color: #6cff61;
+  background: rgba(83, 255, 82, 0.18);
+  box-shadow: 0 0 18px rgba(83, 255, 82, 0.22);
+}
+
+.mFootConfirmBtn {
+  margin-top: 22px;
+}
+
+.mFootConfirmBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mFootGameScreen {
+  padding: 6px 6px 120px;
+}
+
+.mFootGameHeaderPanel {
+  padding: 12px 12px 10px;
+  margin-bottom: 10px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.mFootProgressBar {
+  height: 38px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.mFootProgressBar::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 20px;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.mFootStep {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: #cfd8e5;
+  font-weight: 900;
+}
+
+.mFootStep::after {
+  content: "⚽";
+  display: block;
+  margin: 2px auto 0;
+  opacity: 0.28;
+  font-size: 16px;
+}
+
+.mFootStep.done {
+  color: #70ff64;
+}
+
+.mFootStep.done::after {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px rgba(92, 255, 92, 0.8));
+}
+
+.mFootVersus {
+  margin: 14px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.mFootVersus b {
+  font-size: 20px;
+  font-style: italic;
+}
+
+.mFootVersusLogo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.25));
+}
+
+.mFootMessageBox {
+  min-height: 62px;
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mFootMessageBox strong {
+  display: block;
+  color: #80ff70;
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mFootMessageBox span {
+  display: block;
+  margin-top: 4px;
+  color: #aab5c3;
+  font-size: 12px;
+}
+
+.mFootGoalArea {
+  height: 360px;
+  position: relative;
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.mFootStadiumGlow {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: 40%;
+  height: 90px;
+  background: radial-gradient(circle, rgba(92, 255, 81, 0.18), transparent 65%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.mFootNet {
+  position: absolute;
+  left: 1%;
+  top: 20%;
+  width: 98%;
+  height: 50%;
+  background-image: url("/images/goal-net.png");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 2;
+  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.22));
+}
+
+.mFootShotGrid {
+  position: absolute;
+  left: 1%;
+  top: 20%;
+  width: 98%;
+  height: 50%;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  z-index: 30;
+}
+
+.mFootShotPoint {
+  border: 0;
+  background: transparent;
+  cursor: crosshair;
+}
+
+.mFootShotPoint:hover {
+  background: radial-gradient(circle, rgba(95, 255, 91, 0.16), transparent 58%);
+}
+
+.mFootShotPoint.active {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent 62%);
+}
+
+.mFootShotPoint:disabled {
+  cursor: not-allowed;
+}
+
+.mFootKeeper {
+  position: absolute;
+  left: 50%;
+  top: 35%;
+  font-size: 62px;
+  z-index: 11;
+  transition: left 0.28s ease-out, top 0.28s ease-out, transform 0.28s ease-out;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.8));
+  pointer-events: none;
+}
+
+.mFootBall {
+  position: absolute;
+  left: 50%;
+  top: 82%;
+  transform: translate(-50%, -50%);
+  font-size: 62px;
+  z-index: 14;
+  transition: 0.55s cubic-bezier(0.16, 0.78, 0.18, 1);
+  filter: drop-shadow(0 0 16px rgba(87, 255, 87, 0.7));
+  pointer-events: none;
+}
+
+.mFootBall.flying {
+  font-size: 32px;
+}
+
+.mFootResult {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  font-size: 48px;
+  font-weight: 1000;
+  font-style: italic;
+  letter-spacing: 2px;
+  animation: mFootPop 0.45s ease;
+  pointer-events: none;
+}
+
+.mFootResult.goal {
+  color: #7dff68;
+  text-shadow: 0 0 20px rgba(94, 255, 70, 0.95);
+}
+
+.mFootResult.miss {
+  color: #ff5757;
+  text-shadow: 0 0 20px rgba(255, 70, 70, 0.8);
+}
+
+@keyframes mFootPop {
+  from {
+    transform: translate(-50%, -50%) scale(0.65);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.mFootWalletPanel {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+
+.mFootWalletPanel div {
+  padding: 12px 8px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.025));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.mFootWalletPanel small {
+  display: block;
+  color: #9aa7b7;
+  margin-bottom: 5px;
+}
+
+.mFootWalletPanel strong {
+  color: white;
+  font-size: 16px;
+}
+
+.mFootCashCircleBtn {
+  position: absolute;
+  right: 0%;
+  bottom: 5%;
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 50%;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #161000;
+  font-size: 15px;
+  font-weight: 1000;
+  letter-spacing: 1px;
+  background: radial-gradient(circle at 35% 25%, #fff1a8, #ffd15a 35%, #b56a00 100%);
+  box-shadow: 0 0 18px rgba(255, 210, 70, 0.45), 0 10px 24px rgba(0, 0, 0, 0.35);
+  animation: mFootCashBtnPulse 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes mFootCashBtnPulse {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.06);
+  }
+}
+
+.mFootCashOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+.mFootCashBox {
+  width: 260px;
+  padding: 26px 20px 24px;
+  border-radius: 26px;
+  text-align: center;
+  background:
+    radial-gradient(circle at top, rgba(255, 228, 92, 0.3), transparent 42%),
+    linear-gradient(180deg, rgba(33, 38, 25, 0.98), rgba(8, 10, 5, 0.98));
+  border: 1px solid rgba(255, 220, 95, 0.38);
+  box-shadow: 0 0 30px rgba(255, 203, 61, 0.24), 0 22px 60px rgba(0, 0, 0, 0.5);
+  animation: mFootCashPop 0.25s ease-out;
+}
+
+.mFootCashTitle {
+  color: #ffe27a;
+  font-size: 18px;
+  font-weight: 1000;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.mFootCashAmount {
+  color: #ffffff;
+  font-size: 36px;
+  font-weight: 1000;
+  text-shadow: 0 0 14px rgba(255, 217, 80, 0.75), 0 0 28px rgba(255, 174, 0, 0.35);
+  margin-bottom: 8px;
+}
+
+.mFootCashHint {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@keyframes mFootCashPop {
+  from {
+    opacity: 0;
+    transform: scale(0.78) translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (max-width: 390px) {
+  .mFootGoalArea {
+    height: 330px;
+  }
+
+  .mFootBall {
+    font-size: 54px;
+  }
+
+  .mFootKeeper {
+    font-size: 56px;
+  }
+
+  .mFootResult {
+    font-size: 42px;
+  }
+
+  .mFootWalletPanel strong {
+    font-size: 14px;
+  }
+}
+
+.mFootFeedSelectWrap {
+  width: 100%;
+  margin: 0 0 14px;
+}
+
+.mFootFeedSelect {
+  width: 100%;
+  height: 46px;
+  border-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(6, 18, 32, 0.95);
+  color: #fff;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 900;
+  outline: none;
+}
+
+/* 隱藏足球射門提示框 */
+.mFootMessageBox {
+  display: none !important;
+}
+
+.mFootGameTitle {
+
+  display: none !important;
+
+}
+
+/* 足球射門頁禁止上下滑動 */
+.mbPageBodyPlain:has(.mFootPage) {
+  overflow: hidden !important;
+  padding-bottom: 0 !important;
+}
+
+.mbPageBodyPlain:has(.mFootPage) .mFootPage {
+  height: calc(100dvh - 64px - 70px);
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 12px 0 !important;
+}
