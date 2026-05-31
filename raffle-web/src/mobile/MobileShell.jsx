@@ -290,7 +290,7 @@ const banners = useMemo(
     "/img/BANNER1.png?v=3",
     "/img/BANNER2.png?v=3",
     "/img/BANNER3.png?v=3",
-		"/img/BANNER4.png?v=3",
+	"/img/BANNER4.png?v=3",
   ],
   []
 );
