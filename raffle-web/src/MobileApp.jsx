@@ -29,7 +29,7 @@ function getRefCodeFromPath() {
 }
 
 export default function MobileApp() {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => !getToken());
   const [me, setMe] = useState(null);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -92,10 +92,15 @@ export default function MobileApp() {
       if (!silent) setLoading(true);
 
       if (getToken()) {
-        const [meRes, actRes] = await Promise.all([
-          api.me({ force }),
+        const [meResult, actResult] = await Promise.allSettled([
+          api.me({ force }).then(result => {
+            setMe(result?.success ? result : null);
+            return result;
+          }).finally(() => setReady(true)),
           api.activities({ force }),
         ]);
+        const meRes = meResult.status === 'fulfilled' ? meResult.value : null;
+        const actRes = actResult.status === 'fulfilled' ? actResult.value : null;
 
         if (meRes?.success) setMe(meRes);
         else setMe(null);

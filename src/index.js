@@ -6,6 +6,9 @@
 // 讓登入/讀取 D1 幾乎立即回應，不影響你原本的 API/資料/前端 UI。
 
 const __BOOTSTRAP_STATE__ = { promise: null };
+// Bump when changing the schema/bootstrap below. Persisted in D1 so a new
+// Worker isolate does not repeat hundreds of schema/seed queries on first load.
+const SCHEMA_VERSION = '2026-11-07.bootstrap-v1';
 
 const __HOT_CACHE__ = new Map();
 
@@ -48,6 +51,14 @@ async function ensureBootstrapped(db) {
   if (__BOOTSTRAP_STATE__.promise) return __BOOTSTRAP_STATE__.promise;
 
   __BOOTSTRAP_STATE__.promise = (async () => {
+    try {
+      const state = await db.prepare("SELECT value FROM app_schema_state WHERE key='schema_version' LIMIT 1").first();
+      if (state?.value === SCHEMA_VERSION) return;
+    } catch (error) {
+      // Only an absent marker table means initialization is needed. A transient
+      // database error must not trigger schema changes or be marked successful.
+      if (!/no such table:\s*app_schema_state/i.test(String(error?.message || error))) throw error;
+    }
 /* =========================
  * Schema bootstrap + migrations
  * ========================= */
@@ -843,6 +854,10 @@ await db
   .run();
 
 
+
+  await db.prepare('CREATE TABLE IF NOT EXISTS app_schema_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
+  await db.prepare("INSERT INTO app_schema_state (key,value) VALUES ('schema_version',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+    .bind(SCHEMA_VERSION).run();
 
   })().catch((err) => {
     // 如果初始化失敗，允許下次再嘗試（避免整個服務卡死）

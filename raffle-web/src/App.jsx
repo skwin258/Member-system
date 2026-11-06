@@ -49,7 +49,7 @@ function getRefCodeFromPath() {
 }
 
 export default function App() {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => !getToken());
   const [me, setMe] = useState(null);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -117,7 +117,10 @@ export default function App() {
 
       if (getToken()) {
 const [meResult, actResult] = await Promise.allSettled([
-  api.me({ force }),
+  api.me({ force }).then(result => {
+    setMe(result?.success ? result : null);
+    return result;
+  }).finally(() => setReady(true)),
   api.activities({ force }),
 ]);
 
