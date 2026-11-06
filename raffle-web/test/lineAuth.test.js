@@ -1,96 +1,60 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-const api = vi.hoisted(() => ({ lineLogin: vi.fn(), lineRegister: vi.fn() }));
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+const api = vi.hoisted(() => ({ lineSession: vi.fn() }));
 vi.mock('../src/api', () => ({ api }));
-let auth, liff;
+let auth, assign;
 beforeEach(async () => {
-  vi.resetModules();
-  vi.clearAllMocks();
-  sessionStorage.clear();
-  liff = { init: vi.fn().mockResolvedValue(undefined), isLoggedIn: vi.fn().mockReturnValue(true), getIDToken: vi.fn().mockReturnValue('verified-id-token'), login: vi.fn() };
-  vi.stubGlobal('window', { location: new URL('https://skclub.vip/'), liff });
-  api.lineLogin.mockResolvedValue({ success: true, token: 'session' });
-  api.lineRegister.mockResolvedValue({ success: true, token: 'session' });
+  vi.resetModules(); vi.clearAllMocks(); sessionStorage.clear();
+  assign = vi.fn();
+  vi.stubGlobal('window', { location: { href: 'https://skclub.vip/', assign } });
+  api.lineSession.mockResolvedValue({ success: true, token: 'website-session' });
   auth = await import('../src/lib/lineAuth');
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
-
-describe('LINE authorization return', () => {
-  it('persists mode and referral through a fresh external-browser login', async () => {
-    liff.isLoggedIn.mockReturnValue(false);
-    expect(await auth.startLineAuth('register', 'abc12345')).toBeNull();
-    const redirect = new URL(liff.login.mock.calls[0][0].redirectUri);
-    expect(redirect.searchParams.get('sk_line_auth')).toBe('register');
-    expect(redirect.searchParams.get('sk_line_ref')).toBe('abc12345');
-    expect(api.lineRegister).not.toHaveBeenCalled();
-    // Simulate the page loading again after LINE redirects back.
-    vi.resetModules();
-    window.location = redirect;
-    liff.isLoggedIn.mockReturnValue(true);
-    auth = await import('../src/lib/lineAuth');
-    expect(auth.isLineCallback()).toBe(true);
-    await auth.completeLineCallback();
-    expect(api.lineRegister).toHaveBeenCalledExactlyOnceWith({ id_token: 'verified-id-token', referral_code: 'abc12345' });
-  });
-
-  it('completes once even when React StrictMode starts the callback twice', async () => {
-    window.location = new URL('https://skclub.vip/?sk_line_auth=login&code=oauth-code');
-    await Promise.all([auth.completeLineCallback(), auth.completeLineCallback()]);
-    expect(liff.init).toHaveBeenCalledTimes(1);
-    expect(api.lineLogin).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps intent from liff.state before SDK rewrites the URL, without session storage', async () => {
-    window.location = new URL('https://skclub.vip/?liff.state=' + encodeURIComponent('/?sk_line_auth=register&sk_line_ref=friend123'));
-    liff.init.mockImplementation(async () => { window.location = new URL('https://skclub.vip/'); });
-    expect(auth.isLineCallback()).toBe(true);
-    await auth.completeLineCallback();
-    expect(api.lineRegister).toHaveBeenCalledWith({ id_token: 'verified-id-token', referral_code: 'friend123' });
-  });
-
-  it('registers a new LINE member using the backend error code', async () => {
-    api.lineLogin.mockResolvedValue({ success: false, code: 'LINE_NOT_REGISTERED', error: '尚未使用 LINE 註冊' });
-    await auth.startLineAuth('login', 'friend123');
-    expect(api.lineRegister).toHaveBeenCalledWith({ id_token: 'verified-id-token', referral_code: 'friend123' });
-  });
-
-  it('does not create an account for a locked member or general server errors', async () => {
-    api.lineLogin.mockResolvedValue({ success: false, error: '帳號已鎖定', status: 403 });
-    await expect(auth.startLineAuth('login')).rejects.toThrow('帳號已鎖定');
-    expect(api.lineRegister).not.toHaveBeenCalled();
-  });
-
-  it('does not redirect again if the callback authorization was cancelled', async () => {
-    liff.isLoggedIn.mockReturnValue(false);
-    await expect(auth.completeLineCallback()).rejects.toThrow('授權未完成');
-    expect(liff.login).not.toHaveBeenCalled();
-    expect(api.lineLogin).not.toHaveBeenCalled();
-  });
-
-  it('times out a stalled SDK and permits a subsequent retry', async () => {
-    vi.useFakeTimers();
-    liff.init.mockImplementationOnce(() => new Promise(() => {}));
-    const stalled = expect(auth.startLineAuth()).rejects.toThrow('逾時');
-    await vi.advanceTimersByTimeAsync(15000);
-    await stalled;
-    await auth.startLineAuth();
-    expect(liff.init).toHaveBeenCalledTimes(2);
-    expect(api.lineLogin).toHaveBeenCalledTimes(1);
-  });
-
-  it('rejects an absent ID token without sending an unauthenticated registration', async () => {
-    liff.getIDToken.mockReturnValue(null);
-    await expect(auth.startLineAuth('register')).rejects.toThrow('身分授權');
-    expect(api.lineRegister).not.toHaveBeenCalled();
-  });
-
-  it('does not automatically sign in normal homepage visits', () => {
-    expect(auth.isLineCallback()).toBe(false);
-    expect(liff.init).not.toHaveBeenCalled();
-  });
-
-  it('removes authorization parameters but preserves referral paths and unrelated query data', () => {
-    window.location = new URL('https://skclub.vip/register/friend123?sk_line_auth=register&sk_line_ref=friend123&code=secret&state=secret&campaign=hello');
-    expect(auth.clearLineCallback()).toBe('/register/friend123?campaign=hello');
-  });
+afterEach(() => vi.unstubAllGlobals());
+it('starts HTTPS backend authorization with mode/referral and never reads LIFF tokens', async () => {
+  window.location.href = 'http://192.168.1.136:5173/';
+  await auth.startLineAuth('register', 'friend123');
+  const url = new URL(assign.mock.calls[0][0]);
+  expect(url.origin).toBe('https://api.skclub.vip');
+  expect(url.pathname).toBe('/auth/line/start');
+  expect(url.searchParams.get('mode')).toBe('register');
+  expect(url.searchParams.get('ref')).toBe('friend123');
+  expect(url.searchParams.has('redirect_uri')).toBe(false);
+  expect(api.lineSession).not.toHaveBeenCalled();
+});
+it('deduplicates StrictMode callback exchanges', async () => {
+  window.location.href = 'https://skclub.vip/?line_auth=complete';
+  await Promise.all([auth.completeLineCallback(), auth.completeLineCallback()]);
+  expect(api.lineSession).toHaveBeenCalledTimes(1);
+});
+it('shows friendly expired-token guidance without repeating the handoff', async () => {
+  window.location.href = 'https://skclub.vip/?line_auth=error&line_error=LINE_TOKEN_EXPIRED';
+  await expect(auth.completeLineCallback()).rejects.toThrow('重新進行授權');
+  expect(api.lineSession).not.toHaveBeenCalled();
+  await auth.startLineAuth();
+  expect(assign).toHaveBeenCalledTimes(1);
+});
+it('fails closed for old LIFF callbacks and does not resubmit cached credentials', async () => {
+  window.location.href = 'https://skclub.vip/?sk_line_auth=login&code=old-code';
+  expect(auth.isLineCallback()).toBe(true);
+  await expect(auth.completeLineCallback()).rejects.toThrow('流程已更新');
+  expect(api.lineSession).not.toHaveBeenCalled();
+});
+it('never displays raw provider or unknown server errors', async () => {
+  window.location.href = 'https://skclub.vip/?line_auth=complete';
+  api.lineSession.mockResolvedValue({ success: false, error: 'IdToken expired.', code: 'unexpected-code' });
+  await expect(auth.completeLineCallback()).rejects.toThrow('LINE 服務');
+});
+it('does not automatically authorize on regular visits and clears old auth state on success', () => {
+  expect(auth.isLineCallback()).toBe(false);
+  window.location.href = 'https://skclub.vip/?line_auth=complete&campaign=hello';
+  sessionStorage.setItem('sk_line_auth_pending', 'old-state');
+  expect(auth.clearLineCallback()).toBe('/?campaign=hello');
+  expect(sessionStorage.getItem('sk_line_auth_pending')).toBeNull();
+});
+it('network failure does not replay a consumed one-time handoff', async () => {
+  window.location.href = 'https://skclub.vip/?line_auth=complete';
+  api.lineSession.mockRejectedValue(new Error('network error'));
+  await expect(auth.completeLineCallback()).rejects.toThrow('稍後重新登入');
+  await expect(auth.completeLineCallback()).rejects.toThrow('稍後重新登入');
+  expect(api.lineSession).toHaveBeenCalledTimes(1);
 });

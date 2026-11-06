@@ -286,32 +286,18 @@ async createElectronicRoomTicket() {
     return await api.login(username, password);
   },
 
-  async lineLogin(payload = {}) {
-    const r = await request("/auth/line/login", {
+  async lineSession() {
+    const result = await request("/auth/line/session", {
       method: "POST",
-      body: JSON.stringify(payload || {}),
+      credentials: "include",
+      body: "{}",
     });
-    const t = r?.token || r?.access_token || r?.data?.token || "";
-    if (r?.success && t) {
-      setToken(t);
+    if (result?.success && result?.token) {
+      setToken(result.token);
       touchUserActivity();
       clearMemo([memoKey("/auth/me", "user"), memoKey("/me", "user")]);
     }
-    return r;
-  },
-
-  async lineRegister(payload = {}) {
-    const r = await request("/auth/line/register", {
-      method: "POST",
-      body: JSON.stringify(payload || {}),
-    });
-    const t = r?.token || r?.access_token || r?.data?.token || "";
-    if (r?.success && t) {
-      setToken(t);
-      touchUserActivity();
-      clearMemo([memoKey("/auth/me", "user"), memoKey("/me", "user")]);
-    }
-    return r;
+    return result;
   },
 
   /* -----------------

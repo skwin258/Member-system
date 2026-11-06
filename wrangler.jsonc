@@ -15,7 +15,9 @@
   ],
 
   "vars": {
-    "LINE_LOGIN_CHANNEL_ID": "2010170588"
+    "LINE_LOGIN_CHANNEL_ID": "2010170588",
+    "LINE_LOGIN_REDIRECT_URI": "https://api.skclub.vip/auth/line/callback",
+    "LINE_LOGIN_FRONTEND_URL": "https://skclub.vip/"
   },
 
   "routes": [

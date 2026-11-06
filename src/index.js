@@ -1,3 +1,4 @@
+import { handleLineOAuth, isLineOAuthRoute } from './line-oauth.js';
 // raffle-api/src/index.js
 
 // ✅ PERF FIX (2026-03-02):
@@ -884,7 +885,13 @@ const corsHeaders = {
   });
 };
 
+    if (isLineOAuthRoute(url.pathname) && request.method === "OPTIONS") {
+      return handleLineOAuth(request, env, null, null);
+    }
     if (request.method === "OPTIONS") return corsEmpty(204);
+    if (["/auth/line/login", "/auth/line/register"].includes(url.pathname)) {
+      return json({ success: false, code: "LINE_REAUTHORIZE", error: "登入流程已更新，請重新整理頁面後再次進行 LINE 授權" }, { status: 410, headers: { "Cache-Control": "no-store" } });
+    }
 
     try {
       const db = env.raffle_db || env.RAFFLE_DB || env.DB;
@@ -992,65 +999,6 @@ const safeJson = async (req) => {
       const randToken = () => {
         const a = crypto.getRandomValues(new Uint8Array(16));
         return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
-      };
-
-      const getLineChannelId = () =>
-        String(
-          env.LINE_LOGIN_CHANNEL_ID ||
-          env.LINE_CHANNEL_ID ||
-          env.VITE_LINE_CHANNEL_ID ||
-          ""
-        ).trim();
-
-      const verifyLineIdToken = async (idToken) => {
-        const token = String(idToken || "").trim();
-        const clientId = getLineChannelId();
-
-        if (!clientId) {
-          return {
-            ok: false,
-            error: "尚未設定 LINE_LOGIN_CHANNEL_ID，請先在 Cloudflare Worker 環境變數設定 LINE Login Channel ID",
-          };
-        }
-
-        if (!token) {
-          return { ok: false, error: "缺少 LINE id_token" };
-        }
-
-        const body = new URLSearchParams();
-        body.set("id_token", token);
-        body.set("client_id", clientId);
-
-        const res = await fetch("https://api.line.me/oauth2/v2.1/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body,
-        });
-
-        let data = null;
-        try {
-          data = await res.json();
-        } catch (_) {
-          data = null;
-        }
-
-        if (!res.ok || !data?.sub) {
-          return {
-            ok: false,
-            error: data?.error_description || data?.error || "LINE 授權驗證失敗",
-            raw: data,
-          };
-        }
-
-        return {
-          ok: true,
-          lineUser: {
-            sub: String(data.sub || "").trim(),
-            name: String(data.name || "LINE會員").trim(),
-            picture: String(data.picture || "").trim(),
-            email: String(data.email || "").trim(),
-          },
-        };
       };
 
       const makeLineUsername = async (lineUserId) => {
@@ -2819,76 +2767,12 @@ return json({
 }
 
 // =========================
-// AUTH: LINE login
-// POST /auth/line/login
-// body: { id_token }
-// =========================
-if (url.pathname === "/auth/line/login" && request.method === "POST") {
-  const body = await safeJson(request);
-  const verified = await verifyLineIdToken(body.id_token || body.idToken);
-
-  if (!verified.ok) {
-    return json({ success: false, error: verified.error, raw: verified.raw || null }, { status: 401 });
-  }
-
-  const lineUserId = String(verified.lineUser.sub || "").trim();
-  const user = await db
-    .prepare(
-      `SELECT id, username, password, display_name,
-              welfare_balance, discount_balance, s_balance,
-              line_id, line_user_id, line_display_name, line_picture_url,
-              birthday, bank_holder, bank_name, bank_branch, bank_account,
-              line_verified, num_authorized, uses_left, times_override,
-              enabled, locked
-       FROM users
-       WHERE line_user_id=?
-       LIMIT 1`
-    )
-    .bind(lineUserId)
-    .first();
-
-  if (!user) {
-    return json(
-      { success: false, error: "尚未使用 LINE 註冊，請先點註冊並使用 LINE 註冊", code: "LINE_NOT_REGISTERED" },
-      { status: 404 }
-    );
-  }
-
-  if (Number(user.enabled || 0) !== 1) {
-    return json({ success: false, error: "帳號已停用" }, { status: 403 });
-  }
-  if (Number(user.locked || 0) === 1) {
-    return json({ success: false, error: "帳號已鎖定" }, { status: 403 });
-  }
-
-  // 同步最新 LINE 顯示名稱/頭像
-  await db
-    .prepare("UPDATE users SET line_display_name=?, line_picture_url=? WHERE id=?")
-    .bind(verified.lineUser.name || "", verified.lineUser.picture || "", Number(user.id))
-    .run();
-
-  return await createUserLoginSession({
-    ...user,
-    line_display_name: verified.lineUser.name || user.line_display_name || "",
-    line_picture_url: verified.lineUser.picture || user.line_picture_url || "",
-  });
-}
-
-// =========================
 // AUTH: LINE register
 // POST /auth/line/register
 // body: { id_token, referral_code }
 // 說明：若從推薦連結進來，LINE 註冊成功後也會寫入 referrals，推薦人數會計算到。
 // =========================
-if (url.pathname === "/auth/line/register" && request.method === "POST") {
-  const body = await safeJson(request);
-  const ref_code = String(body.referral_code || body.ref_code || body.ref || "").trim();
-  const verified = await verifyLineIdToken(body.id_token || body.idToken);
-
-  if (!verified.ok) {
-    return json({ success: false, error: verified.error, raw: verified.raw || null }, { status: 401 });
-  }
-
+const signInLineMember = async (verified, ref_code) => {
   const lineUserId = String(verified.lineUser.sub || "").trim();
   const displayName = String(verified.lineUser.name || "LINE會員").trim();
   const pictureUrl = String(verified.lineUser.picture || "").trim();
@@ -3037,6 +2921,10 @@ if (url.pathname === "/auth/line/register" && request.method === "POST") {
   res.headers.set("X-SK-Referral-Bound", refBound ? "1" : "0");
   res.headers.set("X-SK-Referral-Rewarded", refRewarded ? "1" : "0");
   return res;
+};
+
+if (isLineOAuthRoute(url.pathname)) {
+  return await handleLineOAuth(request, env, db, signInLineMember);
 }
 
 // =========================

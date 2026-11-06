@@ -1,123 +1,56 @@
 import { api } from '../api';
-import { LINE_LIFF_ID } from '../config';
+import { API_BASE } from '../config';
 
-const PENDING_KEY = 'sk_line_auth_pending';
-const MAX_AGE = 15 * 60 * 1000;
-let initPromise;
+const MESSAGES = {
+  LINE_CONFIG_ERROR: 'LINE 登入設定尚未完成，請聯絡客服',
+  LINE_STATE_INVALID: '登入驗證已失效，請在同一個瀏覽器重新進行 LINE 授權',
+  LINE_CANCELLED: '已取消 LINE 授權，請重新登入',
+  LINE_TOKEN_EXPIRED: 'LINE 授權已失效，請重新進行授權',
+  LINE_TOKEN_INVALID: 'LINE 身分驗證未完成，請重新進行授權',
+  LINE_PROVIDER_ERROR: 'LINE 服務暫時無法連線，請稍後重新登入',
+  LINE_SESSION_INVALID: '登入連線已失效，請在同一個瀏覽器重新登入；若從 Telegram 開啟，請改用 Safari 或 Chrome 完成整個流程',
+  LINE_ACCOUNT_DISABLED: '帳號已停用，請聯絡客服',
+  LINE_ACCOUNT_LOCKED: '帳號已鎖定，請聯絡客服',
+  LINE_REAUTHORIZE: '登入流程已更新，請重新進行 LINE 授權',
+};
 let callbackPromise;
-
-export function withTimeout(promise, ms, message) {
-  let timer;
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms); }),
-  ]).finally(() => clearTimeout(timer));
+function authError(code) {
+  return Object.assign(new Error(MESSAGES[code] || MESSAGES.LINE_PROVIDER_ERROR), { code });
 }
-
-function readPending() {
-  try {
-    const value = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null');
-    return value && Date.now() - value.createdAt < MAX_AGE ? value : null;
-  } catch { return null; }
-}
-
-function callbackParams() {
-  const url = new URL(window.location.href);
-  const state = url.searchParams.get('liff.state');
-  if (state) {
-    try {
-      const nested = new URL(state, url.origin);
-      if (nested.searchParams.has('sk_line_auth')) return nested.searchParams;
-    } catch { /* Use the direct callback parameters. */ }
-  }
-  return url.searchParams;
-}
-
 export function isLineCallback() {
-  const url = new URL(window.location.href);
-  return callbackParams().has('sk_line_auth') || url.searchParams.has('liff.state') ||
-    (Boolean(readPending()) && (url.searchParams.has('code') || url.searchParams.has('error')));
+  const params = new URL(window.location.href).searchParams;
+  return params.has('line_auth') || params.has('sk_line_auth') || params.has('liff.state');
 }
-
-async function loadLineSdk() {
-  if (window.liff) return window.liff;
-  const script = document.getElementById('line-liff-sdk');
-  if (!script) throw new Error('LINE 服務尚未載入，請重新整理後重試');
-  let loaded, failed;
-  try {
-    await withTimeout(new Promise((resolve, reject) => {
-      loaded = resolve;
-      failed = () => reject(new Error('LINE 服務載入失敗，請檢查網路後重新整理'));
-      script.addEventListener('load', loaded, { once: true });
-      script.addEventListener('error', failed, { once: true });
-    }), 8000, 'LINE 服務載入逾時，請檢查網路後重新整理');
-  } finally {
-    script.removeEventListener('load', loaded);
-    script.removeEventListener('error', failed);
-  }
-  if (!window.liff) throw new Error('LINE 服務載入失敗，請重新整理後重試');
-  return window.liff;
-}
-
-async function initLine() {
-  if (!initPromise) {
-    initPromise = withTimeout(
-      loadLineSdk().then(liff => liff.init({ liffId: LINE_LIFF_ID })),
-      15000,
-      'LINE 授權連線逾時，請重試',
-    ).catch(error => { initPromise = null; throw error; });
-  }
-  await initPromise;
-  return window.liff;
-}
-
-async function exchangeToken(mode, referralCode, liff) {
-  const idToken = liff.getIDToken();
-  if (!idToken) throw new Error('未取得 LINE 身分授權，請重新登入並同意授權');
-  let data = mode === 'register'
-    ? await api.lineRegister({ id_token: idToken, referral_code: referralCode })
-    : await api.lineLogin({ id_token: idToken });
-  if (mode === 'login' && (data?.code === 'LINE_NOT_REGISTERED' || data?.raw?.code === 'LINE_NOT_REGISTERED')) {
-    data = await api.lineRegister({ id_token: idToken, referral_code: referralCode });
-  }
-  if (!data?.success || !data?.token) throw new Error(data?.error || 'LINE 登入失敗，請重試');
-  try { sessionStorage.removeItem(PENDING_KEY); } catch { /* URL also carries the intent. */ }
-  return data;
-}
-
 export async function startLineAuth(mode = 'login', referralCode = '') {
-  const liff = await initLine();
-  if (liff.isLoggedIn()) return exchangeToken(mode, referralCode, liff);
-  const redirect = new URL(window.location.href);
-  redirect.searchParams.set('sk_line_auth', mode);
-  if (referralCode) redirect.searchParams.set('sk_line_ref', referralCode);
-  try {
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ mode, referralCode, createdAt: Date.now() }));
-  } catch { /* Keep intent in the callback URL when storage is unavailable. */ }
-  liff.login({ redirectUri: redirect.href });
+  // Top-level HTTPS navigation avoids third-party cookies and LIFF token caches.
+  // A local preview intentionally completes authentication on the production site.
+  const url = new URL('/auth/line/start', API_BASE);
+  url.searchParams.set('mode', mode === 'register' ? 'register' : 'login');
+  if (/^[a-zA-Z0-9_-]{4,32}$/.test(referralCode)) url.searchParams.set('ref', referralCode);
+  try { sessionStorage.removeItem('sk_line_auth_pending'); } catch { /* Server owns auth state. */ }
+  window.location.assign(url.href);
   return null;
 }
-
 export function completeLineCallback() {
   if (!callbackPromise) {
-    // Read before init: LIFF can rewrite the callback URL during initialization.
-    const params = callbackParams();
-    const pending = readPending();
-    const mode = params.get('sk_line_auth') || pending?.mode || 'login';
-    const referral = params.get('sk_line_ref') || pending?.referralCode || '';
+    const params = new URL(window.location.href).searchParams;
     callbackPromise = (async () => {
-      const liff = await initLine();
-      if (!liff.isLoggedIn()) throw new Error('LINE 授權未完成或已取消，請返回首頁重新登入');
-      return exchangeToken(mode, referral, liff);
-    })().catch(error => { callbackPromise = null; throw error; });
+      if (params.get('line_auth') === 'error') throw authError(params.get('line_error'));
+      if (params.get('line_auth') !== 'complete') throw authError('LINE_REAUTHORIZE');
+      let data;
+      try { data = await api.lineSession(); }
+      catch { throw authError('LINE_PROVIDER_ERROR'); }
+      if (!data?.success || !data?.token) throw authError(data?.code || 'LINE_SESSION_INVALID');
+      return data;
+    })();
   }
+  // Never replay the one-time handoff; recovery starts a new authorization.
   return callbackPromise;
 }
-
 export function clearLineCallback() {
-  try { sessionStorage.removeItem(PENDING_KEY); } catch { /* No storage available. */ }
+  try { sessionStorage.removeItem('sk_line_auth_pending'); } catch { /* Storage may be unavailable. */ }
   const url = new URL(window.location.href);
-  ['sk_line_auth', 'sk_line_ref', 'liff.state', 'code', 'state', 'error', 'error_description', 'liffClientId', 'liffRedirectUri'].forEach(key => url.searchParams.delete(key));
+  ['line_auth', 'line_error', 'sk_line_auth', 'sk_line_ref', 'liff.state', 'code', 'state', 'error', 'error_description', 'liffClientId', 'liffRedirectUri'].forEach(key => url.searchParams.delete(key));
   if (/access_token=|id_token=/.test(url.hash)) url.hash = '';
   return url.pathname + url.search + url.hash;
 }
