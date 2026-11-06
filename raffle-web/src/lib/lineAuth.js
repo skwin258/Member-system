@@ -6,6 +6,9 @@ const MAX_AGE = 15 * 60 * 1000;
 const LOGIN_HOME = 'https://skclub.vip/';
 let initPromise;
 let callbackPromise;
+let startPromise;
+let redirecting = false;
+let initialized = false;
 
 export function withTimeout(promise, ms, message) {
   let timer;
@@ -29,7 +32,7 @@ function callbackParams() {
   if (state) {
     try {
       const nested = new URL(state, url.origin);
-      if (nested.searchParams.has('sk_line_auth')) return nested.searchParams;
+      if (nested.searchParams.has('sk_line_auth') || nested.searchParams.has('sk_line_start')) return nested.searchParams;
     } catch { /* Use the direct callback parameters. */ }
   }
   return url.searchParams;
@@ -37,7 +40,7 @@ function callbackParams() {
 
 export function isLineCallback() {
   const url = new URL(window.location.href);
-  return callbackParams().has('sk_line_auth') || url.searchParams.has('liff.state') ||
+  return callbackParams().has('sk_line_auth') || callbackParams().has('sk_line_start') || url.searchParams.has('liff.state') ||
     (Boolean(readPending()) && (url.searchParams.has('code') || url.searchParams.has('error')));
 }
 
@@ -64,13 +67,52 @@ async function loadLineSdk() {
 async function initLine() {
   if (!initPromise) {
     initPromise = withTimeout(
-      loadLineSdk().then(liff => liff.init({ liffId: LINE_LIFF_ID })),
+      loadLineSdk().then(liff => liff.init({ liffId: LINE_LIFF_ID })).then(() => { initialized = true; }),
       15000,
       'LINE 授權連線逾時，請重試',
-    ).catch(error => { initPromise = null; throw error; });
+    );
   }
   await initPromise;
   return window.liff;
+}
+
+function intent() {
+  const params = callbackParams();
+  const pending = readPending();
+  return {
+    mode: (params.get('sk_line_start') || params.get('sk_line_auth') || pending?.mode) === 'register' ? 'register' : 'login',
+    referral: params.get('sk_line_ref') || pending?.referralCode || '',
+    retry: params.get('sk_line_retry') === '1' || pending?.retry ? 1 : 0,
+  };
+}
+
+function freshPage(mode, referralCode, retry = 0, viaLiff = false) {
+  if (redirecting) return null;
+  const url = new URL(viaLiff ? `https://liff.line.me/${LINE_LIFF_ID}/` : LOGIN_HOME);
+  url.searchParams.set('sk_line_start', mode);
+  if (referralCode) url.searchParams.set('sk_line_ref', referralCode);
+  if (retry) url.searchParams.set('sk_line_retry', '1');
+  redirecting = true;
+  // A full navigation destroys any uncancellable in-flight init. The new page
+  // contains no old OAuth code/state and starts PKCE on the callback origin.
+  window.location.href = url.href;
+  return null;
+}
+
+export function restartLineAuth() {
+  const { mode, referral } = intent();
+  // Re-enter through the official LIFF URL so LINE can establish its browser
+  // context again; never replay the failed code in the current document.
+  return freshPage(mode, referral, 0, true);
+}
+
+function friendlyError(error) {
+  const message = String(error?.message || error || '');
+  if (/code.?verifier|invalid.?grant|invalid.?state|state.*mismatch/i.test(message)) {
+    return new Error('LINE 授權連線已失效，請按「重新登入」開始新的授權；請在同一個瀏覽器完成');
+  }
+  if (expired(error)) return new Error('LINE 授權已失效，請重新登入');
+  return error;
 }
 
 function expired(error) {
@@ -87,13 +129,14 @@ function tokenNeedsRenewal(liff) {
 }
 
 async function redirectToLine(mode, referralCode, retry = 0, renew = false) {
+  if (redirecting) return null;
+  if (new URL(window.location.href).origin !== new URL(LOGIN_HOME).origin) return freshPage(mode, referralCode, retry);
   let liff = window.liff || await loadLineSdk();
+  if (initialized && liff.isInClient?.() && !liff.isLoggedIn()) return freshPage(mode, referralCode, retry, true);
   if (renew) {
     if (liff.isInClient?.()) throw new Error('LINE 授權已失效，請重新開啟此頁，或使用 Safari／Chrome 重新登入');
     liff.logout();
-    initPromise = null;
-    try { liff = await initLine(); }
-    catch { throw new Error('LINE 授權資料已失效，請重新整理頁面後再登入'); }
+    if (!initialized) return freshPage(mode, referralCode, retry);
   }
   // Never recycle OAuth code/state/liff.state or a LAN URL into redirectUri.
   // The LIFF SDK continues to own OAuth state and PKCE verification.
@@ -104,7 +147,9 @@ async function redirectToLine(mode, referralCode, retry = 0, renew = false) {
   try {
     sessionStorage.setItem(PENDING_KEY, JSON.stringify({ mode, referralCode, retry, createdAt: Date.now() }));
   } catch { /* Intent is also carried in the callback URL. */ }
-  liff.login({ redirectUri: redirect.href });
+  redirecting = true;
+  try { liff.login({ redirectUri: redirect.href }); }
+  catch (error) { redirecting = false; throw friendlyError(error); }
   return null;
 }
 
@@ -134,26 +179,28 @@ async function exchangeToken(mode, referralCode, liff, retry = 0) {
   return data;
 }
 
-export async function startLineAuth(mode = 'login', referralCode = '') {
-  try {
+export function startLineAuth(mode = 'login', referralCode = '', retry = 0) {
+  if (redirecting) return Promise.resolve(null);
+  if (new URL(window.location.href).origin !== new URL(LOGIN_HOME).origin) return Promise.resolve(freshPage(mode, referralCode, retry));
+  if (startPromise) return startPromise;
+  startPromise = (async () => { try {
     const liff = await initLine();
-    if (liff.isLoggedIn()) return await exchangeToken(mode, referralCode, liff);
-    return redirectToLine(mode, referralCode);
+    if (liff.isLoggedIn()) return await exchangeToken(mode, referralCode, liff, retry);
+    return redirectToLine(mode, referralCode, retry);
   } catch (error) {
-    if (expired(error)) return redirectToLine(mode, referralCode, 1, true);
-    throw error;
-  }
+    if (expired(error) && !retry) return redirectToLine(mode, referralCode, 1, true);
+    throw friendlyError(error);
+  } })().finally(() => { startPromise = null; });
+  return startPromise;
 }
 
 export function completeLineCallback() {
   if (!callbackPromise) {
     // Read before init: LIFF can rewrite the callback URL during initialization.
     const params = callbackParams();
-    const pending = readPending();
-    const mode = params.get('sk_line_auth') || pending?.mode || 'login';
-    const referral = params.get('sk_line_ref') || pending?.referralCode || '';
-    const retry = params.get('sk_line_retry') === '1' || pending?.retry ? 1 : 0;
+    const { mode, referral, retry } = intent();
     callbackPromise = (async () => {
+      if (params.has('sk_line_start')) return startLineAuth(mode, referral, retry);
       try {
         const liff = await initLine();
         if (!liff.isLoggedIn()) throw new Error('LINE 授權未完成或已取消，請返回首頁重新登入');
@@ -163,9 +210,9 @@ export function completeLineCallback() {
           if (!retry) return redirectToLine(mode, referral, 1, true);
           throw new Error('LINE 授權已失效，請返回首頁重新登入');
         }
-        throw error;
+        throw friendlyError(error);
       }
-    })().catch(error => { callbackPromise = null; throw error; });
+    })();
   }
   return callbackPromise;
 }
@@ -173,7 +220,7 @@ export function completeLineCallback() {
 export function clearLineCallback() {
   try { sessionStorage.removeItem(PENDING_KEY); } catch { /* No storage available. */ }
   const url = new URL(window.location.href);
-  ['sk_line_auth', 'sk_line_ref', 'sk_line_retry', 'liff.state', 'code', 'state', 'error', 'error_description', 'liffClientId', 'liffRedirectUri'].forEach(key => url.searchParams.delete(key));
+  ['sk_line_start', 'sk_line_auth', 'sk_line_ref', 'sk_line_retry', 'liff.state', 'code', 'state', 'error', 'error_description', 'liffClientId', 'liffRedirectUri'].forEach(key => url.searchParams.delete(key));
   if (/access_token=|id_token=/.test(url.hash)) url.hash = '';
   return url.pathname + url.search + url.hash;
 }

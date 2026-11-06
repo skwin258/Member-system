@@ -1,12 +1,22 @@
 import React, { StrictMode } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-const flow = vi.hoisted(() => ({ startLineAuth: vi.fn(), completeLineCallback: vi.fn(), isLineCallback: vi.fn(), clearLineCallback: vi.fn() }));
+const flow = vi.hoisted(() => ({ startLineAuth: vi.fn(), completeLineCallback: vi.fn(), isLineCallback: vi.fn(), clearLineCallback: vi.fn(), restartLineAuth: vi.fn() }));
 vi.mock('../src/lib/lineAuth', () => flow);
 import LoginBox from '../src/LoginBox';
 import LineAuthCallback from '../src/components/LineAuthCallback';
 beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); flow.isLineCallback.mockReturnValue(false); });
 afterEach(cleanup);
+
+it('the callback error button starts fresh authorization instead of replaying the failed code', async () => {
+  flow.isLineCallback.mockReturnValue(true);
+  flow.completeLineCallback.mockRejectedValue(new Error('LINE 授權連線已失效'));
+  render(<LineAuthCallback><div>首頁</div></LineAuthCallback>);
+  await screen.findByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: '重新登入' }));
+  expect(flow.restartLineAuth).toHaveBeenCalledTimes(1);
+  expect(flow.completeLineCallback).toHaveBeenCalledTimes(1);
+});
 
 it('sends one login for rapid double clicks and shows network errors inline', async () => {
   let reject;
