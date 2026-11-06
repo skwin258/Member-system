@@ -37,7 +37,8 @@ function splitPlainParagraphs(s) {
   return formatPlainText(s)
     .split(/\n\s*\n/)
     .map((x) => x.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+        .filter(x=>x.placement!=="login_popup");
 }
 
 export default function MobilePromoPage() {

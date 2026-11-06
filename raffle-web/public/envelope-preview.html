@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>紅包開啟動畫預覽</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:#071310 url('/fantasy/inner-background-preview.png') center/cover fixed;color:#e3ca96;font-family:system-ui,sans-serif;display:grid;place-items:center;overflow:hidden}
+main{text-align:center;width:100%;padding:24px}h1{font-size:20px;font-weight:500;letter-spacing:4px;margin:0 0 55px}p{font-size:13px;color:#b7aa8d;letter-spacing:2px}
+.stage{position:relative;margin:auto;width:min(78vw,350px);aspect-ratio:1;perspective:850px;isolation:isolate}
+.packet{position:absolute;inset:0;border:0;background:none;padding:0;cursor:pointer;transform-style:preserve-3d;-webkit-tap-highlight-color:transparent}
+.packet:focus-visible{outline:1px solid #d8b269;outline-offset:10px;border-radius:20px}
+.packet img{position:absolute;width:100%;height:100%;inset:0;object-fit:contain;pointer-events:none}
+.body{clip-path:url(#envelope-body);z-index:4;filter:drop-shadow(0 8px 9px #0008)}
+.inside{position:absolute;z-index:1;left:23%;right:23%;top:7%;bottom:8%;background:linear-gradient(#42160d,#a05220 38%,#3e100e);border:2px solid #b3823a;border-radius:5px;opacity:0}
+.lid{z-index:5;clip-path:url(#envelope-flap);transform-origin:50% 4.8%;backface-visibility:visible}
+.glow{position:absolute;inset:4% -10%;z-index:2;background:radial-gradient(ellipse,#fff7bc 0%,#ffd56d88 21%,#e6ac2433 42%,transparent 68%);opacity:0;pointer-events:none;mix-blend-mode:screen}
+.rays{position:absolute;inset:-35%;background:repeating-conic-gradient(from 0deg,transparent 0deg 15deg,#ffe6a233 17deg 22deg,transparent 25deg 45deg);mask-image:radial-gradient(circle,#000,transparent 65%);opacity:0;pointer-events:none;z-index:0}
+.reward{position:absolute;z-index:3;left:32%;right:32%;top:26%;height:40%;background:linear-gradient(135deg,#f9eac0,#c99b48);border:3px double #9c7028;border-radius:5px;box-shadow:0 0 30px #fbd67988;color:#72501e;display:grid;place-content:center;gap:7px;opacity:0;transform:translateY(35%) scale(.85);font-size:12px;letter-spacing:3px}.reward b{font-size:32px;font-family:Georgia,serif;letter-spacing:0}.reward small{font-size:10px;letter-spacing:1px}
+.spark{position:absolute;z-index:6;left:50%;top:35%;width:5px;height:5px;border-radius:50%;background:#ffe8a6;box-shadow:0 0 7px #ffdc63;opacity:0;pointer-events:none}
+.open .packet{animation:bump .5s ease}.open .inside{opacity:1;transition:opacity .2s .35s}
+.open .lid{animation:lid-open 1s cubic-bezier(.25,.6,.3,1) .25s forwards}
+.open .glow{animation:shine 1.8s ease .35s forwards}.open .rays{animation:rays 2.1s ease .4s forwards}
+.open .reward{animation:reward 1.2s cubic-bezier(.2,.7,.3,1) .65s forwards}
+.open .spark{animation:spark 1.5s ease-out var(--delay) forwards}
+@keyframes bump{25%{transform:scale(.96) rotate(-2deg)}65%{transform:scale(1.045) rotate(1deg)}100%{transform:scale(1)}}
+@keyframes lid-open{0%{transform:rotateX(0);filter:brightness(1)}30%{filter:brightness(1.5)}100%{transform:rotateX(155deg);filter:brightness(.55)}}
+@keyframes shine{0%{opacity:0;transform:scale(.6)}45%{opacity:1;transform:scale(1.2)}100%{opacity:.5;transform:scale(1)}}
+@keyframes rays{0%{opacity:0;transform:rotate(-20deg) scale(.6)}40%{opacity:.8}100%{opacity:.2;transform:rotate(20deg) scale(1.1)}}
+@keyframes reward{0%{opacity:0;transform:translateY(35%) scale(.85)}100%{opacity:1;transform:translateY(-59%) scale(1)}}
+@keyframes spark{0%{opacity:0;transform:translate(0,0) scale(.1)}20%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(.3)}}
+.replay{margin-top:45px;padding:10px 26px;color:#d8be86;background:#10211c;border:1px solid #927441;border-radius:7px;font:14px system-ui;cursor:pointer}
+@media(prefers-reduced-motion:reduce){.open *{animation-duration:.01ms!important;animation-delay:0ms!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute;pointer-events:none"><defs>
+<clipPath id="envelope-flap" clipPathUnits="objectBoundingBox"><path d="M .21 .042 L .77 .042 L .767 .201 L .602 .304 C .602 .367 .553 .416 .489 .416 C .425 .416 .376 .367 .376 .304 L .217 .201 Z"/></clipPath>
+<clipPath id="envelope-body" clipPathUnits="objectBoundingBox"><path d="M .217 .199 L .376 .302 C .376 .365 .425 .414 .489 .414 C .553 .414 .602 .365 .602 .302 L .767 .199 L .767 .95 L .217 .95 Z"/></clipPath>
+</defs></svg>
+<main><h1>紅包開啟動畫</h1><div class="stage"><div class="rays"></div><button class="packet" aria-label="打開紅包"><div class="inside"></div><div class="glow"></div><div class="reward"><span>開啟成功</span><b>✦</b><small>效果預覽</small></div><img class="body" src="/fantasy/red-envelope-preview.png" alt=""><img class="lid" src="/fantasy/red-envelope-preview.png" alt=""></button></div><p id="hint">點擊紅包查看動畫</p><button class="replay">重新播放</button></main>
+<script>
+const stage=document.querySelector('.stage'),packet=document.querySelector('.packet'),hint=document.querySelector('#hint');let opened=false;
+for(let i=0;i<18;i++){const s=document.createElement('i');s.className='spark';const angle=i/18*Math.PI*2;s.style.setProperty('--x',Math.cos(angle)*150+'px');s.style.setProperty('--y',Math.sin(angle)*130-60+'px');s.style.setProperty('--delay',(.5+(i%4)*.08)+'s');stage.append(s)}
+function open(){if(opened)return;opened=true;stage.classList.add('open');hint.textContent='動畫效果預覽';packet.setAttribute('aria-label','紅包已開啟')}
+packet.onclick=open;document.querySelector('.replay').onclick=()=>{stage.classList.remove('open');opened=false;void stage.offsetWidth;open()};
+</script></body></html>

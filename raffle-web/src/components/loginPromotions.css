@@ -1,0 +1,10 @@
+.login-promotion-overlay{position:fixed;inset:0;z-index:1000000;display:grid;place-items:center;padding:40px 18px;background:#000b;backdrop-filter:blur(2px);cursor:pointer;overscroll-behavior:contain;touch-action:none}
+.login-promotion-art{position:relative;width:min(100%,480px);display:flex;justify-content:center;animation:login-promotion-enter .18s ease-out;outline:none}
+.login-promotion-art img{display:block;max-width:100%;width:auto;max-height:calc(100dvh - 100px);object-fit:contain;filter:drop-shadow(0 12px 30px #0007)}
+.login-promotion-close{position:absolute;z-index:2;right:0;top:-35px;width:38px;height:38px;border:1px solid #eedaa877;border-radius:50%;background:#142019d9;color:#fff1cb;font:30px/1 system-ui;display:grid;place-items:center;padding:0;cursor:pointer}
+.login-promotion-close:focus-visible{outline:2px solid #e8c67c;outline-offset:3px}
+.login-promotion-art.is-closing{pointer-events:none;animation:login-promotion-exit .23s ease-in forwards}
+.login-promotion-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@keyframes login-promotion-enter{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+@keyframes login-promotion-exit{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.22)}}
+@media(prefers-reduced-motion:reduce){.login-promotion-art,.login-promotion-art.is-closing{animation-duration:.01ms}}

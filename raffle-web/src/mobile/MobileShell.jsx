@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import "./mobileShell.css";
+import FantasyHome from './FantasyHome.jsx';
 import MobilePageFrame from "./MobilePageFrame.jsx";
 import { api } from "../api";
 import LoginBox from "../LoginBox";
@@ -13,6 +14,7 @@ import MobileShopPage from "./MobileShopPage.jsx";
 import InvitePage from "../pages/front/InvitePage.jsx";
 import MobileMyPage from "./MobileMyPage.jsx";
 import MobileElectronicRoomPage from "./MobileElectronicRoomPage.jsx";
+import "./mobileChrome.css";
 
 function BottomNavIcon({ type, active = false }) {
   const cls = active ? "mbBottomSvg isActive" : "mbBottomSvg";
@@ -282,37 +284,6 @@ const [electronicStatus, setElectronicStatus] = useState({
   message: "",
 });
 
-const [bannerIndex, setBannerIndex] = useState(0);
-const bannerTrackRef = useRef(null);
-
-const banners = useMemo(
-  () => [
-    "/img/BANNER1.png?v=3",
-    "/img/BANNER2.png?v=3",
-    "/img/BANNER3.png?v=3",
-	"/img/BANNER4.png?v=4",
-  ],
-  []
-);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBannerIndex((prev) => {
-        const next = (prev + 1) % banners.length;
-        const track = bannerTrackRef.current;
-        if (track) {
-          track.scrollTo({
-            left: next * track.clientWidth,
-            behavior: "smooth",
-          });
-        }
-        return next;
-      });
-    }, 5000);
-
-    return () => clearInterval(timer);
-  }, [banners.length]);
-
 useEffect(() => {
   if (!isGuest) return;
   const code = String(refCode || "").trim();
@@ -390,6 +361,7 @@ useEffect(() => {
 
   const menu = useMemo(
     () => [
+      { key: "ai", title: "AI 專區", guestAllowed: true },
       { key: "promo", title: "活動", guestAllowed: true },
       { key: "treasure", title: "奪寶", guestAllowed: true },
       { key: "records", title: "紀錄", guestAllowed: false },
@@ -428,79 +400,18 @@ function needLogin() {
     setActiveKey(key);
   }
 
-  function handleBannerScroll() {
-    const el = bannerTrackRef.current;
-    if (!el) return;
-
-    const width = el.clientWidth || 1;
-    const idx = Math.round(el.scrollLeft / width);
-    const safeIdx = Math.max(0, Math.min(banners.length - 1, idx));
-    setBannerIndex(safeIdx);
-  }
-
-  function goBanner(idx) {
-    const el = bannerTrackRef.current;
-    if (!el) return;
-
-    const width = el.clientWidth;
-    el.scrollTo({
-      left: width * idx,
-      behavior: "smooth",
-    });
-
-    setBannerIndex(idx);
-  }
-
   function renderBottomNav() {
-    const items = [
-      { key: "promo", label: "活動", icon: "promo" },
-      { key: "support", label: "客服", icon: "support" },
-      { key: "records", label: "紀錄", icon: "records" },
-      { key: "my", label: "我的", icon: "my" },
-    ];
-
-    return (
-      <div className="mbBottomNav mbBottomNav--icon">
-        <div className="mbBottomNavHalf">
-          {items.slice(0, 2).map((item) => {
-            const isActive = activeKey === item.key;
-            return (
-              <button
-                key={item.key}
-                className={`mbBottomIconItem ${isActive ? "isActive" : ""}`}
-                type="button"
-                onClick={() => handleGo(item.key)}
-              >
-                <BottomNavIcon type={item.icon} active={isActive} />
-                <span className="mbBottomIconLabel">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mbBottomNavCenterGap" />
-
-        <div className="mbBottomNavHalf">
-          {items.slice(2).map((item) => {
-            const isActive = activeKey === item.key;
-            return (
-              <button
-                key={item.key}
-                className={`mbBottomIconItem ${isActive ? "isActive" : ""}`}
-                type="button"
-                onClick={() => handleGo(item.key)}
-              >
-                <BottomNavIcon type={item.icon} active={isActive} />
-                <span className="mbBottomIconLabel">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
+    const item=(key,label)=><button key={key} className="fh-nav-item" type="button" aria-current={activeKey===key?'page':undefined} onClick={()=>handleGo(key)}><BottomNavIcon type={key} active={activeKey===key}/><span>{label}</span></button>;
+    return <nav className="fh-bottom-nav" aria-label="底部選單">
+      {item('promo','活動')}{item('support','客服')}
+      <button className="fh-coin-button" type="button" aria-label="回首頁" onClick={()=>setActiveKey('home')}><img className="fh-coin-image" src="/fantasy/scoin.png" alt="" draggable="false"/></button>
+      {item('records','紀錄')}{item('my','我的')}
+    </nav>;
   }
 
   function renderContent() {
+    if(activeKey==='ai')return <MobilePageFrame title="AI 專區" onBack={()=>setActiveKey('home')} plain><div className="fh-ai-grid"><button type="button" onClick={()=>alert('尚在開發中')}><TechIcon type="baccarat"/><strong>百家樂</strong></button><button type="button" onClick={()=>alert('尚在開發中')}><TechIcon type="sports"/><strong>運彩</strong></button><button type="button" onClick={()=>handleGo('electronicRoom')}><TechIcon type="game"/><strong>電子老虎機</strong><span>{electronicBadgeNumber}</span></button></div></MobilePageFrame>;
+
     if (activeKey === "promo") {
       return (
         <MobilePageFrame title="優惠活動" onBack={() => setActiveKey("home")} plain={true}>
@@ -611,19 +522,6 @@ if (activeKey === "treasure") {
     return null;
   }
 
-  const homeFloatButton = (
-    <button
-      className="mbFloatBtn"
-      type="button"
-      aria-label="回首頁"
-      onClick={() => setActiveKey("home")}
-    >
-      <span className="mbFloatCoinRing">
-        <img src="/img/scoin.png" alt="S Coin" className="mbFloatBtnImg" />
-      </span>
-    </button>
-  );
-
   const authModal = showGuestAuth ? (
     <div className="mbAuthOverlay" onClick={() => setShowGuestAuth(false)}>
       <div className="mbAuthBox" onClick={(e) => e.stopPropagation()}>
@@ -651,9 +549,9 @@ const electronicBadgeNumber = (() => {
   if (activeKey !== "home") {
     return (
       <>
-        <div className="mbHome mbHome--inner">
+        <div className="mbHome mbHome--inner fh-inner">
           {renderContent()}
-          {homeFloatButton}
+
           {renderBottomNav()}
         </div>
         {authModal}
@@ -661,209 +559,5 @@ const electronicBadgeNumber = (() => {
     );
   }
 
-  return (
-    <>
-      <div className="mbHome">
-        <div className="mbHomeScroll">
-          <section className="mbHeroCard">
-            <div className="mbBannerSlider" ref={bannerTrackRef} onScroll={handleBannerScroll}>
-{banners.map((src, idx) => (
-  <div className="mbBannerSlide" key={idx}>
-    <img
-      src={src}
-      alt={`Banner ${idx + 1}`}
-      className="mbBannerImg"
-      draggable="false"
-    />
-  </div>
-))}
-            </div>
-
-            <div className="mbBannerDots">
-              {banners.map((_, idx) => (
-                <button
-                  key={idx}
-                  className={idx === bannerIndex ? "active" : ""}
-                  onClick={() => goBanner(idx)}
-                  type="button"
-                  aria-label={`切換 Banner ${idx + 1}`}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="mbNoticeBlock">
-            <span className="mbNoticeIcon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M4 10v4h4l7 5V5l-7 5H4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                <path d="M18 9c1 1 1 5 0 6M20.5 6.5c2.4 2.8 2.4 8.2 0 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </span>
-            <div className="mbNoticeTrack">
-              <div className="mbNoticeMarquee">
-                系統公告：5/20 系統維護完成，部分功能已優化升級！
-              </div>
-            </div>
-          </section>
-
-<section className="mbInfoPanel">
-  <div className="mbInfoActions">
-    {!isGuest ? (
-      <>
-        <button className="mbInfoBtn" type="button" onClick={() => handleGo("my")}>
-          我的
-        </button>
-        <button className="mbInfoBtn" type="button" onClick={onLogout}>
-          登出
-        </button>
-      </>
-    ) : (
-      <>
-<button
-  className="mbInfoBtn"
-  type="button"
-  onClick={() => {
-    setAuthDefaultView("login");
-    setShowGuestAuth(true);
-  }}
->
-  登入
-</button>
-
-<button
-  className="mbInfoBtn"
-  type="button"
-  onClick={() => {
-    setAuthDefaultView("register");
-    setShowGuestAuth(true);
-  }}
->
-  註冊
-</button>
-      </>
-    )}
-  </div>
-
-  <div className="mbInfoStats">
-    <button className="mbInfoStatItem" type="button" onClick={() => handleGo("my")}>
-      <span>福利金額</span>
-      <strong>{money(me?.user?.welfare_balance)}</strong>
-    </button>
-
-    <button className="mbInfoStatItem" type="button" onClick={() => handleGo("my")}>
-      <span>折抵金</span>
-      <strong>{money(me?.user?.discount_balance)}</strong>
-    </button>
-
-    <button className="mbInfoStatItem wide" type="button" onClick={() => handleGo("my")}>
-      <span>S幣餘額</span>
-      <strong>{money(me?.user?.s_balance)}</strong>
-    </button>
-  </div>
-</section>
-
-          <section className="mbSectionHead">
-            <div>
-              <span></span>
-              <strong>AI 專區</strong>
-            </div>
-          </section>
-
-<section className="mbAiGrid">
-  <button
-    className="mbAiCard cyan"
-    type="button"
-    onClick={() => alert("尚在開發中")}
-  >
-    <TechIcon type="baccarat" />
-    <strong>百家樂</strong>
-  </button>
-
-  <button
-    className="mbAiCard violet"
-    type="button"
-    onClick={() => alert("尚在開發中")}
-  >
-    <TechIcon type="sports" />
-    <strong>運彩</strong>
-  </button>
-
-<button
-  className="mbAiCard blue"
-  type="button"
-  onClick={() => handleGo("electronicRoom")}
->
-<span className="mbAiFlameBadge" aria-hidden="true">
-  <span className="mbAiFlameGlow" />
-
-  <svg className="mbAiFlameIcon" viewBox="0 0 64 64" fill="none">
-    <defs>
-      <linearGradient id="mbAiFlameGradRed" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#fff3b0" />
-        <stop offset="35%" stopColor="#ffb347" />
-        <stop offset="70%" stopColor="#ff5a36" />
-        <stop offset="100%" stopColor="#ff1f1f" />
-      </linearGradient>
-    </defs>
-
-    <path
-      d="M36 8c2 8-2 12-6 17-4 4-8 8-8 15 0 8 6 14 14 14s14-6 14-14c0-10-7-14-9-22-1 3-3 5-5 8 1-8-3-13-7-18h-3Z"
-      fill="url(#mbAiFlameGradRed)"
-    />
-    <path
-      d="M33 26c1 5-2 7-4 10-2 2-3 4-3 7 0 5 4 9 9 9s9-4 9-9c0-6-4-9-6-13-1 2-2 3-3 5 0-4-2-7-5-9h3Z"
-      fill="rgba(255,255,255,0.28)"
-    />
-  </svg>
-
-  <span className="mbAiFlameCount">{electronicBadgeNumber}</span>
-</span>
-
-  <TechIcon type="game" />
-  <strong>電子老虎機</strong>
-</button>
-</section>
-
-<section className="mbFeatureGrid">
-  <button className="mbFeatureCard red" type="button" onClick={() => handleGo("treasure")}>
-    <TechIcon type="treasure" />
-    <div>
-      <strong>奪寶專區</strong>
-      <span>紅包與輪盤活動</span>
-    </div>
-  </button>
-
-  <button className="mbFeatureCard violet" type="button" onClick={() => handleGo("shop")}>
-    <TechIcon type="shop" />
-    <div>
-      <strong>積分商城</strong>
-      <span>電子積分商城</span>
-    </div>
-  </button>
-
-  <button className="mbFeatureCard cyan" type="button" onClick={() => handleGo("invite")}>
-    <TechIcon type="invite" />
-    <div>
-      <strong>邀請好友</strong>
-      <span>好友邀請獎勵</span>
-    </div>
-  </button>
-
-  <button className="mbFeatureCard blue" type="button" onClick={() => handleGo("records")}>
-    <TechIcon type="record" />
-    <div>
-      <strong>抽獎紀錄</strong>
-      <span>查看中獎明細</span>
-    </div>
-  </button>
-</section>
-        </div>
-
-        {homeFloatButton}
-        {renderBottomNav()}
-      </div>
-
-      {authModal}
-    </>
-  );
+  return <><FantasyHome isGuest={isGuest} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>{renderBottomNav()}{authModal}</>;
 }

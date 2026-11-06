@@ -146,7 +146,7 @@ export default function AdminPromotions() {
       }
       if (!data?.success) throw new Error(data?.error || "load promotions failed");
 
-      setItems(data.items || []);
+      setItems((data.items || []).filter(item=>item.placement!=="login_popup"));
     } catch (e) {
       setMsg("❌ " + (e?.message || "load failed"));
     } finally {
@@ -166,7 +166,7 @@ export default function AdminPromotions() {
 
       if (!data?.success) throw new Error(data?.error || "load positions failed");
 
-      const list = Array.isArray(data.items) ? data.items : [];
+      const list = (Array.isArray(data.items) ? data.items : []).filter(item=>item.position_key!=="login_popup");
       setPositions(list);
 
       if (!form.id) {

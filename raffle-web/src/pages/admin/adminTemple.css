@@ -1,0 +1,132 @@
+html.is-admin-route{color-scheme:dark;background:#0a140f}
+.is-admin-route body{display:block;min-width:320px;background:#0a140f}
+.ra-adminShell{
+  --bg:#0a140f;--bg2:#080e0a;--panel:#152319e8;--panel2:#243224;--line:#ac8c4b55;
+  --text:#e1d5b6;--muted:#aca88c;--neon:#d5b572;--neon2:#a99052;--ok:#91b68d;
+  font-family:system-ui,'Microsoft JhengHei',sans-serif;
+  position:fixed;inset:0;width:100%;height:100dvh;min-height:0;display:flex;overflow:hidden;
+  color:var(--text);background:linear-gradient(#09140ee8,#09140ee8),url('/fantasy/my-temple-background.png') center/cover;
+}
+.ra-adminShell *{box-sizing:border-box;min-width:0}
+.ra-adminShell .ra-adminSidebar{display:flex;position:relative;flex:0 0 258px;width:258px;min-width:258px;height:100%;padding:25px 16px 18px;gap:16px;border-right:1px solid #a68b4955;background:linear-gradient(160deg,#2f3524e8,#0d1a13f5 55%);backdrop-filter:blur(12px)}
+.ra-brandCard{display:flex;align-items:center;gap:12px;padding:2px 5px 20px;border:0;border-bottom:1px solid #ab8e4255;border-radius:0;background:none}
+.ra-brandLogo{width:46px;height:46px;object-fit:contain}
+.ra-brandCard strong{font-size:17px;letter-spacing:1px;color:#e7d1a2}.ra-brandCard span{display:block;font-size:9px;letter-spacing:1.5px;color:#9f9c7c;margin-top:7px}
+.ra-navLabel{font-size:10px;letter-spacing:3px;color:#9a946f;padding:0 12px}
+.ra-adminShell .ra-nav{display:flex;flex-direction:column;gap:5px;overflow-y:auto;min-height:0;flex:1;padding:0 4px 0 0;scrollbar-width:thin;scrollbar-color:#8b7945 transparent}
+.ra-adminShell .ra-navBtn{display:flex;align-items:center;gap:12px;text-align:left;flex:none;padding:11px 12px;width:100%;border:1px solid transparent;background:none;border-radius:10px;color:#bdb79b;box-shadow:none}
+.ra-navNumber{font:11px Georgia,serif;letter-spacing:1px;color:#8f8155;flex:0 0 22px}
+.ra-navBtn strong{font-size:13px;font-weight:600;letter-spacing:.5px}.ra-navBtn small{display:block;font-size:10px;color:#96957c;margin-top:5px}
+.ra-adminShell .ra-navBtn:hover{background:#aa90531a;border-color:#a58b4344;transform:none}
+.ra-adminShell .ra-navBtnActive{background:linear-gradient(100deg,#8f774433,#3b482122);border-color:#ad915377;color:#eed9a7;box-shadow:inset 3px 0 #c9a967}
+.ra-navBtnActive .ra-navNumber{color:#e7cb8b}
+.ra-adminShell .ra-sideFooter{margin-top:auto;flex:none;display:flex;flex-direction:column;gap:14px;padding-top:14px;border-top:1px solid #ab8b4444}
+.ra-adminShell .ra-userCard{display:flex;align-items:center;gap:12px;padding:0 6px;background:none;border:0;box-shadow:none}
+.ra-adminShell .ra-avatar{display:grid;place-items:center;width:37px;height:37px;border-radius:50%;background:#34432a;border:1px solid #a98b4e66;color:#dbc58f;font:20px Georgia,serif;box-shadow:none}
+.ra-userCard strong{font-size:12px;font-weight:600}.ra-userRole{display:block;font-size:10px;color:#a59f7d;margin-top:5px}
+.ra-footerActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ra-adminShell .ra-adminMain{flex:1;min-width:0;height:100%;padding:24px 28px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.ra-adminShell .ra-topBar{display:flex;align-items:center;justify-content:space-between;flex:none;padding:0 0 20px;gap:12px;background:none;border:0;border-bottom:1px solid #a78a4544;border-radius:0;backdrop-filter:none}
+.ra-pageHeading{flex:1;min-width:0}.ra-pageHeading h1{margin:0;color:#ecd8a9;font-size:23px;font-weight:600;letter-spacing:2px;line-height:1.4}.ra-pageHeading p{margin:5px 0 0;color:#aaa88a;font-size:11px;letter-spacing:1px}
+.ra-environment{display:flex;align-items:center;gap:7px;border:1px solid #a28c4b55;border-radius:999px;padding:7px 12px;color:#baa77e;font-size:10px;white-space:nowrap}.ra-environment>span{width:5px;height:5px;border-radius:50%;background:#b9a16a}
+.ra-adminShell .ra-contentScroll{position:relative;flex:1;min-height:0;min-width:0;width:100%;padding:22px;border:1px solid #a68c4444;border-radius:16px;background:#0c1911b8;backdrop-filter:blur(8px);overflow-y:auto!important;overflow-x:hidden!important;scrollbar-width:thin;scrollbar-color:#9b844b #0c1911;scroll-padding-top:18px}
+.ra-contentScroll h2{margin:0 0 16px;color:#e3d0a2;font-size:21px;font-weight:600;letter-spacing:1px;line-height:1.5}.ra-contentScroll h3{color:#d7c394;font-size:15px;font-weight:600;letter-spacing:.5px}
+.ra-adminShell :is(.ra-btn,.btn,.btn-main,.adminBtn,.btnPrimary,.btnActive){border:1px solid #a98b4d88;border-radius:999px;background:linear-gradient(135deg,#39412b,#102015);color:#deca9b;box-shadow:inset 0 0 0 2px #09170e;font-size:12px;font-weight:600;min-height:37px;padding:8px 15px;cursor:pointer;text-decoration:none;text-align:center}
+.ra-adminShell :is(.ra-btnPrimary,.btnPrimary,.btnActive,.btn-main){background:linear-gradient(#d3b97e,#a07b3d);border-color:#d4b16d;color:#172315;box-shadow:inset 0 0 0 2px #7b633755}
+.ra-adminShell button:disabled{cursor:not-allowed;opacity:.5}
+.ra-adminShell .ra-adminMain :is(input,select,textarea){display:block;max-width:100%;width:100%;min-width:0;flex:initial!important;min-height:39px;padding:9px 11px;border:1px solid #9e854b77!important;border-radius:8px!important;background:#07150fc9!important;color:#e1d0aa!important;caret-color:#e4c88d!important;font-family:inherit;font-size:13px;color-scheme:dark}
+.ra-adminShell textarea{min-height:110px;resize:vertical}
+.ra-adminShell .ra-adminMain :is(input,textarea)::placeholder{color:#86866e!important}
+.ra-adminShell input:is([type=checkbox],[type=radio]){display:inline-block;width:17px!important;height:17px;min-height:0;max-width:17px;flex:none!important;accent-color:#b69b5b;vertical-align:middle}
+.ra-adminShell input[type=file]{font-size:12px;line-height:1.6;padding:9px}
+.ra-adminShell select option{color:#e2d1a7;background:#142218}
+.ra-adminShell .ra-adminMain :is(input,select,textarea):focus{border-color:#d8b970!important;box-shadow:0 0 0 2px #b9954327!important;outline:none}
+.ra-adminShell :is(button,a):focus-visible{outline:2px solid #e3c583;outline-offset:3px}
+.ra-adminShell :is(.cardBox,.adminBlock,.ra-card,.apCard,.au-card,.adminCard,.shopPanel){border:1px solid #a4884944!important;border-radius:12px;background:linear-gradient(135deg,#35402b44,#102117c9)!important;box-shadow:0 5px 14px #0002}
+.ra-adminShell .shopPanel{height:auto;max-height:none;overflow:visible}
+.ra-adminShell .adminPromoPreview{background:#09180f;border:1px solid #a68b4555;border-radius:12px}
+.ra-adminShell .temple-table-scroll{width:100%;max-width:100%;overflow:auto;margin:16px 0;scrollbar-width:thin;scrollbar-color:#ad9355 #0c1a10;border:1px solid #a58b4844;border-radius:10px}
+.ra-adminShell .temple-table-scroll table{width:100%!important;min-width:760px!important;border-collapse:collapse!important;background:#0d1e14;color:#d5c7a4;font-size:12px}
+.ra-adminShell .temple-table-scroll th{background:#263323!important;color:#d7bd83!important;font-weight:600!important;border-color:#8f793b55!important}
+.ra-adminShell .temple-table-scroll td{border-color:#8f793b33!important;color:#c9c3a5}
+.ra-adminShell .temple-table-scroll tbody tr:hover{background:#9d854116}
+.ra-adminShell :is(.ra-pill,.pill){border:1px solid #a48a4a66;background:#a68d4322;color:#ccb37c;border-radius:999px;font-size:11px;padding:4px 9px}
+.ra-menuToggle,.ra-mobileClose,.ra-navBackdrop{display:none}
+
+/* Login remains separate from authenticated administration. */
+.admin-login-screen{min-height:100dvh;display:grid;place-items:center;padding:24px;background:linear-gradient(#07110944,#07110988),url('/fantasy/my-temple-background.png') center/cover;color:#e4d0a4}
+.admin-login-card{width:min(100%,420px);padding:30px 26px;border:1px solid #ac8d4f88;border-radius:20px;background:linear-gradient(135deg,#283821ed,#0d1b12f5);box-shadow:inset 0 0 0 4px #07150d,inset 0 0 0 5px #ad8e4222,0 20px 60px #0006;text-align:center}
+.admin-login-logo{width:64px;height:64px;object-fit:contain}.admin-login-eyebrow{color:#cbb17b;font-size:11px;letter-spacing:4px;margin:16px 0 22px}
+.admin-login-card>div{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+.admin-login-card>div>div:first-child{color:#ead4a4!important;font-size:23px!important;letter-spacing:2px}
+.admin-login-card input{background:#08160fd9!important;border:1px solid #a68c4d77!important;border-radius:999px!important;color:#e4d1a8!important;min-height:46px;padding:12px 16px!important;width:100%;font-size:14px!important}
+.admin-login-card button{background:linear-gradient(#d2b77a,#a27c3e)!important;color:#172415!important;border:1px solid #d6b36e!important;border-radius:999px!important;box-shadow:inset 0 0 0 2px #79622e44!important;min-height:44px;letter-spacing:2px}
+.admin-login-card input:focus-visible,.admin-login-card button:focus-visible{outline:2px solid #ddc284;outline-offset:2px}
+
+/* Login image manager. */
+.alp-page{max-width:1240px;margin:0 auto}.alp-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.alp-heading h2,.alp-heading h3{margin:0}.alp-heading p{font-size:12px;line-height:1.8;color:#a8a78a;margin:8px 0 0}
+.alp-stats{display:flex;gap:12px 24px;flex-wrap:wrap;padding:16px 0 22px;color:#aaa488;font-size:11px}.alp-stats b{color:#e1c58a;font-size:17px;font-weight:600;margin-right:4px}
+.alp-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.alp-panel{min-width:0;padding:20px;background:#14241ad9;border:1px solid #a78b4955;border-radius:14px}.alp-panel h3{margin:0 0 18px}.alp-panel .alp-heading h3{margin:0}
+.alp-field{display:flex;flex-direction:column;gap:8px;color:#c7b78d;font-size:12px;margin:14px 0}
+.alp-upload{display:flex;flex-direction:column;gap:9px;padding:16px;border:1px dashed #a68b4b77;border-radius:10px;color:#d5bd84;font-size:12px}.alp-upload small{color:#8f957a;font-size:10px}
+.alp-image-preview{margin:14px 0;height:220px;display:grid;place-items:center;border-radius:10px;overflow:hidden;background:repeating-conic-gradient(#223025 0% 25%,#18271d 0% 50%) 50% /20px 20px;color:#909779;font-size:12px}.alp-image-preview img{max-width:100%;max-height:100%;object-fit:contain}
+.alp-form-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center}.alp-checkbox{display:flex;align-items:center;gap:9px;font-size:12px;color:#c9b991}
+.alp-actions{display:flex;gap:8px;flex-wrap:wrap}.alp-message{padding:12px 16px;margin:0 0 18px;border:1px solid #70906466;border-radius:9px;background:#3c603322;color:#b4d0a5;font-size:12px;line-height:1.7}.alp-message.is-error{border-color:#a5775366;color:#e0b291;background:#6d3f2722}
+.alp-list{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}.alp-list li{display:flex;align-items:center;gap:14px;padding:12px;background:#09180f88;border:1px solid #a58a4233;border-radius:10px}.alp-thumb{width:76px;height:90px;flex:none;display:grid;place-items:center;background:#203023;border-radius:7px}.alp-thumb img{max-width:100%;max-height:100%;object-fit:contain}.alp-item-meta{flex:1;min-width:0}.alp-item-meta strong{display:block;font-size:13px;color:#dac89c;overflow-wrap:anywhere}.alp-item-meta>span{display:block;font-size:10px;color:#999c7d;margin:7px 0 12px}.alp-item-meta .ra-btn{font-size:11px;min-height:30px;padding:5px 12px}.alp-empty{padding:36px 16px;text-align:center;color:#a5a487;font-size:12px;line-height:1.8}
+
+@media(max-width:1200px){.ra-adminShell .ra-adminMain{padding:20px}.alp-columns{grid-template-columns:1fr}}
+@media(max-width:980px){
+  .ra-adminShell .ra-adminSidebar{display:flex!important;position:fixed;z-index:300;left:0;top:0;width:min(85vw,300px);min-width:0;padding-top:max(25px,env(safe-area-inset-top));visibility:hidden;translate:-100% 0;transition:translate .22s ease,visibility .22s}
+  .ra-adminShell.is-nav-open .ra-adminSidebar{visibility:visible;translate:0 0}
+  .ra-adminShell .ra-adminMain{padding:16px;gap:14px}
+  .ra-adminShell .ra-contentScroll{padding:16px;border-radius:12px}
+  .ra-menuToggle{display:flex;flex-direction:column;align-items:center;gap:1px;flex:none;width:42px;height:42px;justify-content:center;padding:0;border:1px solid #ac8d4b77;border-radius:10px;background:#243322;color:#dcc591;font-size:18px}.ra-menuToggle span{font-size:9px;letter-spacing:1px}
+  .ra-mobileClose{display:block;position:absolute;right:14px;top:12px;width:30px;height:30px;border:0;padding:0;border-radius:50%;background:#283820;color:#d9c697;font-size:25px}
+  .ra-navBackdrop{display:block;position:fixed;inset:0;width:100%;height:100%;z-index:290;border:0;background:#0009;backdrop-filter:blur(3px);border-radius:0}
+  .ra-pageHeading h1{font-size:19px}.ra-pageHeading p{font-size:10px}.ra-environment{padding:6px 8px;font-size:9px}
+  .ra-adminShell .ra-contentScroll :is(.adminGrid2,.adminGrid3,.formGrid,.formRow){grid-template-columns:minmax(0,1fr)!important;flex-wrap:wrap}
+  .ra-adminShell .ra-contentScroll [style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important}
+  .ra-adminShell .ra-contentScroll div[style*="display: flex"]{flex-wrap:wrap}
+}
+@media(max-width:480px){
+  .ra-adminShell .ra-adminMain{padding:12px;gap:12px}.ra-adminShell .ra-topBar{padding-bottom:12px;gap:9px}.ra-adminShell .ra-contentScroll{padding:13px}.ra-contentScroll h2{font-size:18px}.ra-pageHeading p{max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.ra-environment{font-size:9px}.alp-panel{padding:14px}.alp-list li{gap:10px;padding:10px}.alp-thumb{width:60px;height:76px}.admin-login-card{padding:27px 20px}
+}
+@media(prefers-reduced-motion:reduce){.ra-adminShell .ra-adminSidebar{transition:none}}
+
+/* Apply the same materials to the existing specialized editors. */
+.ra-adminShell :is(.apCard,.apPositionItem,.apPromoItem,.auLeftPane,.auRightPane,.auRedeemPanel,.apsModalCard,.apsModalPanel,.ra-panel){border-color:#a78b4d66!important;background:linear-gradient(135deg,#33412b55,#0f2016eb)!important;color:#dccfad;box-shadow:inset 0 0 0 2px #a78c3f13,0 5px 14px #0003}
+.ra-adminShell :is(.apCardTitle,.apPromoTitle,.apPreviewTitle,.auTitle){color:#e1ce9f;font-weight:600}
+.ra-adminShell :is(.apSub,.apLabel,.apPreviewSort,.auSub,.auLabel){color:#aaa78b}
+.ra-adminShell :is(.apBtn,.apUploadBtn,.auBtn){border:1px solid #a98c4e88;background:linear-gradient(#30402a,#132217);color:#d9c391;border-radius:999px;box-shadow:inset 0 0 0 2px #09170e;font-size:12px;font-weight:600}
+.ra-adminShell :is(.apBtnPrimary,.auBtn.primary){background:linear-gradient(#cfb476,#9c793e);border-color:#d9b976;color:#192617}
+.ra-adminShell :is(.apBtnDanger,.auBtn.danger){background:#573b252f;border-color:#ac785277;color:#d8aa8d}
+.ra-adminShell :is(.apBadge.on,.auBadge.on){background:#526f3433;color:#b9d19a;border-color:#8fa45e55}
+.ra-adminShell :is(.apBadge.off,.auBadge.off){background:#573d2633;color:#c5ab91;border-color:#98784a55}
+.ra-adminShell .auTab{border:1px solid #9e854b77;border-radius:999px;background:#18291b;color:#c7b58c;font-size:12px}
+.ra-adminShell .auTab.active{background:linear-gradient(#d1b77a,#a17e43);border-color:#d9b66e;color:#192516}
+.ra-adminShell .auItem{border-color:#9f884344;background:#14251a99;color:#c3bf9e}
+.ra-adminShell .auItem.active{background:#85743a2b;border-color:#b89b5488}
+.ra-adminShell .auIdBadge{color:#cdb37d;background:#9f854422;border-color:#a58a4944}
+.ra-adminShell :is(.auPaneHead,.auSection,.auStatic,.auMini,.auSearchBar){border-color:#9e854844;background:#18291c88;color:#d5c39c}
+.ra-adminShell :is(.auPaneTitle,.auSectionTitle,.auAccount){color:#dcc89a}
+.ra-adminShell .auBalanceRow.green{color:#aec69a;background:#526c3433;border-color:#8fa05b55}
+.ra-adminShell .alp-delete{color:#e3b39a;border-color:#a2774e88;background:linear-gradient(#483525,#281f16);box-shadow:inset 0 0 0 2px #1a1710}
+.ra-adminShell .apPreviewHtml{background:#08150e88;border-color:#9d834138;color:#c5bfa0}
+.ra-adminShell .apsModalHeader{background:#17291be8;border-color:#a68b4855}
+.ra-adminShell .apsModalCard{max-height:90dvh}
+.ra-adminShell .auZ{height:auto;min-height:100%;padding:0;overflow:visible}
+.ra-adminShell .auMainGrid{min-height:500px;height:auto;overflow:visible;grid-template-columns:minmax(220px,290px) minmax(0,1fr)}
+.ra-adminShell :is(.apFixedPage,.ap3Panel){height:auto;overflow:visible}
+.ra-adminShell .ap3Panel{grid-template-rows:auto auto;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.ra-adminShell .apPanelScroll{height:auto;max-height:none;overflow:visible;padding:18px}
+.ra-adminShell :is(.apLeftPanel,.apRightTop,.apRightBottom){min-height:0;overflow:visible}
+.ra-adminShell button:not(.ra-navBtn,.ra-menuToggle,.ra-mobileClose,.ra-navBackdrop,.ra-btn,.btn,.btnPrimary,.btnActive,.btn-main,.alp-checkbox){border-color:#a3884b88;color:#d9c694}
+@media(max-width:980px){
+  .ra-adminShell .auMainGrid{grid-template-columns:minmax(0,1fr);min-height:0}
+  .ra-adminShell :is(.auLeftPane,.auRightPane){height:auto;min-height:0;max-height:none;overflow:visible}
+  .ra-adminShell .auLeftPane{max-height:420px;overflow:auto}
+  .ra-adminShell :is(.auGrid,.apGrid2){grid-template-columns:minmax(0,1fr)}
+  .ra-adminShell .ap3Panel{display:flex;flex-direction:column}
+  .ra-adminShell .apPanelScroll{padding:14px}
+}

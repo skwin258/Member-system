@@ -190,7 +190,7 @@ export default function AdminAdminRoles() {
       </div>
 
       <div style={{ overflowX: "auto" }}>
-        <table className="adminTable" style={{ width: "100%" }}>
+        <div className="temple-table-scroll"><table className="adminTable" style={{ width: "100%" }}>
           <thead>
             <tr>
               <th style={{ minWidth: 60 }}>ID</th>
@@ -264,7 +264,7 @@ export default function AdminAdminRoles() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

@@ -184,7 +184,7 @@ export default function AdminAiControl({ adminMe }) {
               onClick={() => setActiveType(item.key)}
               style={{
                 border: active
-                  ? "1px solid rgba(0, 254, 239, 0.75)"
+                  ? "1px solid rgba(210, 177, 108, 0.75)"
                   : "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 18,
                 padding: "16px 14px",
@@ -192,10 +192,10 @@ export default function AdminAiControl({ adminMe }) {
                 textAlign: "left",
                 cursor: "pointer",
                 background: active
-                  ? "linear-gradient(135deg, rgba(0,254,239,0.22), rgba(34,94,255,0.18))"
-                  : "linear-gradient(180deg, rgba(18,34,58,0.92), rgba(8,15,30,0.92))",
+                  ? "linear-gradient(135deg, rgba(210,177,108,0.22), rgba(115,139,76,0.18))"
+                  : "linear-gradient(180deg, rgba(30,43,27,0.92), rgba(8,22,12,0.92))",
                 boxShadow: active
-                  ? "0 0 22px rgba(0,254,239,0.18)"
+                  ? "0 0 22px rgba(210,177,108,0.18)"
                   : "none",
               }}
             >
@@ -217,7 +217,7 @@ export default function AdminAiControl({ adminMe }) {
             borderRadius: 18,
             padding: 18,
             background:
-              "linear-gradient(180deg, rgba(18,34,58,0.92), rgba(8,15,30,0.92))",
+              "linear-gradient(180deg, rgba(30,43,27,0.92), rgba(8,22,12,0.92))",
           }}
         >
           <div style={{ fontSize: 17, fontWeight: 1000, marginBottom: 8 }}>
@@ -245,7 +245,7 @@ export default function AdminAiControl({ adminMe }) {
     borderRadius: 18,
     padding: 18,
     background:
-      "linear-gradient(180deg, rgba(18,34,58,0.92), rgba(8,15,30,0.92))",
+      "linear-gradient(180deg, rgba(30,43,27,0.92), rgba(8,22,12,0.92))",
     maxHeight: "620px",
     overflow: "hidden",
   }}
@@ -307,7 +307,7 @@ export default function AdminAiControl({ adminMe }) {
                     onClick={() => loadElectronicStatus(u)}
                     style={{
                       border: active
-                        ? "1px solid rgba(0,254,239,0.75)"
+                        ? "1px solid rgba(210,177,108,0.75)"
                         : "1px solid rgba(255,255,255,0.1)",
                       borderRadius: 14,
                       padding: 12,
@@ -315,7 +315,7 @@ export default function AdminAiControl({ adminMe }) {
                       color: "#fff",
                       cursor: "pointer",
                       background: active
-                        ? "rgba(0,254,239,0.12)"
+                        ? "rgba(210,177,108,0.12)"
                         : "rgba(255,255,255,0.05)",
                     }}
                   >
@@ -338,7 +338,7 @@ export default function AdminAiControl({ adminMe }) {
               borderRadius: 18,
               padding: 18,
               background:
-                "linear-gradient(180deg, rgba(18,34,58,0.92), rgba(8,15,30,0.92))",
+                "linear-gradient(180deg, rgba(30,43,27,0.92), rgba(8,22,12,0.92))",
               minHeight: 320,
             }}
           >
@@ -519,8 +519,8 @@ export default function AdminAiControl({ adminMe }) {
                   marginTop: 16,
                   borderRadius: 12,
                   padding: "10px 12px",
-                  background: "rgba(0,254,239,0.1)",
-                  border: "1px solid rgba(0,254,239,0.22)",
+                  background: "rgba(210,177,108,0.1)",
+                  border: "1px solid rgba(210,177,108,0.22)",
                   color: "#fff",
                   fontSize: 13,
                 }}

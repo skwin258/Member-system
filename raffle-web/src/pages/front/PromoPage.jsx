@@ -44,7 +44,7 @@ export default function PromoPage() {
       }
 
       const list = Array.isArray(data.items) ? data.items : [];
-      setPositions(list);
+      setPositions(list.filter(item=>item.position_key!=="login_popup"));
 
       if (!tab && list.length > 0) {
         setTab(String(list[0].position_key || ""));
@@ -85,7 +85,7 @@ export default function PromoPage() {
       }
 
       const list = Array.isArray(data.items) ? data.items : [];
-      setItems(list);
+      setItems(list.filter(item=>item.placement!=="login_popup"));
       setSlideIndex(0);
     } catch (e) {
       setErr(String(e?.message || e));

@@ -396,9 +396,9 @@ export default function MobileWheelPage({
 
     {
       const g = ctx.createRadialGradient(cx, cy, wheelR, cx, cy, outerR);
-      g.addColorStop(0, "#ffe8a3");
-      g.addColorStop(0.55, "#f3b12a");
-      g.addColorStop(1, "#b56b06");
+      g.addColorStop(0, "#e4c282");
+      g.addColorStop(0.55, "#8b642b");
+      g.addColorStop(1, "#3f301b");
 
       ctx.beginPath();
       ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
@@ -407,7 +407,7 @@ export default function MobileWheelPage({
     }
 
     {
-      const bulbs = 18;
+      const bulbs = 24;
       const phase = bulbPhaseRef.current;
       for (let i = 0; i < bulbs; i++) {
         const a = (Math.PI * 2 * i) / bulbs - Math.PI / 2;
@@ -419,16 +419,16 @@ export default function MobileWheelPage({
         const alpha = on ? 0.95 : 0.35;
 
         ctx.beginPath();
-        ctx.arc(x, y, 2.8, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-        ctx.fill();
+        ctx.save();ctx.translate(x,y);ctx.rotate(a+Math.PI/4);ctx.rect(-3,-3,6,6);
+        ctx.fillStyle = i % 3 === 0 ? `rgba(77,206,177,${alpha})` : `rgba(231,196,127,${alpha})`;
+        ctx.fill();ctx.restore();
       }
     }
 
     {
       ctx.beginPath();
       ctx.arc(cx, cy, wheelR + 2, 0, Math.PI * 2);
-      ctx.fillStyle = "#d79b2a";
+      ctx.fillStyle = "#b58c47";
       ctx.fill();
     }
 
@@ -443,16 +443,16 @@ export default function MobileWheelPage({
 
       const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, wheelR);
       if (i % 2 === 0) {
-        g.addColorStop(0, "#fff6c8");
-        g.addColorStop(1, "#f2d27e");
+        g.addColorStop(0, "#263e35");
+        g.addColorStop(1, "#0c1916");
       } else {
-        g.addColorStop(0, "#fff2b0");
-        g.addColorStop(1, "#e9c25f");
+        g.addColorStop(0, "#354139");
+        g.addColorStop(1, "#14251f");
       }
       ctx.fillStyle = g;
       ctx.fill();
 
-      ctx.strokeStyle = "rgba(140,90,0,0.35)";
+      ctx.strokeStyle = "rgba(205,168,92,0.6)";
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -463,12 +463,24 @@ export default function MobileWheelPage({
       ctx.translate(cx, cy);
       ctx.rotate(mid);
       ctx.textAlign = "right";
-      ctx.fillStyle = "#7a3d00";
+      ctx.fillStyle = "#e5ce9e";
       ctx.font = "bold 12px Arial";
-      ctx.fillText(label, wheelR - 12, 4);
+      ctx.fillText(label, wheelR - 38, 4, wheelR - 84);
       ctx.restore();
     }
 
+
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+    [wheelR-2,wheelR-9,wheelR-29,43].forEach((r,i)=>{ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=i%2?'#735a32':'#c5a567';ctx.lineWidth=i===0?2:1;ctx.stroke()});
+    for(let i=0;i<24;i++){
+      ctx.save();ctx.rotate(i*Math.PI/12);ctx.translate(0,-wheelR+19);
+      ctx.strokeStyle='#c6a365';ctx.lineWidth=1.2;ctx.beginPath();
+      if(i%2===0){ctx.ellipse(0,-3,2.5,3.4,0,0,Math.PI*2);ctx.moveTo(0,.5);ctx.lineTo(0,7);ctx.moveTo(-4,2);ctx.lineTo(4,2)}
+      else{ctx.moveTo(0,-5);ctx.lineTo(3,0);ctx.lineTo(0,5);ctx.lineTo(-3,0);ctx.closePath()}
+      ctx.stroke();ctx.restore();
+    }
+    for(let i=0;i<36;i++){ctx.save();ctx.rotate(i*Math.PI/18);ctx.beginPath();ctx.moveTo(0,48);ctx.lineTo(0,57);ctx.strokeStyle='#b28d4655';ctx.stroke();ctx.restore()}
+    ctx.restore();
     {
       const pressed = pressedRef.current;
       const scale = pressed ? 0.96 : 1.0;
@@ -479,20 +491,21 @@ export default function MobileWheelPage({
       ctx.translate(-cx, -cy);
 
       ctx.beginPath();
-      ctx.arc(cx, cy, 34, 0, Math.PI * 2);
-      ctx.fillStyle = "#b11616";
+      ctx.arc(cx, cy, 36, 0, Math.PI * 2);
+      ctx.fillStyle = "#c9a35e";
       ctx.fill();
 
       const g = ctx.createRadialGradient(cx - 8, cy - 8, 8, cx, cy, 30);
-      g.addColorStop(0, "#ff6a6a");
-      g.addColorStop(1, "#b11616");
+      g.addColorStop(0, "#517b60");
+      g.addColorStop(1, "#173b30");
 
       ctx.beginPath();
       ctx.arc(cx, cy, 30, 0, Math.PI * 2);
       ctx.fillStyle = g;
       ctx.fill();
 
-      ctx.fillStyle = "#fff";
+      ctx.strokeStyle="#d9b977";ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle = "#f2dfb6";
       ctx.textAlign = "center";
       ctx.font = "bold 13px Arial";
       ctx.fillText("抽獎", cx, cy + 4);
@@ -511,10 +524,10 @@ export default function MobileWheelPage({
       ctx.lineTo(cx + halfW, baseY);
       ctx.closePath();
 
-      ctx.fillStyle = "#c01818";
+      ctx.fillStyle = "#42bba6";
       ctx.fill();
 
-      ctx.strokeStyle = "rgba(0,0,0,0.25)";
+      ctx.strokeStyle = "#e3bf76";
       ctx.lineWidth = 2;
       ctx.stroke();
     }

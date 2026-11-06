@@ -267,3 +267,7 @@
     font-size: 13px;
   }
 }
+/* Static fantasy assets, scoped to the red-envelope page in this preview. */
+.mbHome:has(.mRpPage){background:#071310 url('/fantasy/inner-background-preview.png') center center / cover no-repeat}
+.mbHome:has(.mRpPage)::before,.mbHome:has(.mRpPage)::after{display:none}
+.mRpPacketOnlyImg{max-width:64px}

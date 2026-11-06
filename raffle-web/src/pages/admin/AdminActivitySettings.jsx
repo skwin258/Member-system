@@ -10,13 +10,15 @@ export default function AdminActivitySettings() {
   const load = async () => {
     setErr("");
     setLoading(true);
-    const r = await api.adminActivities();
-    setLoading(false);
-    if (!r.success) {
-      setErr(r.error || "讀取失敗");
-      return;
+    try {
+      const r = await api.adminActivities();
+      if (!r?.success) throw new Error(r?.error || "讀取失敗");
+      setItems(Array.isArray(r.items) ? r.items : []);
+    } catch(e) {
+      setErr(e.message || "讀取失敗，請重新整理");
+    } finally {
+      setLoading(false);
     }
-    setItems(Array.isArray(r.items) ? r.items : []);
   };
 
   useEffect(() => {
@@ -47,13 +49,15 @@ export default function AdminActivitySettings() {
       dailyReset: row.dailyReset,
       requireAuthorized: row.requireAuthorized,
     };
-    const r = await api.adminPatchActivity(row.key, patch);
-    setSavingKey("");
-    if (!r.success) {
-      setErr(r.error || "儲存失敗");
-      return;
+    try {
+      const r = await api.adminPatchActivity(row.key, patch);
+      if (!r?.success) throw new Error(r?.error || "儲存失敗");
+      await load();
+    } catch(e) {
+      setErr(e.message || "儲存失敗，請再試一次");
+    } finally {
+      setSavingKey("");
     }
-    await load();
   };
 
   return (
@@ -75,7 +79,7 @@ export default function AdminActivitySettings() {
       </div>
 
       <div style={{ overflowX: "auto" }}>
-        <table className="adminTable" style={{ width: "100%" }}>
+        <div className="temple-table-scroll"><table className="adminTable" style={{ width: "100%" }}>
           <thead>
             <tr>
               <th style={{ minWidth: 120 }}>Key</th>
@@ -191,7 +195,7 @@ export default function AdminActivitySettings() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       <div style={{ marginTop: 12, opacity: 0.75, lineHeight: 1.6 }}>

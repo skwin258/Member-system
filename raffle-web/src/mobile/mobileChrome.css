@@ -1,0 +1,274 @@
+/* Shared ancient-gold chrome for every mobile page. */
+:root {
+  --temple-gold: #c9ab70;
+  --temple-edge: #997340;
+  --temple-surface: repeating-linear-gradient(115deg,transparent 0 43px,#c49c5b06 44px,transparent 46px),radial-gradient(ellipse at 50% 0,#24514c55,transparent 65%),linear-gradient(#252923,#121815 45%,#090e0d);
+  --temple-button: linear-gradient(135deg,#3c3828,#15231e 48%,#0c1512);
+}
+.mbHome .mbPageTopBar,.fantasy-home .fh-header,.fh-bottom-nav {
+  background:var(--temple-surface);
+  color:var(--temple-gold);
+  border-color:var(--temple-edge);
+}
+.mbHome .mbPageTopBar {
+  border-bottom:2px solid var(--temple-edge);
+  box-shadow:0 1px 0 #e4c98a44,0 6px 20px #0006,inset 0 -4px 0 #080e0c,inset 0 -5px 0 #96713e66;
+}
+.mbHome .mbPageTitle,.mbHome .mbTreasureTopText,.mbHome .mbTreasureTopTitleText {
+  color:#e8d2a2;letter-spacing:2px;text-shadow:0 2px 3px #000;
+}
+.mbHome .mbBackBtn,.mbHome .mbTreasureTopSelect,.mRpPage .mRpClaimBtn {
+  border:1px solid #af8a49;
+  border-radius:999px;
+  background:var(--temple-button);
+  color:#ead3a0;
+  box-shadow:inset 0 0 0 2px #0a1411,inset 0 0 0 3px #ad884733,0 3px 8px #0005;
+  text-shadow:0 1px 2px #000;
+}
+.mbHome .mbBackBtn {font-weight:600;letter-spacing:1px;}
+.mbHome .mbTreasureTopSelect {border-radius:999px;accent-color:var(--temple-gold);padding-left:12px;}
+.mbHome .mbTreasureTopSelect option {background:#14201a;color:#ead3a0;}
+.mbHome .mbBackBtn:focus-visible,.mbHome .mbTreasureTopSelect:focus-visible,.mRpPage .mRpClaimBtn:focus-visible {outline:2px solid #eed39a;outline-offset:3px;}
+.mRpPage .mRpClaimBtn {position:relative;min-width:100px;letter-spacing:4px;border-width:2px;font-size:15px;}
+.mRpPage .mRpClaimBtn::before,.mRpPage .mRpClaimBtn::after {content:'◆';position:absolute;top:50%;transform:translateY(-50%);font-size:7px;color:#d0b471;}
+.mRpPage .mRpClaimBtn::before {left:8px}.mRpPage .mRpClaimBtn::after {right:8px}
+.mRpPage .mRpClaimBtn:disabled {opacity:.65;cursor:not-allowed;}
+.mRpPage .mRpStatsMiniLabel,.mRpPage .mRpHint {color:#bfaf8d;}
+.mRpPage .mRpStatsMiniValue {color:#f2ddb2;}
+.fantasy-home .fh-header {left:0;right:0;padding:0 5%;border-bottom:1px solid var(--temple-edge);}
+
+/* Reserve the footer exactly once; allow other pages to scroll naturally. */
+.mbHome.fh-inner {padding-bottom:0;}
+.fh-inner .mbPageFrame {padding-bottom:0;}
+.fh-inner .mbPageBodyPlain {padding-bottom:calc(100px + env(safe-area-inset-bottom,0px));}
+.mbPageFrame:has(.mRpPage) .mbPageBodyPlain {
+  padding-bottom:0;
+  margin-bottom:calc(100px + env(safe-area-inset-bottom,0px));
+}
+.mRpPage {flex:1;min-height:0;}
+.mRpPage .mRpBody {display:flex;flex:1;min-height:0;padding:10px 18px 6px;}
+.mRpPage .mRpSectionPlain {display:flex;flex-direction:column;flex:1;min-height:0;}
+.mRpPage .mRpFeedSection--top {flex:none;margin-bottom:4px;}
+.mRpPage .mRpMarqueeViewport--plain {height:20px;margin-bottom:0;}
+.mRpPage .mRpGrid {flex:1;min-height:210px;grid-template-rows:repeat(6,minmax(0,1fr));gap:5px 8px;margin-top:0;}
+.mRpPage .mRpPacketOnlyBtn {height:100%;min-height:0;}
+.mRpPage .mRpPacketOnlyImg {width:100%;height:100%;max-width:76px;max-height:100%;object-fit:contain;}
+.mRpPage .mRpStatsCard {flex:none;margin-top:10px;padding:10px 0 2px;border-color:#ab854344;}
+.mRpPage .mRpStatsMiniCard {min-height:0;padding:4px 0;}
+.mRpPage .mRpStatsMiniValue {font-size:28px;}
+.mRpPage .mRpHint {margin-top:8px;font-size:12px;}
+@media(max-height:600px){
+  .mbPageFrame:has(.mRpPage) .mbPageBodyPlain {overflow-y:auto;}
+  .mRpPage {min-height:400px;}
+}
+
+/* Wheel uses the same temple backdrop and antique metal palette. */
+.mbHome:has(.mWheelPage){background:#071310 url('/fantasy/inner-background-preview.png') center/cover no-repeat}
+.mbHome:has(.mWheelPage)::before,.mbHome:has(.mWheelPage)::after{display:none}
+.mWheelPage .mWheelCanvasWrap{width:min(100%,370px,calc(100dvh - 300px));height:auto;aspect-ratio:1;margin:12px auto}
+.mWheelPage .mWheelCanvas{width:100%;height:100%;filter:drop-shadow(0 12px 15px #0009)}
+.mWheelPage .mWheelBody{padding:4px 18px 12px}
+.mWheelPage .mWheelStatsCard{border-color:#ad884744}
+.mWheelPage .mWheelStatsMiniLabel{color:#c6b38e}.mWheelPage .mWheelStatsMiniValue{color:#f1d9a8}
+.mWheelPage .mWheelCenterHit{width:22%;height:22%;border-radius:50%}
+.mWheelPage .mWheelCenterHit:focus-visible{outline:2px solid #ebcd91;outline-offset:2px}
+
+/* Treasury shop: one page scroller, with shared fixed navigation. */
+.mbHome:has(.mShopPage){background:#081610 url('/fantasy/shop-temple-background.png') center/cover no-repeat}
+.mbHome:has(.mShopPage)::before,.mbHome:has(.mShopPage)::after{display:none}
+.mbPageFrame:has(.mShopPage) .mbPageBodyPlain{display:block;overflow-y:auto;overflow-x:hidden;scrollbar-color:#a88a51 #0b1712;scrollbar-width:thin}
+.mShopPage{display:block;flex:none;min-height:100%;padding:12px 16px 16px;color:#e5d6b6}
+.mShopPage .mShopProductsSection{display:block;flex:none;min-height:auto}
+.mShopPage .mShopProductsScroll{display:block;flex:none;overflow:visible;min-height:auto;padding:0;scrollbar-width:none}
+.mShopPage .mShopMarquee{margin-bottom:12px;border-bottom:1px solid #b18c3d44;padding-bottom:8px}
+.mShopPage .mShopMarqueeItem{color:#cbb88d;font-weight:500;letter-spacing:.5px}
+.mShopPage .mShopCard,.mShopPage .mShopTabsCard{
+  border:1px solid #ab884a88;border-radius:14px;
+  background:linear-gradient(125deg,#38362466,transparent 65%),linear-gradient(#12241eed,#091610ed);
+  box-shadow:inset 0 0 0 3px #07110d,inset 0 0 0 4px #ae8b4122,0 6px 16px #0005;
+}
+.mShopPage .mShopCardTitle{color:#e7cf97;letter-spacing:3px;font-size:15px}
+.mShopPage .mShopCardTitle::before{content:'◆';font-size:9px;color:#bca162;margin-right:10px}
+.mShopPage .mShopInfoCard{padding:17px}
+.mShopPage .mShopBalanceRow{gap:8px}
+.mShopPage .mShopBalancePill{background:#09150ecc;border:1px solid #b28c474d;border-radius:999px;color:#cdbd97;padding:0 12px;font-size:12px}
+.mShopPage .mShopBalancePill b{color:#f1d18a;font-size:16px;font-variant-numeric:tabular-nums}
+.mShopPage .mShopActionGroup{gap:6px}
+.mShopPage .mShopActionBtn,.mShopPage .mShopActionBtn.isPrimary,.mShopPage .mShopIconBtn,.mShopPage .mShopTabBtn{
+  border:1px solid #ad8a4e;border-radius:999px;background:var(--temple-button);color:#ddc591;
+  box-shadow:inset 0 0 0 2px #07140d,inset 0 0 0 3px #b7975622;font-weight:600;
+}
+.mShopPage .mShopActionBtn{min-width:90px;padding:0 12px;font-size:12px}
+.mShopPage .mShopIconBtn{width:36px;flex-basis:36px;font-size:18px}
+.mShopPage .mShopTabsCard{padding:12px;gap:10px}
+.mShopPage .mShopTabBtn{font-size:13px;letter-spacing:1px;height:39px}
+.mShopPage .mShopTabBtn.isActive{background:linear-gradient(#d7bd7c,#a37b3a);color:#1c2418;border-color:#e4c784;box-shadow:inset 0 0 0 2px #806331}
+.mShopPage .mShopDropdownMenu{background:#101f17fa;border-color:#ab884a;border-radius:12px;box-shadow:0 12px 25px #0009}
+.mShopPage .mShopDropdownItem{color:#dbcca9;font-weight:500}
+.mShopPage .mShopDropdownItem.isActive{background:#a0813b33;color:#f0d18e}
+.mShopPage .mShopSectionTitle{display:flex;align-items:center;gap:10px;color:#e3cd9b;font-size:15px;letter-spacing:2px;margin:18px 0 13px}
+.mShopPage .mShopSectionTitle::after{content:'';height:1px;flex:1;background:linear-gradient(90deg,#a98a4a88,transparent)}
+.mShopPage .mShopGrid{gap:12px;align-items:stretch}
+.mShopPage .mShopProductCard{display:flex;flex-direction:column;border-radius:12px;border:1px solid #a17c4288;background:linear-gradient(130deg,#26352aaa,#0b1711f5 60%);box-shadow:0 5px 12px #0005,inset 0 0 0 2px #ad8e4122}
+.mShopPage .mShopProductImg{height:auto;aspect-ratio:1;background:#f3f0e8;border-bottom:2px solid #a98746}
+.mShopPage .mShopProductImg img{object-fit:contain}
+.mShopPage .mShopProductBody{display:flex;flex-direction:column;flex:1;padding:12px 10px}
+.mShopPage .mShopProductName{color:#eadbb9;font-size:14px;font-weight:600;line-height:1.5;min-height:42px}
+.mShopPage .mShopProductCost{color:#acaa8d;font-size:11px;margin-top:auto;padding-top:10px;white-space:normal}
+.mShopPage .mShopProductCost span{color:#f0d69b;font-size:18px;font-weight:700}
+.mShopPage .mShopRedeemBtn{height:37px;border:1px solid #d5b36d;border-radius:999px;background:linear-gradient(#d3b879,#a07b3d);color:#182316;box-shadow:inset 0 0 0 2px #6e582c55,0 3px 6px #0004;font-size:13px;font-weight:700;letter-spacing:1px}
+.mShopPage .mShopRedeemBtn.isDisabled{opacity:.65;background:var(--temple-button);color:#cbb789;border-color:#8b7348;filter:none}
+.mShopPage button:focus-visible{outline:2px solid #f1d799;outline-offset:3px}
+.mShopPage .mShopHint,.mShopPage .mShopError{color:#d6c39c}
+.mShopPage .crmCard{background:linear-gradient(135deg,#243427,#0b1711);border:1px solid #b18e4c;box-shadow:inset 0 0 0 4px #9a7d3522,0 20px 60px #0009}
+.mShopPage .crmTitle,.mShopPage .crmPTitle{color:#ead4a3}
+.mShopPage .crmPPrice{color:#c9b990}.mShopPage .crmPPrice b{color:#f2d58e}.mShopPage .crmHint{color:#afa68d}
+.mShopPage .crmHead,.mShopPage .crmFoot{border-color:#ab894544}
+.mShopPage .crmBtn,.mShopPage .crmX{border-radius:999px;border-color:#ad8848;background:var(--temple-button);color:#dfc99a}
+.mShopPage .crmBtn.solid{background:linear-gradient(#d3b879,#a07b3d);color:#172315;border-color:#e0c181}
+.mShopPage .crmImgWrap{border-color:#ae8b45}.mShopPage .crmImg{object-fit:contain}
+
+/* Two distinct temple backgrounds for promotions and account records. */
+.mbHome:has(.mPromoPage){background:#1a120b url('/fantasy/promo-temple-background.png') center/cover no-repeat}
+.mbHome:has(.mRecPage){background:#081619 url('/fantasy/records-temple-background.png') center/cover no-repeat}
+.mbHome:has(.mPromoPage)::before,.mbHome:has(.mPromoPage)::after,
+.mbHome:has(.mRecPage)::before,.mbHome:has(.mRecPage)::after{display:none}
+.mPromoPage{display:block;flex:none;overflow:visible;padding:16px;min-height:100%;box-sizing:border-box}
+.mPromoPage .mPromoScroll{overflow:visible;padding:0;gap:16px}
+.mPromoPage .mPromoItem,.mPromoPage .mPromoStateCard{
+  width:100%;min-width:0;padding:12px;border:1px solid #b18b4c99;border-radius:16px;
+  background:linear-gradient(130deg,#4c3a2466,transparent 60%),linear-gradient(#211c14ef,#10160ff5);
+  box-shadow:inset 0 0 0 3px #0d130c,inset 0 0 0 4px #a98a3f22,0 8px 20px #0005;
+}
+.mPromoPage .mPromoImage{border-radius:10px;border:1px solid #b18b4c55}
+.mPromoPage .mPromoImagePlaceholder{background:var(--temple-button);color:#d9c195;border:1px solid #a78747}
+.mPromoPage .mPromoExpand{background:#10190fe6;border:1px solid #a687453f;border-radius:12px;padding:14px 12px}
+.mPromoPage .mPromoTitle,.mPromoPage .mPromoExpandTitle{color:#ead2a0;letter-spacing:1px;font-size:16px}
+.mPromoPage .mPromoAction{min-width:86px;border:1px solid #c7a562;background:linear-gradient(#d0b576,#9c7538);color:#202514;border-radius:999px;box-shadow:inset 0 0 0 2px #76602f66;font-weight:700}
+.mPromoPage .mPromoContent{color:#d5c9aa;font-size:14px;line-height:1.95}
+.mPromoPage .mPromoContent :is(h1,h2,h3,h4,h5,h6){color:#e4ca91}
+.mPromoPage .mPromoEmptyText{color:#b5a788}
+.mPromoPage .mPromoImageBtn:focus-visible,.mPromoPage button:focus-visible{outline:2px solid #ecd69c;outline-offset:3px}
+
+.mRecPage{padding:14px 16px 0;box-sizing:border-box;color:#daccad}
+.mRecPage .mRecTabs{flex-shrink:0;padding:0 0 12px;gap:8px}
+.mRecPage .mRecTab,.mRecPage .mRecQuickChip,.mRecPage .mRecQuickBtn{
+  border:1px solid #a5884b88;background:var(--temple-button);color:#cdbb91;border-radius:999px;box-shadow:inset 0 0 0 2px #0b1711;
+}
+.mRecPage .mRecTab.active{background:linear-gradient(#d4bb80,#a17c3c);border-color:#ddc082;color:#1c2519;box-shadow:inset 0 0 0 2px #735e36}
+.mRecPage .mRecFilterCard,.mRecPage .mRecItemCard,.mRecPage .mRecEmpty{
+  border:1px solid #aa8a4d88;border-radius:16px;background:linear-gradient(135deg,#2f392c99,transparent 75%),linear-gradient(#12201cf2,#0b1512f2);
+  box-shadow:inset 0 0 0 2px #ad8b3e16,0 6px 18px #0005;
+}
+.mRecPage .mRecFilterCard{flex-shrink:0;padding:12px}
+.mRecPage .mRecQuickChip{font-size:12px;padding:0 5px;min-width:0;font-weight:600}
+.mRecPage .mRecSelectRow select,.mRecPage .mRecField select,.mRecPage .mRecField input{background:#07140eaa;border-color:#9c814b88;border-radius:999px;color:#ddc99d;font-size:13px;font-weight:500}
+.mRecPage select option{background:#142019;color:#ddc99d}
+.mRecPage .mRecSelectRow::after{color:#cdb17b}
+.mRecPage .mRecSearchBtn{border:1px solid #d9b775;border-radius:999px;background:linear-gradient(#d1b577,#9c773b);color:#172416;box-shadow:inset 0 0 0 2px #79613255;font-weight:700;letter-spacing:3px}
+.mRecPage .mRecSearchBtn--block{margin-bottom:0}
+.mRecPage .mRecScrollArea{padding:0 0 12px;scrollbar-width:thin;scrollbar-color:#947b46 transparent}
+.mRecPage .mRecList{gap:12px}
+.mRecPage .mRecItemCard{padding:14px}
+.mRecPage .mRecTime,.mRecPage .mRecSectionCount{color:#aeaa90}
+.mRecPage .mRecMainPrize,.mRecPage .mRecSectionTitle{color:#ebd5a4}
+.mRecPage .mRecMetaBox,.mRecPage .mRecMetaLine,.mRecPage .mRecNote{border-color:#9b824333;background:#08140e66;border-radius:10px}
+.mRecPage .mRecMetaBox span,.mRecPage .mRecMetaLine span,.mRecPage .mRecNote span{color:#a9a68a}
+.mRecPage .mRecMetaBox strong,.mRecPage .mRecMetaLine strong,.mRecPage .mRecNote p{color:#ded1b1}
+.mRecPage .mRecStatus,.mRecPage .mRecTag{color:#d2bd87;background:#8f713222;border-color:#ac8c4d66}
+.mRecPage .mRecStatus.win{color:#a8d6b8;background:#28583a44;border-color:#668e5677}
+.mRecPage .mRecStatus.lose{color:#d6a995;background:#733d272f;border-color:#9c674c66}
+.mRecPage button:focus-visible,.mRecPage select:focus-visible,.mRecPage input:focus-visible{outline:2px solid #e9cc8e;outline-offset:2px}
+
+/* Filters and every record travel in the same page scroller. */
+.mbPageFrame:has(.mRecPage) .mbPageBodyPlain{display:block;overflow-y:auto;overflow-x:hidden;scrollbar-color:#9d854e transparent;scrollbar-width:thin}
+.mRecPage{height:auto;min-height:100%;display:block;overflow:visible;padding-bottom:12px}
+.mRecPage .mRecRecordsPanel{display:block;flex:none;min-height:auto}
+.mRecPage .mRecScrollArea{flex:none;overflow:visible;min-height:auto}
+
+/* Invite friends: a separate papyrus-and-jade temple backdrop. */
+.mbHome:has(.invitePage){background:#0b1911 url('/fantasy/invite-temple-background.png') center/cover no-repeat}
+.mbHome:has(.invitePage)::before,.mbHome:has(.invitePage)::after{display:none}
+.mbPageFrame:has(.invitePage) .mbPageBody{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 16px calc(100px + env(safe-area-inset-bottom,0px));scrollbar-width:thin;scrollbar-color:#9b824b transparent}
+.mbPageFrame:has(.invitePage) .mbInnerPageCard{padding:0;border:0;border-radius:0;background:none;box-shadow:none;overflow:visible;min-height:0}
+.mbHome .invitePage{width:100%;max-width:none;margin:0;padding:0;display:block;color:#d9c9a6}
+.mbHome .inviteHeroCard{display:none}
+.mbHome .inviteGrid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.mbHome .mbPageBody .inviteCard{
+  min-width:0;margin:0;padding:16px!important;border:1px solid #a5894e99;border-radius:16px!important;
+  background:linear-gradient(135deg,#3a433044,transparent 65%),linear-gradient(#13241bef,#0a1711f5);
+  box-shadow:inset 0 0 0 3px #07140e,inset 0 0 0 4px #b5914622,0 8px 20px #0005!important;
+}
+.mbHome .inviteCardTitle{color:#e5cea0;font-size:18px;letter-spacing:1px}
+.mbHome .inviteCardSub{color:#b1ac8c;line-height:1.8;font-size:12px}
+.mbHome .inviteLinkBox{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.mbHome .inviteInput{width:100%;height:44px;min-width:0;padding:0 14px;border:1px solid #9f824955;border-radius:12px;background:#07130ebd;color:#e0cfac;box-shadow:inset 0 1px 3px #0004;font-size:12px}
+.mbHome .inviteBtn{width:100%;height:42px;border:1px solid #ab8a4e;border-radius:999px;background:var(--temple-button);color:#ddc99a;font-size:13px;letter-spacing:2px;box-shadow:inset 0 0 0 2px #09170f,inset 0 0 0 3px #b28a4322}
+.mbHome .inviteBtnPrimary{background:linear-gradient(#d2b77a,#a07b3d);color:#1a2819;border-color:#dfc084;box-shadow:inset 0 0 0 2px #7b633655}
+.mbHome .inviteBtn:disabled{opacity:.55;cursor:not-allowed}
+.mbHome .inviteStatsRow{display:flex;align-items:stretch;flex-direction:column;gap:12px}
+.mbHome .inviteCountBadge{width:100%;border:1px solid #a3854944;border-radius:999px;background:#283b2544;color:#dcc89d;font-size:12px;padding:10px 14px;box-sizing:border-box}
+.mbHome .inviteHint,.mbHome .inviteUserRow{padding:14px;margin-top:12px;border:1px solid #9c824333;border-radius:12px;background:#09170f88;color:#b8b292}
+.mbHome .inviteUserIndex{color:#b89e66}.mbHome .inviteUserName{color:#e2d1ab}
+.mbHome .inviteFooterRow{margin-top:16px}
+.mbHome .inviteError{color:#dfb79c;background:#5a352444;border:1px solid #a7784f66;border-radius:12px;padding:12px}
+.mbHome .inviteInput:focus-visible,.mbHome .inviteBtn:focus-visible{outline:2px solid #ead29a;outline-offset:2px}
+
+/* Float the image independently of the rotating orbit; pulse its floor shadow. */
+.fantasy-home .fh-slide img{animation:temple-item-float 3.8s ease-in-out var(--float-delay,0s) infinite;will-change:translate}
+.fantasy-home .fh-shadow{background:none;filter:none}
+.fantasy-home .fh-shadow::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse,#000b 0%,#0007 35%,#0003 56%,transparent 73%);filter:blur(7px);animation:temple-shadow-breathe 3.8s ease-in-out var(--float-delay,0s) infinite}
+.fh-entering .fh-slide img,.fh-entering .fh-shadow::before{animation-play-state:paused}
+@keyframes temple-item-float{0%,100%{translate:0 3px}50%{translate:0 -9px}}
+@keyframes temple-shadow-breathe{0%,100%{transform:scale(1.04);opacity:1}50%{transform:scale(.91);opacity:.72}}
+@media(prefers-reduced-motion:reduce){.fantasy-home .fh-slide img,.fantasy-home .fh-shadow::before{animation:none}}
+
+/* Personal center: shared gold controls, inset cards and one scroll container. */
+.mbHome:has(.mMyPage){background:#121a11 url('/fantasy/my-temple-background.png') center/cover no-repeat}
+.mbHome:has(.mMyPage)::before,.mbHome:has(.mMyPage)::after{display:none}
+.mbPageFrame:has(.mMyPage) .mbPageBodyPlain{display:block;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#a58b50 transparent}
+.mMyPage{height:auto;min-height:100%;display:block;overflow:visible;padding:16px 16px 12px;color:#ddcfad}
+.mMyPage .mMyHeroTop{padding:4px 2px}
+.mMyPage .mMyAvatar{background:radial-gradient(circle at 30% 20%,#716640,#263d29 65%,#112015);border:2px solid #b89a58;box-shadow:inset 0 0 0 3px #112115,0 0 0 1px #584724;color:#e8d09c}
+.mMyPage .mMyHeroWelcome{color:#ead4a5;font-weight:700;letter-spacing:.5px}
+.mMyPage .mMyHeroUser{color:#b6b08b}
+.mMyPage .mMyVipBar{border:1px solid #ad8d4c88;background:linear-gradient(125deg,#3c3a2388,#102219);box-shadow:inset 0 0 0 3px #0b1b12,inset 0 0 0 4px #b78f4522;border-radius:999px}
+.mMyPage .mMyVipItem,.mMyPage .mMyVipBtn{color:#dfc78c;font-weight:600;font-size:13px}
+.mMyPage .mMyVipDivider{background:#b5985266}
+.mMyPage .mMyActionRow{gap:10px}
+.mMyPage .mMyActionBtn{border:1px solid #a7894a77;background:var(--temple-button);box-shadow:inset 0 0 0 3px #08170e;color:#bcaf8b;border-radius:14px;font-weight:600;font-size:12px}
+.mMyPage .mMyActionBtn.isActive{border-color:#d0ad61;background:linear-gradient(135deg,#514b2c,#1d3624);color:#f0d99c;box-shadow:inset 0 0 0 3px #102314,inset 0 0 0 4px #d7b46244}
+.mMyPage .mMyContentCard{display:block;flex:none;min-height:0;overflow:visible;border:1px solid #ae8e4b88;background:linear-gradient(125deg,#303d2899,transparent 65%),linear-gradient(#112219ed,#09180ff5);box-shadow:inset 0 0 0 3px #07160d,inset 0 0 0 4px #b8924422,0 8px 20px #0004;border-radius:16px}
+.mMyPage .mMyContentTitle{background:linear-gradient(90deg,#7e6c292f,transparent);border-color:#ad8b4244;color:#e4cd99;letter-spacing:2px;font-size:15px;border-radius:16px 16px 0 0}
+.mMyPage .mMyList,.mMyPage .mMyBankForm,.mMyPage .mMyWalletSection{flex:none;min-height:0;overflow:visible;overscroll-behavior:auto}
+.mMyPage .mMyInfoRow,.mMyPage .mMyWalletBlock{border-color:#a88b3d33}
+.mMyPage .mMyInfoLabel,.mMyPage .mMyFieldLabel{color:#c7bd96;font-weight:500;font-size:13px}
+.mMyPage .mMyInfoValue,.mMyPage .mMyLockedText{color:#e0d1aa;font-weight:600}
+.mMyPage .mMyInput,.mMyPage .mMyLockedBox,.mMyPage .mMyHintBox{border:1px solid #a287454f;background:#07160d88;border-radius:12px;color:#dac99d;font-size:13px;font-weight:500;color-scheme:dark}
+.mMyPage .mMyInput::placeholder{color:#958f71}
+.mMyPage .mMyInput:focus{border-color:#d0af68;box-shadow:0 0 0 2px #b5913f22}
+.mMyPage .mMyPrimaryBtn,.mMyPage .mMySaveBtn{border:1px solid #d4b36d;border-radius:999px;background:linear-gradient(#d2b87b,#9d783a);color:#182715;box-shadow:inset 0 0 0 2px #79633355;font-size:13px;font-weight:700;letter-spacing:1px}
+.mMyPage .mMyGhostBtn,.mMyPage .mMyWalletBtn{border:1px solid #ad8d4d88;background:var(--temple-button);color:#d7c28f;border-radius:999px;font-size:13px;font-weight:600}
+.mMyPage .mMyWalletLabel{color:#bdb38e;font-weight:500}
+.mMyPage .mMyWalletAmount{color:#edd29a;font-weight:700}
+.mMyPage .mMyWalletNotice{color:#a7a184}
+.mMyPage .mMyVerifiedBadge{color:#b2d2a3;border-color:#839b5766;background:#4b643333;font-weight:600}
+.mMyPage button:focus-visible{outline:2px solid #ecd599;outline-offset:2px}
+
+/* Customer support sanctuary. */
+.mbHome:has(.supportPage){background:#151811 url('/fantasy/support-temple-background.png') center/cover no-repeat}
+.mbHome:has(.supportPage)::before,.mbHome:has(.supportPage)::after{display:none}
+.mbPageFrame:has(.supportPage) .mbPageBodyPlain{display:block;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#a18a50 transparent}
+.mbHome .supportPage{height:auto;min-height:100%;display:block;padding:20px 16px 16px}
+.mbHome .supportFrame{max-width:none;padding:4px;border:1px solid #a78a4f;border-radius:18px;background:linear-gradient(135deg,#75603a55,#101d12cc);box-shadow:0 8px 22px #0006,inset 0 0 0 2px #0a150d}
+.mbHome .supportGlow{display:none}
+.mbHome .supportInner{margin:0;border-radius:13px;border:1px solid #aa8c4533;background:linear-gradient(140deg,#343a2699,transparent 65%),linear-gradient(#142319ee,#0a160ff5);box-shadow:inset 0 0 18px #0003}
+.mbHome .supportBox{padding:24px 20px;min-height:0}
+.mbHome .supportBox h3{color:#ecd5a2;letter-spacing:2px;font-weight:700;border-bottom:1px solid #ad8b4244;padding-bottom:16px;margin-bottom:18px}
+.mbHome .supportBox h3::before{content:'◆';font-size:10px;color:#b99b5b;margin-right:10px}
+.mbHome .supportBox p{color:#bcb18f}
+.mbHome .supportBox li{color:#d6c8a6;margin-bottom:14px;font-size:13px}
+.mbHome .supportBox li::before{width:5px;height:5px;border-radius:0;transform:rotate(45deg);background:#c8aa66;box-shadow:0 0 5px #bc984333}
+.mbHome .supportBtn{height:44px;border-radius:999px;border:1px solid #d2ae66;background:linear-gradient(#d3b77a,#9f7a3d);color:#1a2718;box-shadow:inset 0 0 0 2px #79622d55,0 4px 10px #0004;letter-spacing:1px;font-size:14px;font-weight:700}
+.mbHome .supportBtn:hover{box-shadow:inset 0 0 0 2px #79622d55,0 6px 14px #0005;filter:brightness(1.08)}
+.mbHome .supportBtn:focus-visible{outline:2px solid #edcf94;outline-offset:3px}

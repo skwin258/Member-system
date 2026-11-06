@@ -5,6 +5,7 @@ import "./index.css";
 import "./App.css";
 import App from "./App.jsx";
 import MobileApp from "./MobileApp.jsx";
+import "./pages/admin/adminTemple.css";
 
 function isAdminPath() {
   const p = window.location.pathname || "/";
@@ -30,6 +31,9 @@ function pickRootApp() {
   return App; // 桌機走原本版
 }
 
+const adminRoute=isAdminPath();
+document.documentElement.classList.toggle('is-admin-route',adminRoute);
+if(adminRoute)document.title='SK 管理中心';
 const RootApp = pickRootApp();
 
 createRoot(document.getElementById("root")).render(

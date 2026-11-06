@@ -220,8 +220,8 @@ const actRes = actResult.status === "fulfilled" ? actResult.value : null;
 
     if (!getAdminToken() || !adminMe) {
       return (
-        <div style={{ padding: 40, fontFamily: "Arial" }}>
-          <h1 style={{ marginBottom: 16 }}>🛡️ 管理端登入</h1>
+        <div className="admin-login-screen"><section className="admin-login-card"><img className="admin-login-logo" src="/fantasy/SKLOGO.png" alt="SK"/>
+          <p className="admin-login-eyebrow">SK · 管理中心</p>
           <LoginBox
             mode="admin"
             onLoggedIn={async (loginRes) => {
@@ -236,7 +236,7 @@ const actRes = actResult.status === "fulfilled" ? actResult.value : null;
             }}
           />
           {adminLoading ? <div style={{ marginTop: 10 }}>載入中...</div> : null}
-        </div>
+        </section></div>
       );
     }
 

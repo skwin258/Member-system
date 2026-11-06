@@ -105,7 +105,7 @@ export default function MobileRecordsPage({ me, initialView = "raffle" }) {
   const [fromDate, setFromDate] = useState(getTaipeiTodayYmd());
   const [toDate, setToDate] = useState(getTaipeiTodayYmd());
   const [status, setStatus] = useState("all");
-  const [activity, setActivity] = useState("all");
+  const [activity, setActivity] = useState("redpacket");
   const [account, setAccount] = useState(u?.username || "");
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -247,7 +247,6 @@ export default function MobileRecordsPage({ me, initialView = "raffle" }) {
   <div className="mRecStackFields">
     <label className="mRecSelectRow">
       <select value={activity} onChange={(e) => setActivity(e.target.value)}>
-        <option value="all">遊戲合作夥伴</option>
         <option value="redpacket">紅包抽獎</option>
         <option value="wheel">輪盤抽獎</option>
         <option value="number">數字抽獎</option>

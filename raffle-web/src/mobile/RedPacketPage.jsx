@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
-import redpacketImg from "../assets/redpacket.png";
+const redpacketImg = "/fantasy/red-envelope-preview.png";
 import "./redPacketPage.css";
 
 const REDPACKET_TOTAL = 30;
@@ -313,7 +313,7 @@ setTimeout(() => {
                   >
                     <img
                       src={redpacketImg}
-                      alt="redpacket"
+                      alt="古金封印紅包"
                       className="mRpPacketOnlyImg"
                     />
                   </button>

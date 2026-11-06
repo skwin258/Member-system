@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, clearToken, getToken, touchUserActivity, isUserIdleExpired } from "./api";
 import MobileShell from "./mobile/MobileShell.jsx";
+import LoginPromotions from "./components/LoginPromotions.jsx";
 
 function isLikelyRefCode(code) {
   return /^[a-zA-Z0-9_-]{4,32}$/.test(String(code || ""));
@@ -165,7 +166,7 @@ if (!ready) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#050d16",
+        background: '#071310 url("/fantasy/背景.png") center / cover no-repeat',
         flexDirection: "column",
       }}
     >
@@ -195,6 +196,8 @@ if (!ready) {
 }
 
   return (
+    <>
+    <LoginPromotions authenticated={!!me?.success && !!getToken()} userId={me?.user?.id}/>
     <MobileShell
       me={me}
       activities={activities}
@@ -219,5 +222,7 @@ if (!ready) {
         window.location.href = "/";
       }}
     />
+    </>
   );
 }
+

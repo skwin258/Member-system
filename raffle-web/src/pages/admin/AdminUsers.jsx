@@ -394,7 +394,7 @@ async function saveUser() {
               <div className="sec">
                 <div className="secTitle">抽獎紀錄/異動紀錄（近90天）</div>
                 <div className="logWrap">
-                  <table className="logTable">
+                  <div className="temple-table-scroll"><table className="logTable">
                     <thead>
                       <tr>
                         <th>時間</th><th>帳號</th><th>類型</th><th>狀態</th><th>結果</th><th>備註</th>
@@ -413,14 +413,14 @@ async function saveUser() {
                       ))}
                       {!logs.length ? <tr><td colSpan={6} className="empty">無紀錄</td></tr> : null}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               </div>
 
               <div className="sec">
                 <div className="secTitle">兌換紀錄（近90天）</div>
                 <div className="logWrap">
-                  <table className="logTable">
+                  <div className="temple-table-scroll"><table className="logTable">
                     <thead>
                       <tr>
                         <th>時間</th><th>帳號</th><th>狀態</th><th>扣除</th><th>商品</th>
@@ -438,7 +438,7 @@ async function saveUser() {
                       ))}
                       {!orders.length ? <tr><td colSpan={5} className="empty">無紀錄</td></tr> : null}
                     </tbody>
-                  </table>
+                  </table></div>
                 </div>
               </div>
             </div>

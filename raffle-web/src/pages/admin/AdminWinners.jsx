@@ -60,7 +60,7 @@ export default function AdminWinners() {
       </div>
 
       <div style={{ overflowX: "auto" }}>
-        <table className="adminTable" style={{ width: "100%" }}>
+        <div className="temple-table-scroll"><table className="adminTable" style={{ width: "100%" }}>
           <thead>
             <tr>
               <th style={{ minWidth: 140 }}>時間</th>
@@ -85,7 +85,7 @@ export default function AdminWinners() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

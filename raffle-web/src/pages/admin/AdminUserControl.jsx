@@ -716,7 +716,7 @@ const toggleReview = async (id) => {
         <div className="auSection">
           <div className="auSectionTitle">抽獎紀錄 / 異動紀錄（近90天）</div>
           <div className="logWrap">
-            <table className="logTable">
+            <div className="temple-table-scroll"><table className="logTable">
               <thead>
                 <tr>
                   <th>時間</th>
@@ -758,14 +758,14 @@ const toggleReview = async (id) => {
                   </tr>
                 ) : null}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
 
         <div className="auSection">
           <div className="auSectionTitle">兌換紀錄（近90天）</div>
           <div className="logWrap">
-            <table className="logTable">
+            <div className="temple-table-scroll"><table className="logTable">
               <thead>
                 <tr>
                   <th>時間</th>
@@ -803,7 +803,7 @@ const toggleReview = async (id) => {
                   </tr>
                 ) : null}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       </div>
@@ -840,7 +840,7 @@ const toggleReview = async (id) => {
     </div>
 
     <div className="auRedeemTableWrap">
-      <table className="logTable auRedeemTable">
+      <div className="temple-table-scroll"><table className="logTable auRedeemTable">
         <thead>
           <tr>
             <th>ID</th>
@@ -912,7 +912,7 @@ const toggleReview = async (id) => {
             </tr>
           )}
         </tbody>
-      </table>
+      </table></div>
     </div>
   </div>
 )}

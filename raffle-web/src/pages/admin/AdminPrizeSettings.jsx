@@ -571,7 +571,7 @@ export default function AdminPrizeSettings() {
           <h4 style={{ marginTop: 18 }}>機率池（只在模式=機率池生效）</h4>
 
           <div style={{ overflowX: "auto" }}>
-            <table className="adminTable" style={{ width: "100%" }}>
+            <div className="temple-table-scroll"><table className="adminTable" style={{ width: "100%" }}>
               <thead>
                 <tr>
                   <th style={{ minWidth: 80 }}>金額</th>
@@ -644,7 +644,7 @@ export default function AdminPrizeSettings() {
                     </tr>
                   ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           <div style={{ marginTop: 10, opacity: 0.8 }}>目前啟用總機率：{totalRpProb}</div>
@@ -665,7 +665,7 @@ export default function AdminPrizeSettings() {
           <h3 style={{ marginTop: 0 }}>輪盤獎項設定</h3>
 
           <div style={{ overflowX: "auto" }}>
-            <table className="adminTable" style={{ width: "100%" }}>
+            <div className="temple-table-scroll"><table className="adminTable" style={{ width: "100%" }}>
               <thead>
                 <tr>
                   <th style={{ minWidth: 160 }}>名稱</th>
@@ -834,7 +834,7 @@ export default function AdminPrizeSettings() {
                     </tr>
                   ))}
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           <div style={{ marginTop: 10, opacity: 0.8 }}>目前啟用總機率：{totalWheelProb}</div>
