@@ -7,7 +7,7 @@ beforeEach(async () => {
   vi.resetModules();
   vi.clearAllMocks();
   sessionStorage.clear();
-  liff = { init: vi.fn().mockResolvedValue(undefined), isLoggedIn: vi.fn().mockReturnValue(true), getIDToken: vi.fn().mockReturnValue('verified-id-token'), login: vi.fn() };
+  liff = { init: vi.fn().mockResolvedValue(undefined), isLoggedIn: vi.fn().mockReturnValue(true), getIDToken: vi.fn().mockReturnValue('verified-id-token'), login: vi.fn(), logout: vi.fn(), isInClient: vi.fn().mockReturnValue(false) };
   vi.stubGlobal('window', { location: new URL('https://skclub.vip/'), liff });
   api.lineLogin.mockResolvedValue({ success: true, token: 'session' });
   api.lineRegister.mockResolvedValue({ success: true, token: 'session' });
@@ -78,10 +78,54 @@ describe('LINE authorization return', () => {
     expect(api.lineLogin).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects an absent ID token without sending an unauthenticated registration', async () => {
+  it('renews an absent ID token without sending an unauthenticated registration', async () => {
     liff.getIDToken.mockReturnValue(null);
-    await expect(auth.startLineAuth('register')).rejects.toThrow('身分授權');
+    expect(await auth.startLineAuth('register')).toBeNull();
+    expect(liff.logout).toHaveBeenCalledTimes(1);
+    expect(liff.login).toHaveBeenCalledTimes(1);
     expect(api.lineRegister).not.toHaveBeenCalled();
+  });
+
+  it('uses a clean production return URL instead of recycling old OAuth parameters or LAN URLs', async () => {
+    window.location = new URL('http://192.168.1.136:5173/register/friend123?code=old-code&state=old-state&liff.state=old#access_token=old');
+    liff.isLoggedIn.mockReturnValue(false);
+    await auth.startLineAuth('register', 'friend123');
+    const target = new URL(liff.login.mock.calls[0][0].redirectUri);
+    expect(target.origin + target.pathname).toBe('https://skclub.vip/');
+    expect([...target.searchParams.keys()]).toEqual(['sk_line_auth', 'sk_line_ref']);
+    expect(target.hash).toBe('');
+  });
+
+  it('renews locally expired tokens before sending them to the backend', async () => {
+    liff.getDecodedIDToken = vi.fn().mockReturnValue({ exp: Math.floor(Date.now()/1000) - 1 });
+    expect(await auth.startLineAuth('login', 'friend123')).toBeNull();
+    expect(api.lineLogin).not.toHaveBeenCalled();
+    expect(liff.logout).toHaveBeenCalledTimes(1);
+    const target = new URL(liff.login.mock.calls[0][0].redirectUri);
+    expect(target.searchParams.get('sk_line_ref')).toBe('friend123');
+    expect(target.searchParams.get('sk_line_retry')).toBe('1');
+  });
+
+  it('recovers from the actual legacy backend IdToken expired response with a fresh authorization', async () => {
+    api.lineLogin.mockResolvedValue({ success: false, error: 'IdToken expired.', status: 401 });
+    expect(await auth.startLineAuth()).toBeNull();
+    expect(api.lineLogin).toHaveBeenCalledTimes(1);
+    expect(liff.logout).toHaveBeenCalledTimes(1);
+    expect(liff.login).toHaveBeenCalledTimes(1);
+    expect(liff.init).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not endlessly reauthorize if a fresh callback is still rejected', async () => {
+    window.location = new URL('https://skclub.vip/?sk_line_auth=login&sk_line_retry=1');
+    api.lineLogin.mockResolvedValue({ success: false, error: 'IdToken expired.' });
+    await expect(auth.completeLineCallback()).rejects.toThrow('請返回首頁重新登入');
+    expect(liff.login).not.toHaveBeenCalled();
+  });
+
+  it('hides a repeated expired-token error during SDK reinitialization', async () => {
+    liff.init.mockRejectedValue(new Error('IdToken expired.'));
+    await expect(auth.startLineAuth()).rejects.toThrow('請重新整理頁面後再登入');
+    expect(api.lineLogin).not.toHaveBeenCalled();
   });
 
   it('does not automatically sign in normal homepage visits', () => {

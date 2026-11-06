@@ -8,8 +8,9 @@ export default function LineAuthCallback({ children }) {
   useEffect(() => {
     if (!active) return;
     let disposed = false;
-    completeLineCallback().then(() => {
-      if (!disposed) window.location.replace(clearLineCallback());
+    completeLineCallback().then(data => {
+      // null means LIFF has started a new authorization navigation.
+      if (!disposed && data?.success) window.location.replace(clearLineCallback());
     }).catch(err => { if (!disposed) setError(err.message); });
     return () => { disposed = true; };
   }, [active, attempt]);
