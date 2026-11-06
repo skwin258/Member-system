@@ -1,9 +1,10 @@
+import { API_BASE } from '../../config';
 // raffle-web/src/pages/admin/AdminPrizeSettings.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api";
 import "./AdminPrizeSettings.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+
 
 function resolveImageUrl(u) {
   const s = String(u || "").trim();

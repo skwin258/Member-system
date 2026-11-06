@@ -1,8 +1,9 @@
+import { API_BASE } from '../../config';
 import React, { useEffect, useMemo, useState } from "react";
 import { getAdminToken } from "../../api";
 import "./AdminPromotions.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+
 
 function resolveCoverUrl(u) {
   const s = String(u || "").trim();

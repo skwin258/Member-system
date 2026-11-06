@@ -1,3 +1,4 @@
+import { API_BASE } from '../../config';
 // raffle-web/src/pages/admin/AdminShopPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { getAdminToken } from "../../api";
@@ -10,7 +11,7 @@ import { getAdminToken } from "../../api";
  * - 商品刪除：DELETE /admin/shop/products/:id（admin auth）
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+
 const CATEGORIES = ["稀有商品", "折抵金", "現金"];
 
 function toNum(v, fallback = 0) {

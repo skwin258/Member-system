@@ -5,6 +5,7 @@ import "./index.css";
 import "./App.css";
 import App from "./App.jsx";
 import MobileApp from "./MobileApp.jsx";
+import LineAuthCallback from "./components/LineAuthCallback.jsx";
 import "./pages/admin/adminTemple.css";
 
 function isAdminPath() {
@@ -39,7 +40,7 @@ const RootApp = pickRootApp();
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <RootApp />
+      <LineAuthCallback><RootApp /></LineAuthCallback>
     </BrowserRouter>
   </StrictMode>
 );

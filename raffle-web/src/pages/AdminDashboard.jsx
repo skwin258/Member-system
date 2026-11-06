@@ -1,3 +1,4 @@
+import { API_BASE } from '../config';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './admin/adminShell.css';
 import AdminActivitySettings from './admin/AdminActivitySettings.jsx';
@@ -36,7 +37,7 @@ export default function AdminDashboard({adminMe,onAdminLogout}){
   const menuButton=useRef(null),sidebar=useRef(null);
   const current=visibleTabs.find(t=>t.key===tab)||visibleTabs[0];
   const Content=current.Component;
-  const live=String(import.meta.env.VITE_API_BASE||'').includes('api.skclub.vip');
+  const live=API_BASE.includes('api.skclub.vip');
   useEffect(()=>{const url=new URL(location.href);url.searchParams.set('tab',current.key);history.replaceState(null,'',url)},[current.key]);
   useEffect(()=>{
     if(!navOpen)return;

@@ -1,9 +1,10 @@
+import { API_BASE } from '../config';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import "./mobileWheel.css";
 import scoinIcon from "../assets/scoin.png";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+
 
 const HISTORY_POLL_MS = 20000;
 const MARQUEE_DURATION_MS = 10000;

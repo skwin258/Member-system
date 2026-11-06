@@ -1,6 +1,7 @@
+import { API_BASE } from './config';
 // raffle-web/src/api.js
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+
 
 const LS_TOKEN = "sk_token";
 const LS_ADMIN_TOKEN = "sk_admin_token";
@@ -117,22 +118,30 @@ async function request(path, opts = {}) {
     if (t) headers.Authorization = `Bearer ${t}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers,
-  });
-
-  let data = null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  let res;
+  let data;
   try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...opts,
+      headers,
+      signal: opts.signal ? AbortSignal.any([opts.signal, controller.signal]) : controller.signal,
+    });
     data = await res.json();
-  } catch {
-    data = null;
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('伺服器連線逾時，請稍後重試');
+    if (error instanceof SyntaxError) throw new Error('伺服器回應異常，請稍後重試');
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
 
   if (!res.ok) {
     return {
       success: false,
       error: data?.error || `HTTP ${res.status}`,
+      code: data?.code,
       status: res.status,
       raw: data,
     };

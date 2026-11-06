@@ -1,10 +1,11 @@
+import { API_BASE } from '../config';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, clearToken } from "../api";
 import "./WheelPage.css";
 import scoinIcon from "../assets/scoin.png";
 import { formatTaipeiDateTime } from "../utils/taipeiTime";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787";
+
 
 const WINNERS_LIMIT = 12;
 const WINNERS_POLL_MS = 5000;

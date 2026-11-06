@@ -7,7 +7,7 @@
     <title>SK會員中心</title>
 
     <!-- LINE LIFF SDK：LINE登入 / LINE註冊使用 -->
-    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script id="line-liff-sdk" defer charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
     <!-- Meta Pixel Code -->
     <script>
@@ -22,6 +22,10 @@
       fbq('init', '902759669237829');
       fbq('track', 'PageView');
     </script>
+
+    <!-- End Meta Pixel Code -->
+  </head>
+  <body>
     <noscript>
       <img
         height="1"
@@ -30,9 +34,6 @@
         src="https://www.facebook.com/tr?id=902759669237829&ev=PageView&noscript=1"
       />
     </noscript>
-    <!-- End Meta Pixel Code -->
-  </head>
-  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

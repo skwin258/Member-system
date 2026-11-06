@@ -1,3 +1,4 @@
+import { API_BASE } from '../../config';
 // raffle-web/src/pages/front/FrontShell.jsx
 import React, { useMemo, useState } from "react";
 import "./frontShell.css";
@@ -337,7 +338,7 @@ export default function FrontShell({
 
       <RegisterModal
         open={showRegister}
-        apiBase={import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787"}
+        apiBase={API_BASE}
         referralCode={refCode || ""}
         onClose={() => setShowRegister(false)}
         onSuccess={() => {

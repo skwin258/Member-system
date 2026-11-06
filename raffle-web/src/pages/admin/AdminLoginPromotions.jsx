@@ -1,9 +1,10 @@
+import { API_BASE } from '../../config';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, getAdminToken } from '../../api';
 import { LOGIN_PLACEMENT, orderedLoginPromotions, resolvePromotionImage, validatePng } from '../../lib/loginPromotions';
 import { PromotionSequence } from '../../components/LoginPromotions';
 
-const API_BASE=import.meta.env.VITE_API_BASE||'http://127.0.0.1:8787';
+
 const empty={id:null,title:'',sort:0,enabled:true,cover_image_url:''};
 async function positions(method='GET',body,id=''){
   const token=getAdminToken();

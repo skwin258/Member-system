@@ -1,10 +1,11 @@
+import { API_BASE } from '../config';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getToken } from '../api';
 import { LOGIN_PLACEMENT, loginSessionKey, orderedLoginPromotions } from '../lib/loginPromotions';
 import './loginPromotions.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8787';
+
 
 export function PromotionSequence({ items, onComplete, onAdvance }) {
   const [index, setIndex] = useState(0);

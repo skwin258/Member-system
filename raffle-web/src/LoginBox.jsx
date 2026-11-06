@@ -1,6 +1,7 @@
 // raffle-web/src/LoginBox.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, setToken, setAdminToken } from "./api";
+import { startLineAuth } from "./lib/lineAuth";
 
 /**
  * mode:
@@ -27,6 +28,7 @@ export default function LoginBox({
 
   const [openRegister, setOpenRegister] = useState(false);
   const [lineLoading, setLineLoading] = useState(false);
+  const lineBusy = useRef(false);
   const [registerErr, setRegisterErr] = useState("");
 
 useEffect(() => {
@@ -79,126 +81,29 @@ useEffect(() => {
     }
   };
 
-  async function getLineIdToken() {
-    const liffId = import.meta.env.VITE_LINE_LIFF_ID || "";
-
-    if (!liffId) {
-      throw new Error("尚未設定 VITE_LINE_LIFF_ID，請先建立 LINE LIFF 並設定環境變數");
-    }
-
-    if (!window?.liff) {
-      throw new Error("尚未載入 LIFF SDK，請先在 index.html 加入 LINE LIFF SDK");
-    }
-
-    await window.liff.init({ liffId });
-
-    if (!window.liff.isLoggedIn()) {
-      window.liff.login({ redirectUri: window.location.href });
-      return null;
-    }
-
-    const idToken = window.liff.getIDToken();
-    if (!idToken) throw new Error("LINE 授權成功，但沒有取得 idToken");
-    return idToken;
-  }
-
-const handleLineLogin = async () => {
-  if (isAdmin) return;
-
-  try {
+  const handleLineAuth = async (authMode) => {
+    if (isAdmin || lineBusy.current) return;
+    lineBusy.current = true;
     setLineLoading(true);
     setRegisterErr("");
-
-    if (typeof api.lineLogin !== "function" || typeof api.lineRegister !== "function") {
-      alert("LINE 登入/註冊功能尚未完整串接 api.js 與 Worker 後端。");
-      return;
-    }
-
-    const idToken = await getLineIdToken();
-    if (!idToken) return;
-
-    let data = null;
-    let loginErrMsg = "";
-
-    // 先嘗試 LINE 登入
     try {
-      data = await api.lineLogin({
-        id_token: idToken,
-      });
-    } catch (loginErr) {
-      loginErrMsg = String(loginErr?.message || loginErr || "");
-      data = {
-        success: false,
-        error: loginErrMsg,
-      };
-    }
-
-    // 如果登入失敗，判斷是不是尚未註冊
-    if (!data?.success) {
-      const msg = String(data?.error || data?.message || loginErrMsg || "");
-
-      const needRegister =
-        msg.includes("尚未註冊") ||
-        msg.includes("未註冊") ||
-        msg.includes("not registered") ||
-        msg.includes("找不到") ||
-        msg.includes("不存在") ||
-        msg.includes("not found");
-
-      if (!needRegister) {
-        throw new Error(msg || "LINE登入失敗");
-      }
-
-      // 尚未註冊 → 自動 LINE 註冊
-      const referral_code = referralCode || getReferralCodeFromUrl();
-
-      data = await api.lineRegister({
-        id_token: idToken,
-        referral_code,
-      });
-    }
-
-    saveLoginToken(data);
-  } catch (e) {
-    alert("LINE登入失敗：" + (e?.message || String(e)));
-  } finally {
-    setLineLoading(false);
-  }
-};
-
-  const handleLineRegister = async () => {
-    if (isAdmin) return;
-
-    try {
-      setLineLoading(true);
-      setRegisterErr("");
-
-      if (typeof api.lineRegister !== "function") {
-        setRegisterErr("LINE註冊卡片已完成，下一步需要在 api.js 與 Worker 後端新增 /auth/line/register。");
-        return;
-      }
-
-      const idToken = await getLineIdToken();
-      if (!idToken) return;
-
-      const referral_code = getReferralCodeFromUrl();
-      const data = await api.lineRegister({
-        id_token: idToken,
-        referral_code,
-      });
-
-      saveLoginToken(data);
-    } catch (e) {
-      setRegisterErr(e?.message || String(e));
+      const data = await startLineAuth(authMode, referralCode || getReferralCodeFromUrl());
+      if (data) saveLoginToken(data);
+    } catch (error) {
+      setRegisterErr(error?.message || "LINE 登入失敗，請重試");
     } finally {
+      lineBusy.current = false;
       setLineLoading(false);
     }
   };
+  const handleLineLogin = () => handleLineAuth('login');
+  const handleLineRegister = () => handleLineAuth('register');
 
   return (
     <>
       <div style={styles.box}>
         <div style={styles.title}>{title}</div>
+        {registerErr && !openRegister && <p role="alert" style={{ color: "#ffb4b4" }}>{registerErr}</p>}
 
         <div style={styles.grid}>
           <input
@@ -228,7 +133,7 @@ const handleLineLogin = async () => {
           {!isAdmin ? (
             <>
 <button
-  onClick={handleLineRegister}
+  onClick={handleLineLogin}
   disabled={loading || lineLoading}
   style={styles.lineBtn(lineLoading)}
 >
@@ -285,7 +190,7 @@ const handleLineLogin = async () => {
               <div style={styles.registerTextBox}>
                 <div style={styles.registerTitle}>使用 LINE 註冊</div>
                 <div style={styles.registerDesc}>
-                  使用 LINE 授權建立會員資料。已註冊會員請回登入畫面使用帳號密碼登入。
+                  使用 LINE 授權建立會員資料。已註冊會員也可直接使用 LINE 登入。
                 </div>
               </div>
             </div>

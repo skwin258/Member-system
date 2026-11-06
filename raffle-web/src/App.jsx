@@ -1,3 +1,4 @@
+import { API_BASE } from './config';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LoginBox from "./LoginBox";
 import {
@@ -297,8 +298,8 @@ const actRes = actResult.status === "fulfilled" ? actResult.value : null;
       />
 
       <RegisterModal
-        open={!!refCode}
-        apiBase={import.meta.env.VITE_API_BASE || "http://127.0.0.1:8787"}
+        open={!!refCode && !me?.success}
+        apiBase={API_BASE}
         onClose={() => {
           window.location.href = "/";
         }}
