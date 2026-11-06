@@ -909,6 +909,12 @@ const corsHeaders = {
         );
       }
 
+      // OAuth start/handoff need only the isolated auth-flow table, not the
+      // full application bootstrap. Avoid cold-start migrations blocking login.
+      if (["/auth/line/start", "/auth/line/session"].includes(url.pathname)) {
+        return await handleLineOAuth(request, env, db, null);
+      }
+
       /* =========================
        * Helpers
        * ========================= */

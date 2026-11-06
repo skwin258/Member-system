@@ -170,6 +170,9 @@ test('Worker integration preserves existing member identity and balances, regist
     const first = await worker.fetch(new Request(api + '/auth/line/start'), workerEnv);
     assert.equal(first.status, 303);
     assert.ok(first.headers.get('Location').startsWith('https://access.line.me/'));
+    // Start must not run the full application's cold-start migrations.
+    assert.equal(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='users'").get(), undefined);
+    await worker.fetch(new Request(api + '/'), workerEnv);
     sqlite.prepare("INSERT INTO users (username,password,display_name,line_user_id,enabled,locked,welfare_balance,discount_balance,s_balance) VALUES (?,?,?,?,?,?,?,?,?)")
       .run('existing-member', 'unchanged-password', 'Original name', 'Uexisting', 1, 0, 100, 200, 300);
     const member = sqlite.prepare("SELECT * FROM users WHERE username='existing-member'").get();
