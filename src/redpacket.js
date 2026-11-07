@@ -81,10 +81,12 @@ async function getRedpacketBoard(db, userId, rules, enabled) {
   ]);
   const count = rules?.count ?? 30;
   const full = results.length >= count;
-  const round = Number(results[0]?.round_no ?? 1) + Number(full && !rules?.lock);
-  const rows = full && !rules?.lock ? [] : results;
+  const resetEachDraw = Boolean(rules && !rules.lock && (rules.mode === "fixed" || rules.allowRepeat));
+  const reset = Boolean(results.length && resetEachDraw) || (full && !rules?.lock);
+  const round = Number(results[0]?.round_no ?? 1) + Number(reset);
+  const rows = reset ? [] : results;
   return {
-    boardId, round, rows,
+    boardId, round, rows, resetEachDraw,
     state: {
       enabled, count, board: boardId + ":" + round, opened: rows.map(row => row.slot),
       locked: Boolean(full && rules?.lock), left: Math.max(0, Number(usage?.times_left || 0)),
@@ -105,14 +107,14 @@ function pickRedpacketAmount(rules, opened) {
   return pool.at(-1)?.amount;
 }
 
-async function insertRedpacketDraw(db, { userId, requestId, boardId, round, slot, amount, uniqueAmount }) {
+async function insertRedpacketDraw(db, { userId, requestId, boardId, round, slot, amount, uniqueAmount, resetEachDraw }) {
   await db.prepare(`INSERT INTO redpacket_draws(user_id,request_id,board_id,round_no,slot,amount)
     SELECT ?,?,?,?,?,? WHERE EXISTS (
       SELECT 1 FROM user_activity_usage WHERE user_id=? AND activity_key='redpacket' AND times_left>0
     ) AND (?=0 OR NOT EXISTS (
-      SELECT 1 FROM redpacket_draws WHERE user_id=? AND board_id=? AND round_no=? AND amount=?
+      SELECT 1 FROM redpacket_draws WHERE user_id=? AND board_id=? AND round_no=? AND (?=1 OR amount=?)
     )) ON CONFLICT DO NOTHING`)
-    .bind(userId,requestId,boardId,round,slot,amount,userId,Number(uniqueAmount),userId,boardId,round,amount).run();
+    .bind(userId,requestId,boardId,round,slot,amount,userId,Number(uniqueAmount || resetEachDraw),userId,boardId,round,Number(resetEachDraw),amount).run();
 }
 
 export async function handleRedpacket({ request, url, db, requireUser, safeJson, activityEnabledNow, ensureUsageRow, json, forbid }) {
@@ -165,6 +167,7 @@ export async function handleRedpacket({ request, url, db, requireUser, safeJson,
   await insertRedpacketDraw(db, {
     userId, requestId, boardId: board.boardId, round: board.round, slot, amount,
     uniqueAmount: rules.mode === "pool" && !rules.allowRepeat,
+    resetEachDraw: board.resetEachDraw,
   });
   const result = await getResult();
   if (!result) return forbid("紅包盤面或次數已更新，請再試一次", 409);

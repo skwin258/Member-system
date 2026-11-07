@@ -78,12 +78,21 @@ test('redpacket uses the configured board, prevents duplicate draws and settles 
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM draw_records WHERE note='redpacket_draw'").get().n, 2);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM winners WHERE activity_key='redpacket'").get().n, 2);
 
-    assert.equal((await configure({ count:1, mode:'fixed', fixed_amount:0, lock_when_all_opened:0 }, [])).status, 200);
+    assert.equal((await configure({ count:3, mode:'fixed', fixed_amount:0, lock_when_all_opened:0 }, [])).status, 200);
     const fresh = await call('/redpacket/config');
-    const zero = await draw({ board:fresh.board, slot:0, request_id:crypto.randomUUID() });
+    const freshDraws = [0, 1].map(slot => ({ board:fresh.board, slot, request_id:crypto.randomUUID() }));
+    const competing = await Promise.all(freshDraws.map(draw));
+    assert.deepEqual(competing.map(result => result.status).sort(), [200, 409]);
+    const zero = competing.find(result => result.success);
     assert.equal(zero.amount, 0);
     assert.notEqual(zero.board, fresh.board);
     assert.deepEqual(zero.opened, []);
+    assert.equal(zero.left, 2);
+    const settledPayload = freshDraws[competing.findIndex(result => result.success)];
+    assert.equal((await draw(settledPayload)).left, 2);
+    const reopened = await draw({ board:zero.board, slot:settledPayload.slot, request_id:crypto.randomUUID() });
+    assert.equal(reopened.left, 1);
+    assert.deepEqual(reopened.opened, []);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM winners WHERE activity_key='redpacket'").get().n, 2);
   } finally { sqlite.close(); }
 });

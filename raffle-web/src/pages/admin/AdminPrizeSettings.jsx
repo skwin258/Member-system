@@ -575,6 +575,7 @@ export default function AdminPrizeSettings() {
               <option value={1}>是</option>
               <option value={0}>否</option>
             </select>
+            <small>固定金額或允許重複金額時，選「否」會在每次抽獎後換新盤。</small>
           </div>
 
           <h4 style={{ marginTop: 18 }}>機率池（只在模式=機率池生效）</h4>
