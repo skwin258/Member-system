@@ -5,11 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/arcade/claw/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>3D 夾娃娃機 · Claw Engine</title>
-    <script type="module" crossorigin src="/arcade/claw/assets/index-BDWSk-M3.js"></script>
+    <!-- Keep the model version in sync with src/scene/plushies.ts. -->
+    <link rel="preload" href="/arcade/claw/models/plushies/library.glb?v=5" as="fetch" crossorigin fetchpriority="low" />
+    <script type="module" crossorigin src="/arcade/claw/assets/index-CtM3MeZL.js"></script>
     <link rel="stylesheet" crossorigin href="/arcade/claw/assets/index-1aRHW96f.css">
   </head>
   <body style="--temple-backdrop: url('/arcade/claw/assets/temple-background-VhCQHBE1.jpg')">
     <a class="lobby-back" href="../">← 返回大廳</a>
-    <div id="app"></div>
+    <div id="app"><p class="boot-message" role="status">正在載入 3D 機台…</p></div>
   </body>
 </html>
