@@ -1,4 +1,4 @@
-import { PLAY_COST, allowArcadeEntry, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember } from './s-wallet.js';
+import { PLAY_COST, allowArcadeEntry, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember } from './s-wallet.js?v=20261107-2';
 
 let tiers = [
   { limit: 9000, reward: 1000 },

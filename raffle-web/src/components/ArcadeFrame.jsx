@@ -47,6 +47,17 @@ const walletActions = new Set(["claimDailySc", "redpacketDraw", "wheelSpin", "fo
 const updatePending = "會員伺服器尚未更新此功能，目前無法使用。";
 const loginRequired = { success: false, status: 401, error: "請先登入會員。" };
 
+function isArcadeLobby(child) {
+  try {
+    const lobbyPath = new URL("./", arcadeUrl).pathname;
+    const { pathname } = child.location;
+    return (pathname === lobbyPath || pathname === lobbyPath + "index.html") &&
+      !child.document.querySelector(".screen.active");
+  } catch {
+    return false;
+  }
+}
+
 export default function ArcadeFrame({ ref, onWalletChange, onLoginRequired, loginOpen }) {
   const frame = useRef(null);
   const pendingBack = useRef(false);
@@ -57,9 +68,13 @@ export default function ArcadeFrame({ ref, onWalletChange, onLoginRequired, logi
     reset() {
       setFrameVersion(version => version + 1);
     },
-    back(onLobby) {
+    back(onHome) {
       const child = frame.current?.contentWindow;
-      if (!child || pendingBack.current) return;
+      if (pendingBack.current) return;
+      if (!child || isArcadeLobby(child)) {
+        onHome();
+        return;
+      }
       pendingBack.current = true;
       const channel = new MessageChannel();
       function finish() {
@@ -69,11 +84,12 @@ export default function ArcadeFrame({ ref, onWalletChange, onLoginRequired, logi
       }
       const timeout = setTimeout(() => {
         finish();
-        setFrameVersion(version => version + 1);
+        if (isArcadeLobby(child)) onHome();
+        else setFrameVersion(version => version + 1);
       }, 650);
       channel.port1.onmessage = ({ data: handled }) => {
         finish();
-        if (handled === false) onLobby();
+        if (handled === false) onHome();
       };
       child.postMessage({ type: "skclub-arcade-back" }, arcadeUrl.origin, [channel.port2]);
     },

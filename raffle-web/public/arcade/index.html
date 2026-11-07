@@ -357,7 +357,7 @@ h1, h2, h3, p { margin: 0; }
   <section aria-labelledby="games-title">
     <div class="section-heading">
       <h2 id="games-title">遊戲試煉</h2>
-      <small id="games-summary">3 款可遊玩 · 1 款暫停 · 4 款即將開放</small>
+      <small id="games-summary">3 款可遊玩 · 4 款即將開放</small>
     </div>
     <div class="grid">
       <button class="tile tile-card" type="button" data-game="numbers" aria-label="進入數字追逐戰">
@@ -366,11 +366,11 @@ h1, h2, h3, p { margin: 0; }
         </span>
         <span class="tile-caption"><span class="name">數字追逐戰</span><span class="tag open">可遊玩</span></span>
       </button>
-      <a class="tile tile-card claw-entry" id="clawEntry" aria-disabled="true">
+      <a class="tile tile-card claw-entry" id="clawEntry" href="./claw/">
         <span class="tile-art">
           <img src="./assets/golden-temple-claw.png" alt="" width="1254" height="1254">
         </span>
-        <span class="tile-caption"><span class="name">3D 夾娃娃機</span><span class="tag">暫停開放</span></span>
+        <span class="tile-caption"><span class="name">3D 夾娃娃機</span><span class="tag">讀取中</span></span>
       </a>
       <button class="tile tile-card" type="button" data-game="reaction"><span class="tile-art"><img src="./assets/fast-reaction.png" alt="" width="1254" height="1254"></span><span class="tile-caption"><span class="name">極速反應王</span><span class="tag open">可遊玩</span></span></button>
       <a class="tile tile-card claw-entry" href="./treasure/?game=football">
@@ -497,18 +497,26 @@ h1, h2, h3, p { margin: 0; }
     <button class="primary" id="popupOk" type="button">再玩一次</button>
   </div>
 </section>
-<script type="module" src="./assets/number-chase.js"></script>
+<script type="module" src="./assets/number-chase.js?v=20261107-2"></script>
 <script type="module">
-import { PLAY_COST, allowArcadeEntry, dismissOnBackdrop, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember, listenForArcadeBack } from './assets/s-wallet.js';
+import { PLAY_COST, allowArcadeEntry, dismissOnBackdrop, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember, listenForArcadeBack } from './assets/s-wallet.js?v=20261107-2';
 
 document.querySelectorAll('dialog').forEach(dismissOnBackdrop);
 
 void getArcadeSettings().then(({ claw }) => {
-  if (!claw?.enabled || !claw.paidAvailable) return;
   const entry = document.getElementById('clawEntry');
-  entry.href = './claw/';
-  entry.removeAttribute('aria-disabled');
   const tag = entry.querySelector('.tag');
+  if (!claw) {
+    tag.textContent = '點擊重試';
+    return;
+  }
+  if (!claw.enabled || !claw.paidAvailable) {
+    entry.removeAttribute('href');
+    entry.setAttribute('aria-disabled', 'true');
+    tag.textContent = '暫停開放';
+    document.getElementById('games-summary').textContent = '3 款可遊玩 · 1 款暫停 · 4 款即將開放';
+    return;
+  }
   tag.textContent = '可遊玩';
   tag.classList.add('open');
   document.getElementById('games-summary').textContent = '4 款可遊玩 · 4 款即將開放';

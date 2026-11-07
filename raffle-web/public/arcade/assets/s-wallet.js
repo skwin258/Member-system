@@ -105,8 +105,18 @@ export async function prepareArcadeRound(game) {
 }
 
 let settingsRequest;
+async function loadArcadeSettings() {
+  if (!inMemberApp) return {};
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await requestMember('settings');
+    if (result?.success && result.settings) return result.settings;
+  }
+  settingsRequest = undefined;
+  return {};
+}
+
 export function getArcadeSettings() {
-  return settingsRequest ??= requestMember('settings').then(result => result?.settings || {});
+  return settingsRequest ??= loadArcadeSettings();
 }
 
 export function getRewardTiers(settings) {
