@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../../api";
+import AdminArcadeRules from "./AdminArcadeRules";
 
 export default function AdminActivitySettings() {
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function AdminActivitySettings() {
   return (
     <div style={{ textAlign: "left" }}>
       <h2 style={{ marginTop: 0 }}>活動設定</h2>
+      <AdminArcadeRules />
 
       <div style={{ opacity: 0.85, marginBottom: 12, lineHeight: 1.6 }}>
         此頁面控制前台活動的開啟/關閉與基本規則。變更後前台會即時生效。

@@ -40,6 +40,13 @@
       "binding": "RAFFLE_R2",
       "bucket_name": "raffle-promo"
     }
+  ],
+
+  "services": [
+    {
+      "binding": "CLAW_VERIFIER",
+      "service": "skclub-claw-verifier"
+    }
   ]
 
   /**

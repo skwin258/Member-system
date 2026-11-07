@@ -490,6 +490,7 @@ export default function RecordsPage({ me, initialView = "raffle" }) {
                         <td>{r.category || "-"}</td>
                         <td>
                           {r.delta_s ? `S${r.delta_s}` : ""}
+                          {r.delta_sc ? ` SC${r.delta_sc}` : ""}
                           {r.delta_welfare ? `  福利${r.delta_welfare}` : ""}
                           {r.delta_discount ? `  折抵${r.delta_discount}` : ""}
                         </td>

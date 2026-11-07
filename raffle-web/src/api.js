@@ -334,6 +334,24 @@ async createElectronicRoomTicket() {
     return await memoizedGet("/me", { method: "GET", auth: "user" }, 1200);
   },
 
+  async claimDailySc() {
+    const result = await request("/wallet/sc/claim", { method: "POST", auth: "user" });
+    clearMemo([memoKey("/auth/me", "user"), memoKey("/me", "user")]);
+    return result;
+  },
+
+  arcadeSettings: () => request("/arcade/settings"),
+  arcadeRound: (game, action, body) => request(`/arcade/${game}/${action}`, {
+    method: "POST", auth: "user", body: JSON.stringify(body || {}),
+  }),
+  adminSaveGameRules: (key, patch) => request(`/admin/arcade/settings/${key}`, {
+    method: "PATCH", auth: "admin", body: JSON.stringify(patch),
+  }),
+  adminFootballPrizes: () => request("/admin/arcade/football-prizes", { auth: "admin" }),
+  adminSaveFootballPrizes: prizes => request("/admin/arcade/football-prizes", {
+    method: "PUT", auth: "admin", body: JSON.stringify({ prizes }),
+  }),
+
   /* -----------------
    * Profile (0001 PATCH)
   ----------------- */
@@ -563,11 +581,11 @@ async createElectronicRoomTicket() {
     return res;
   },
 
-    async footballStartShoot() {
+    async footballStartShoot(bet_amount, request_id) {
     const res = await request("/football/start-shoot", {
       method: "POST",
       auth: "user",
-      body: JSON.stringify({}),
+      body: JSON.stringify({ bet_amount, request_id }),
     });
 
     clearMemo([
@@ -579,12 +597,13 @@ async createElectronicRoomTicket() {
     return res;
   },
 
-  async footballShoot(game_id) {
+  async footballShoot(game_id, expected_step) {
     return await request("/football/shoot", {
       method: "POST",
       auth: "user",
       body: JSON.stringify({
         game_id: Number(game_id || 0),
+        expected_step,
       }),
     });
   },

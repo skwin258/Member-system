@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import "./mobileShell.css";
 import FantasyHome from './FantasyHome.jsx';
 import MobilePageFrame from "./MobilePageFrame.jsx";
@@ -7,7 +7,7 @@ import LoginBox from "../LoginBox";
 // import RegisterModal from "../components/RegisterModal.jsx";
 
 import MobilePromoPage from "./MobilePromoPage.jsx";
-import TreasurePage from "./MobileTreasurePage.jsx";
+import ArcadeFrame from "../components/ArcadeFrame.jsx";
 import MobileRecordsPage from "./MobileRecordsPage.jsx";
 import SupportPage from "../pages/front/SupportPage.jsx";
 import MobileShopPage from "./MobileShopPage.jsx";
@@ -258,7 +258,6 @@ if (type === "sports") {
 
 export default function MobileShell({
   me,
-  activities,
   loading,
   onRefresh,
   onRefreshMe,
@@ -269,8 +268,8 @@ export default function MobileShell({
   refCode = null,
 }) {
   const [activeKey, setActiveKey] = useState("home");
+  const arcadeFrame = useRef(null);
   const [recordsView, setRecordsView] = useState("raffle");
-  const [treasureTab, setTreasureTab] = useState("redpacket");
 
 const [showGuestAuth, setShowGuestAuth] = useState(false);
 const [authDefaultView, setAuthDefaultView] = useState("login");
@@ -420,40 +419,18 @@ function needLogin() {
       );
     }
 
-if (activeKey === "treasure") {
-  return (
-    <MobilePageFrame
-      title={
-        <div className="mbTreasureTopTitle">
-          <span className="mbTreasureTopText">奪寶專區</span>
-
-          <select
-            className="mbTreasureTopSelect"
-            value={treasureTab}
-            onChange={(e) => setTreasureTab(e.target.value)}
-          >
-            <option value="redpacket">紅包</option>
-            <option value="wheel">輪盤</option>
-            <option value="football">足球射門</option>
-            <option value="number">數字抽獎</option>
-          </select>
-        </div>
-      }
-      onBack={() => setActiveKey("home")}
-      plain={true}
-    >
-      <TreasurePage
-        me={me}
-        activities={activities}
-        onRefreshMe={onRefreshMe || onRefresh}
-        tab={treasureTab}
-        onTabChange={setTreasureTab}
-        isGuest={isGuest}
-        onNeedLogin={needLogin}
-      />
-    </MobilePageFrame>
-  );
-}
+    if (activeKey === "treasure") {
+      return (
+        <MobilePageFrame title="奪寶" onBack={() => arcadeFrame.current?.back(() => setActiveKey("home"))} plain topRight={
+          <div className="arcade-wallet-balances">
+            <span>SC 幣餘額 <strong>{isGuest || me?.user?.sc_balance === undefined ? "—" : Number(me.user.sc_balance).toLocaleString("zh-TW")}</strong></span>
+            <span>S 幣餘額 <strong>{isGuest ? "—" : Number(me?.user?.s_balance || 0).toLocaleString("zh-TW")}</strong></span>
+          </div>
+        }>
+          <ArcadeFrame ref={arcadeFrame} onWalletChange={onRefreshMe || onRefresh} />
+        </MobilePageFrame>
+      );
+    }
 
     if (activeKey === "records") {
       if (isGuest) return null;
@@ -549,7 +526,7 @@ const electronicBadgeNumber = (() => {
   if (activeKey !== "home") {
     return (
       <>
-        <div className="mbHome mbHome--inner fh-inner">
+        <div className={`mbHome mbHome--inner fh-inner${activeKey === "treasure" ? " fh-inner--arcade" : ""}`}>
           {renderContent()}
 
           {renderBottomNav()}

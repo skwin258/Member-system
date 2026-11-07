@@ -545,3 +545,18 @@ html, body{
   max-width: 1500px;  /* 最大寬度 */
   margin: 0 auto;     /* 置中 */
 }
+.arcade-rule-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.arcade-rule-form label {
+  display: grid;
+  gap: 4px;
+}
+.arcade-rule-form fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.arcade-rule-form textarea { min-height: 6em; }

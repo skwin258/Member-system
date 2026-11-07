@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { api } from "../../api";
 import "./myPage.css";
 import { formatTaipeiDate } from "../../utils/taipeiTime";
+import DailyScButton from "../../components/DailyScButton";
 
 function fmtDate(s) {
   return formatTaipeiDate(s) || "-";
@@ -309,6 +310,14 @@ export default function MyPage({ me, onRefreshMe, goPage }) {
 
         <div className="myCard">
           <div className="myCardTitle">我的錢包</div>
+
+          <div className="myWalletRow">
+            <div className="myWalletLeft">
+              <div className="myWalletLabel">SC 幣（遊戲專用）</div>
+              <div className="myWalletAmount">{u.sc_balance === undefined ? "—" : fmtNum(u.sc_balance)}</div>
+            </div>
+            <DailyScButton user={u} onRefreshMe={onRefreshMe} className="myWalletUseBtn" />
+          </div>
 
           <div className="myWalletRow">
             <div className="myWalletLeft">

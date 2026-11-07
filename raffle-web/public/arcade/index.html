@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08101e">
+<title>SKClub｜埃及神殿遊戲館</title>
+<style>
+:root {
+  color-scheme: dark;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  color: #ffedc7;
+  background: #080e1a;
+  --gold: #f6cf84;
+  --gold-line: #9b6b37;
+  --ink: #101b2d;
+  --muted: #d4b991;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 0; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible { outline: 2px solid #fff1b5; outline-offset: 3px; }
+h1, h2, h3, p { margin: 0; }
+.shell, .screen, .overlay { width: min(100%, 480px); margin-inline: auto; }
+.shell, .screen {
+  background:
+    linear-gradient(#080e1a22, transparent 60%, #080e1a) center top / 100% calc(min(100vw, 480px) * 1.777) no-repeat,
+    #080e1a url('./assets/temple-background.jpg') center top / 100% auto no-repeat;
+}
+.shell {
+  min-height: 100svh;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+}
+.brand { text-align: center; margin: 0 0 22px; }
+.solar-mark { width: 148px; height: 42px; display: block; margin: 0 auto 7px; }
+.eyebrow { color: var(--gold); font: 700 10px/1.4 Georgia, serif; letter-spacing: .28em; }
+.brand h1, .game-title, .dialog h3 {
+  color: #ffe5ad;
+  font-family: "Noto Serif TC", "PMingLiU", "Songti TC", serif;
+  font-weight: 900;
+  text-shadow: 0 2px 0 #331d17, 0 4px 18px #000c;
+}
+.brand h1 { font-size: clamp(26px, 8vw, 39px); letter-spacing: .07em; margin: 5px 0 6px; }
+.brand p { font-size: 12px; letter-spacing: .08em; color: #efd6ad; }
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.section-heading h2 { font-size: 16px; letter-spacing: .1em; color: #ffe4ab; }
+.section-heading small { font-size: 11px; color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile-card {
+  display: block;
+  text-align: left;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #8c6138;
+  border-radius: 8px;
+  background: linear-gradient(#1d2b41, #101829);
+}
+.tile-art {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  background: #34271f url('./assets/egypt-six-covers.png') var(--position, center) / 300% 200% no-repeat;
+}
+.tile-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.tile-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 58%, #0a10226b); }
+.tag {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 3px 5px;
+  border: 1px solid #a87b49;
+  border-radius: 3px;
+  background: #101828ed;
+  color: #f4d6a5;
+  font-size: 10px;
+}
+.tile-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  min-height: 38px;
+  padding: 6px 8px;
+}
+.tile .name { min-width: 0; font-size: 13px; font-weight: 800; letter-spacing: .025em; }
+.foot { margin-top: 24px; text-align: center; color: #c5ac87; font-size: 10px; letter-spacing: .12em; }
+.screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: max(8px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom));
+}
+.screen.active { display: block; }
+.game-top { display: flex; align-items: center; justify-content: space-between; margin: 0 0 5px; }
+.game-top [hidden], .board:empty { display: none; }
+.game-top .game-help-button { margin-inline-start: auto; }
+.back {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--gold-line);
+  border-radius: 5px;
+  background: #101a2df0;
+  font-size: 12px;
+}
+.game-top .eyebrow { letter-spacing: .15em; }
+.game-title { text-align: center; font-size: clamp(25px, 7vw, 34px); letter-spacing: .07em; }
+.muted { text-align: center; color: #efdbb5; font-size: 12px; margin-top: 4px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 13px 0 10px; }
+.stats div {
+  padding: 7px 3px;
+  text-align: center;
+  border: 1px solid var(--gold-line);
+  border-radius: 5px;
+  background: linear-gradient(#1e304b, #0d1728);
+}
+.stats small { display: block; color: #e6c99e; font-size: 10px; margin-bottom: 4px; }
+.stats b { font-size: 19px; font-variant-numeric: tabular-nums; color: #ffe3a5; }
+.stats .best { color: #bde4e5; }
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--number-columns, 5), minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px;
+  border: 2px solid #b78043;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #253956, #0b1425 60%, #263655);
+  box-shadow: 0 0 0 1px #e6b373, inset 0 0 0 1px #050a12, 0 5px 18px #0009;
+}
+.cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #f6c886;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(112deg, transparent 0 8px, #3c210b13 9px, transparent 11px 21px),
+    radial-gradient(ellipse at 20% 18%, #ffe1a4, transparent 62%),
+    linear-gradient(150deg, #d99d61, #af723e);
+  box-shadow: inset 0 0 0 1px #8b542e, inset 0 -4px #63371543, 0 2px 0 #000a;
+  font: 800 clamp(18px, 6.4vw, 32px)/1 Georgia, serif;
+  color: #2b190d;
+  text-shadow: 0 1px #ffe0a7;
+}
+.cell:active:not(:disabled) { background: #ffce76; transform: translateY(1px); }
+.cell:disabled {
+  cursor: default;
+  color: #b48f65;
+  border-color: #6a5748;
+  background: #27262c;
+  box-shadow: inset 0 0 0 1px #0a1220;
+  text-shadow: none;
+}
+.notice { min-height: 19px; text-align: center; color: #ffe0a2; font-size: 13px; margin: 10px 0 8px; }
+.primary {
+  width: 100%;
+  min-height: 45px;
+  border: 1px solid #ffe4ab;
+  border-radius: 6px;
+  background: linear-gradient(#ffe2a1, #daa04e);
+  box-shadow: inset 0 -3px #aa663b77, 0 3px #734322;
+  color: #2e1b10;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.primary:active { transform: translateY(2px); box-shadow: 0 1px #734322; }
+.rules { text-align: center; font-size: 11px; line-height: 1.6; color: #d8c2a1; margin: 10px 0 0; }
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  place-items: center;
+  overflow: auto;
+  background: #060a13d6;
+  padding: 18px;
+}
+.overlay.active { display: grid; }
+.dialog {
+  width: min(100%, 340px);
+  padding: 22px 18px;
+  text-align: center;
+  border: 2px solid #d6a15e;
+  border-radius: 8px;
+  background: radial-gradient(ellipse at top, #263f59, #101a2b 70%);
+  box-shadow: inset 0 0 0 3px #7a5532, 0 14px 40px #000a;
+}
+.dialog .seal { color: var(--gold); font-size: 27px; margin-bottom: 5px; }
+.dialog h3 { font-size: 25px; margin-bottom: 8px; }
+.dialog p { font-size: 14px; line-height: 1.7; white-space: pre-line; color: #e9d7b5; }
+.dialog .primary { margin-top: 17px; }
+.reaction-pad {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: clamp(280px, 48svh, 390px);
+  padding: 18px;
+  border: 2px solid #ad7744;
+  border-radius: 9px;
+  background: radial-gradient(ellipse at 50% 40%, #24324a, #0b1221 72%);
+  box-shadow: inset 0 0 0 3px #563d32, 0 5px 16px #0009;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.reaction-pad[data-state="waiting"] { background: radial-gradient(ellipse at 50% 40%, #29262c, #0a101b 72%); }
+.reaction-pad[data-state="lit"] {
+  background: radial-gradient(ellipse at 50% 35%, #9d4b21, #332118 78%);
+  border-color: #ffe09b;
+  box-shadow: inset 0 0 0 3px #bd803b, 0 0 18px #d87e3f55;
+}
+.reaction-visual { display: grid; place-items: center; width: 180px; height: clamp(154px, 28svh, 220px); }
+.reaction-visual canvas { width: 100%; height: 100%; }
+.reaction-visual [hidden] { display: none; }
+.reaction-visual.is-3d .torch-icon { display: none; }
+.torch-icon { width: 74px; height: 88px; }
+.torch-flame { fill: #685348; }
+.torch-core { fill: #39333a; }
+.reaction-pad[data-state="lit"] .torch-flame { fill: #ffac45; filter: drop-shadow(0 0 10px #ffab4e); }
+.reaction-pad[data-state="lit"] .torch-core { fill: #fff1a9; }
+.reaction-signal { font-size: clamp(20px, 6vw, 28px); font-weight: 900; color: #ffe5ad; }
+.reaction-hint { font-size: 13px; color: #eed1a4; }
+.tag.open { background: #f4c87f; border-color: #ffe0a5; color: #2b1b10; font-weight: 900; }
+.claw-entry { color: inherit; text-decoration: none; }
+.claw-entry:focus-visible { outline: 2px solid #fff1b5; outline-offset: 3px; }
+.number-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.number-stats b { font-size: clamp(13px, 4vw, 17px); overflow-wrap: anywhere; }
+.game-help-button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #e0ad63;
+  border-radius: 50%;
+  background: #101a2d;
+  color: #ffe4ab;
+  font-size: 20px;
+  font-weight: 800;
+}
+.game-help {
+  max-height: calc(100dvh - 32px);
+  color: #ffedc7;
+  text-align: left;
+}
+.game-help::backdrop { background: #050a14c9; }
+.game-help h2 { margin-bottom: 10px; color: #ffe4ab; font-size: 21px; }
+.game-help ul { padding-inline-start: 21px; font-size: 14px; line-height: 1.7; }
+.checkin-dialog {
+  width: min(340px, calc(100% - 32px));
+  padding: 23px 22px 22px;
+  border: 1px solid #d9a75c;
+  border-radius: 16px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 4%, #344761 0%, #15253b 48%, #0c1525 88%);
+  box-shadow: inset 0 0 0 4px #b5843f24, 0 18px 48px #000b;
+}
+.checkin-dialog::backdrop { background: #050912bb; backdrop-filter: blur(3px); }
+.checkin-close {
+  position: absolute;
+  inset: 10px 10px auto auto;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #bc925580;
+  border-radius: 50%;
+  background: #0d1727;
+  color: #ffdf9b;
+  font-size: 25px;
+  line-height: 1;
+}
+.checkin-emblem {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 10px;
+  padding: 13px;
+  border: 1px solid #e5bb71;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 25%, #71533a, #1d293b 75%);
+  color: #ffdf9b;
+  box-shadow: 0 0 25px #e4ac5140, inset 0 0 0 4px #0d18288c;
+}
+.checkin-dialog h2 { margin: 0; color: #ffe3a4; font-size: 24px; }
+.checkin-reward {
+  margin: 13px 0 9px;
+  padding: 8px;
+  border-block: 1px solid #b786475c;
+  color: #ffe1a2;
+}
+.checkin-reward strong { font-size: 32px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.checkin-dialog .checkin-note { margin: 0; font-size: 12px; }
+.checkin-dialog .checkin-status { margin: 6px 0 0; color: #f9d99b; }
+.checkin-status:empty { display: none; }
+.checkin-dialog .primary { margin-top: 12px; font-variant-numeric: tabular-nums; }
+.checkin-dialog .primary:disabled {
+  opacity: 1;
+  border-color: #aa8351;
+  background: #26364b;
+  color: #ffe1a2;
+  box-shadow: none;
+  cursor: default;
+}
+.activity-float {
+  position: fixed;
+  z-index: 5;
+  right: max(8px, env(safe-area-inset-right), calc((100% - 480px) / 2 + 8px));
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 64px;
+  height: 64px;
+  border: 1px solid #c38b43;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #25394e, #0c1526 74%);
+  box-shadow: 0 4px 18px #000b;
+  color: #ffe0a2;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.activity-float[data-float="redpacket"] { bottom: calc(28px + env(safe-area-inset-bottom)); }
+.activity-float[data-float="wheel"] { bottom: calc(104px + env(safe-area-inset-bottom)); }
+.activity-float[data-float="checkin"] { bottom: calc(180px + env(safe-area-inset-bottom)); padding: 0; }
+.activity-float img, .activity-float svg { width: 38px; height: 38px; object-fit: contain; pointer-events: none; }
+.activity-float:focus-visible { outline: 2px solid #fff1b5; outline-offset: 3px; }
+.activity-float:active { cursor: grabbing; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="brand">
+    <svg class="solar-mark" viewBox="0 0 148 42" aria-hidden="true">
+      <g fill="#203e66" stroke="#edba71" stroke-width="1.4" stroke-linejoin="round">
+        <path d="M62 18Q33 16 4 4l6 15 11 10 17 7 28-6z"/>
+        <path d="M86 18q29-2 58-14l-6 15-11 10-17 7-28-6z"/>
+        <path d="M11 17q23 9 51 8M21 28q20 6 43 1m-39-16 8 18m10-13 7 16m87-17q-23 9-51 8m41 3q-20 6-43 1m39-16-8 18m-10-13-7 16"/>
+        <circle cx="74" cy="20" r="13" fill="#b97835"/>
+        <circle cx="74" cy="20" r="9.5" fill="#ffcf78"/>
+        <path d="m74 34 4 4-4 3-4-3z" fill="#edba71"/>
+      </g>
+    </svg>
+    <div class="eyebrow">SKCLUB ARCADE</div>
+    <h1>埃及神殿遊戲館</h1>
+    <p>穿越黃沙，挑戰你的最快紀錄</p>
+  </header>
+
+  <section aria-labelledby="games-title">
+    <div class="section-heading">
+      <h2 id="games-title">遊戲試煉</h2>
+      <small id="games-summary">3 款可遊玩 · 1 款暫停 · 4 款即將開放</small>
+    </div>
+    <div class="grid">
+      <button class="tile tile-card" type="button" data-game="numbers" aria-label="進入數字追逐戰">
+        <span class="tile-art">
+          <img src="./assets/number-chase.png" alt="" width="1254" height="1254">
+        </span>
+        <span class="tile-caption"><span class="name">數字追逐戰</span><span class="tag open">可遊玩</span></span>
+      </button>
+      <a class="tile tile-card claw-entry" id="clawEntry" aria-disabled="true">
+        <span class="tile-art">
+          <img src="./assets/golden-temple-claw.png" alt="" width="1254" height="1254">
+        </span>
+        <span class="tile-caption"><span class="name">3D 夾娃娃機</span><span class="tag">暫停開放</span></span>
+      </a>
+      <button class="tile tile-card" type="button" data-game="reaction"><span class="tile-art"><img src="./assets/fast-reaction.png" alt="" width="1254" height="1254"></span><span class="tile-caption"><span class="name">極速反應王</span><span class="tag open">可遊玩</span></span></button>
+      <a class="tile tile-card claw-entry" href="./treasure/?game=football">
+        <span class="tile-art"><img src="./assets/golden-temple-football.png" alt="" width="1254" height="1254">
+        </span>
+        <span class="tile-caption"><span class="name">足球射門</span><span class="tag open">可遊玩</span></span>
+      </a>
+      <button class="tile tile-card locked" type="button" data-game="soon"><span class="tile-art" style="--position: 100% 0%"></span><span class="tile-caption"><span class="name">記憶翻牌王</span><span class="tag">即將開放</span></span></button>
+      <button class="tile tile-card locked" type="button" data-game="soon"><span class="tile-art" style="--position: 0% 100%"></span><span class="tile-caption"><span class="name">大家來找碴</span><span class="tag">即將開放</span></span></button>
+      <button class="tile tile-card locked" type="button" data-game="soon"><span class="tile-art" style="--position: 50% 100%"></span><span class="tile-caption"><span class="name">色彩腦力王</span><span class="tag">即將開放</span></span></button>
+      <button class="tile tile-card locked" type="button" data-game="soon"><span class="tile-art" style="--position: 100% 100%"></span><span class="tile-caption"><span class="name">神秘挑戰賽</span><span class="tag">即將開放</span></span></button>
+    </div>
+  </section>
+  <p class="foot">SKCLUB GAMES · 埃及神殿</p>
+  <nav class="activity-floats" aria-label="簽到與抽獎活動">
+    <button class="activity-float" data-float="checkin" id="checkinButton" type="button" aria-haspopup="dialog">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="6" y="9" width="28" height="26" rx="5" fill="#12223a" stroke="#efbf72" stroke-width="2"/>
+        <path d="M6 16h28M14 6v6m12-6v6m-13 13 5 5 10-10" fill="none" stroke="#ffdf9b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>簽到</span>
+    </button>
+    <a class="activity-float" data-float="redpacket" href="./treasure/?game=redpacket">
+      <img src="./treasure/fantasy/red-envelope-preview.png" alt="" draggable="false">
+      <span>紅包</span>
+    </a>
+    <a class="activity-float" data-float="wheel" href="./treasure/?game=wheel">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="54" r="41" fill="#102643" stroke="#e4b569" stroke-width="5"/>
+            <path d="M50 54 50 15A39 39 0 0 1 89 54ZM50 54H11a39 39 0 0 0 39 39Z" fill="#b98236"/>
+            <path d="M50 54 77 26M50 54l27 27M50 54 23 81M50 54 23 26" stroke="#e4b569" stroke-width="2"/>
+            <circle cx="50" cy="54" r="10" fill="#edc578"/>
+            <path d="M44 3h12l-6 16Z" fill="#ffe0a2"/>
+          </svg>
+      <span>輪盤</span>
+    </a>
+  </nav>
+</main>
+
+<dialog class="dialog game-help checkin-dialog" id="checkinDialog" aria-labelledby="checkinTitle">
+  <form method="dialog"><button class="checkin-close" type="submit" aria-label="關閉簽到">×</button></form>
+  <svg class="checkin-emblem" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <rect x="5" y="8" width="30" height="27" rx="5"/>
+    <path d="M5 16h30M13 5v7m14-7v7M12 24l5 5 11-11" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <h2 id="checkinTitle">每日簽到</h2>
+  <div class="checkin-reward"><strong>3,000</strong> SC 幣</div>
+  <p class="checkin-note">每日可領一次，台灣時間午夜更新</p>
+  <p class="checkin-status" id="checkinStatus" role="status"></p>
+  <button id="checkinClaim" class="primary" type="button">領取 3,000 SC 幣</button>
+</dialog>
+
+<section class="screen" id="gameScreen" aria-labelledby="game-title">
+  <div class="game-top">
+    <button class="back" id="backBtn" type="button">← 返回大廳</button>
+    <button class="game-help-button" id="numberHelpButton" type="button" aria-label="玩法說明" aria-haspopup="dialog" aria-controls="numberHelp">?</button>
+  </div>
+  <h2 class="game-title" id="game-title">數字追逐戰</h2>
+  <p class="muted">從 1 到 25，依序點亮砂岩石板</p>
+  <div class="stats number-stats">
+    <div><small>可用餘額</small><b id="numberBalance">—</b></div>
+    <div><small>目前時間</small><b id="clock">0.000s</b></div>
+    <div><small>下一個數字</small><b id="target">1</b></div>
+    <div><small>最佳紀錄</small><b class="best" id="record">—</b></div>
+  </div>
+  <div class="board" id="board" aria-label="1 至 25 數字方格"></div>
+  <p class="notice" id="notice" aria-live="polite"></p>
+</section>
+
+<dialog class="dialog game-help" id="numberHelp" aria-labelledby="numberHelpTitle">
+  <h2 id="numberHelpTitle">玩法說明</h2>
+  <p>點擊數字 1 時扣 100 S 幣並開始計時，接著按順序點到 25。點錯不扣分，計時會繼續。</p>
+  <ul id="numberTiers"></ul>
+  <p>只發放達成的最高一檔獎勵。超過 13 秒完成，本局獲得 0 S 幣。</p>
+  <form method="dialog">
+    <button class="primary" type="submit" autofocus>知道了</button>
+  </form>
+</dialog>
+
+<section class="screen" id="reactionScreen" aria-labelledby="reaction-title">
+  <div class="game-top">
+    <button class="back" id="reactionBack" type="button">← 返回大廳</button>
+    <button class="game-help-button" id="reactionHelpButton" type="button" aria-label="玩法說明" aria-haspopup="dialog" aria-controls="reactionHelp">?</button>
+  </div>
+  <h2 class="game-title" id="reaction-title">極速反應王</h2>
+  <p class="muted">等待神殿的火炬點亮，立刻點擊石門</p>
+  <div class="stats">
+    <div><small>可用餘額</small><b id="reactionBalance">—</b></div>
+    <div><small>本次反應</small><b id="reactionTime">—</b></div>
+    <div><small>最佳紀錄</small><b class="best" id="reactionBest">—</b></div>
+  </div>
+  <button class="reaction-pad" id="reactionPad" data-state="idle" type="button">
+    <span class="reaction-visual" id="reactionVisual" aria-hidden="true">
+      <canvas id="reactionTorch" hidden></canvas>
+    <svg class="torch-icon" viewBox="0 0 74 88" aria-hidden="true">
+      <path class="torch-flame" d="M37 2c7 16 16 20 17 31 1 10-7 18-17 18s-18-7-17-17c0-8 6-12 7-20 4 4 5 8 5 11 4-5 7-12 5-23z"/>
+      <path class="torch-core" d="M39 27c5 6 7 10 6 14-1 4-4 7-8 7s-7-3-7-7c0-4 5-7 9-14z"/>
+      <path d="M16 49h42l-7 14H23z" fill="#93613a" stroke="#ffd18c" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M29 64h16l-4 21h-8z" fill="#243a57" stroke="#d9a65e" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M19 54h36M32 73h10" stroke="#eab773" stroke-width="2"/>
+    </svg>
+    </span>
+    <span class="reaction-signal" id="reactionSignal" aria-live="polite">點擊開始</span>
+    <span class="reaction-hint" id="reactionHint">每局 100 S 幣</span>
+  </button>
+  <p class="rules">火炬亮起後再點擊。搶跑退回 100 S 幣。</p>
+</section>
+
+<dialog class="dialog game-help" id="reactionHelp" aria-labelledby="reactionHelpTitle">
+  <h2 id="reactionHelpTitle">玩法說明</h2>
+  <p>點擊石門開始，每局扣 100 S 幣。等火炬亮起後立刻點擊。</p>
+  <ul id="reactionTiers"></ul>
+  <p>只發放達成的最高一檔獎勵。超過 200 毫秒不發獎，搶跑則退回本局的 100 S 幣。</p>
+  <form method="dialog">
+    <button class="primary" type="submit" autofocus>知道了</button>
+  </form>
+</dialog>
+
+<section class="overlay" id="popup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+  <div class="dialog">
+    <div class="seal" aria-hidden="true">☥</div>
+    <h3 id="popupTitle">挑戰完成！</h3>
+    <p id="popupText"></p>
+    <button class="primary" id="popupOk" type="button">再玩一次</button>
+  </div>
+</section>
+<script type="module" src="./assets/number-chase.js"></script>
+<script type="module">
+import { PLAY_COST, dismissOnBackdrop, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember, listenForArcadeBack } from './assets/s-wallet.js';
+
+document.querySelectorAll('dialog').forEach(dismissOnBackdrop);
+
+void getArcadeSettings().then(({ claw }) => {
+  if (!claw?.enabled || !claw.paidAvailable) return;
+  const entry = document.getElementById('clawEntry');
+  entry.href = './claw/';
+  entry.removeAttribute('aria-disabled');
+  const tag = entry.querySelector('.tag');
+  tag.textContent = '可遊玩';
+  tag.classList.add('open');
+  document.getElementById('games-summary').textContent = '4 款可遊玩 · 4 款即將開放';
+});
+
+if (inMemberApp) {
+  for (const button of document.querySelectorAll('.game-top .back')) button.hidden = true;
+  listenForArcadeBack(() => {
+    const verification = document.querySelector('.arcade-proof-dialog[open]');
+    if (verification) {
+      verification.close();
+      return true;
+    }
+    const game = document.querySelector('.screen.active');
+    if (!game) return false;
+    game.querySelector('.game-top .back')?.click();
+    return true;
+  });
+}
+
+{
+  const dialog = document.getElementById('checkinDialog');
+  const claim = document.getElementById('checkinClaim');
+  const status = document.getElementById('checkinStatus');
+  const label = '領取 3,000 SC 幣';
+  const day = 86400000;
+  const taipeiOffset = 28800000;
+  let nextClaim = 0;
+  let interval;
+  let busy = false;
+
+  function updateCountdown() {
+    if (!nextClaim) return;
+    const seconds = Math.ceil((nextClaim - Date.now()) / 1000);
+    if (seconds <= 0) {
+      nextClaim = 0;
+      void refresh();
+      return;
+    }
+    const time = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60];
+    claim.textContent = '下次領取 ' + time.map(part => String(part).padStart(2, '0')).join(':');
+  }
+
+  function showClaimed(message) {
+    nextClaim = (Math.floor((Date.now() + taipeiOffset) / day) + 1) * day - taipeiOffset;
+    claim.disabled = true;
+    status.textContent = message;
+    updateCountdown();
+  }
+
+  async function refresh() {
+    if (busy) return;
+    claim.disabled = true;
+    if (!nextClaim) claim.textContent = label;
+    status.textContent = inMemberApp ? '讀取簽到狀態中…' : '請從會員系統登入後簽到。';
+    if (!inMemberApp) return;
+    busy = true;
+    try {
+      const player = await requestMember('player');
+      if (!player?.success) {
+        status.textContent = player?.status === 401 ? '請先登入會員。' : player?.error || '無法讀取簽到狀態。';
+      } else if (player.user.sc_claimed_today === undefined) {
+        status.textContent = '每日簽到尚未開放。';
+      } else if (player.user.sc_claimed_today) {
+        showClaimed('今日已領取');
+      } else {
+        nextClaim = 0;
+        claim.textContent = label;
+        claim.disabled = false;
+        status.textContent = '';
+      }
+    } catch {
+      status.textContent = '無法讀取簽到狀態。';
+    } finally {
+      busy = false;
+    }
+  }
+
+  document.getElementById('checkinButton').addEventListener('click', event => {
+    if (event.defaultPrevented || dialog.open) return;
+    dialog.showModal();
+    updateCountdown();
+    clearInterval(interval);
+    interval = setInterval(updateCountdown, 250);
+    void refresh();
+  });
+  dialog.addEventListener('close', () => {
+    if (!dialog.open) clearInterval(interval);
+  });
+  claim.addEventListener('click', async () => {
+    if (busy || claim.disabled) return;
+    busy = true;
+    claim.disabled = true;
+    try {
+      const result = await requestMember('claimDailySc');
+      if (result?.success || result?.status === 409) {
+        showClaimed(result.success ? '已領取 3,000 SC 幣' : '今日已領取');
+      } else {
+        status.textContent = result?.error || '暫時無法領取。';
+        claim.disabled = false;
+      }
+    } catch {
+      status.textContent = '暫時無法領取。';
+      claim.disabled = false;
+    } finally {
+      busy = false;
+    }
+  });
+}
+
+(() => {
+  const screen = document.getElementById('reactionScreen');
+  const lobby = document.querySelector('.shell');
+  const entry = document.querySelector('[data-game="reaction"]');
+  const back = document.getElementById('reactionBack');
+  const help = document.getElementById('reactionHelp');
+  const pad = document.getElementById('reactionPad');
+  const signal = document.getElementById('reactionSignal');
+  const hint = document.getElementById('reactionHint');
+  const result = document.getElementById('reactionTime');
+  const best = document.getElementById('reactionBest');
+  const bestKey = 'skclub-reaction-best-v1';
+  const balance = document.getElementById('reactionBalance');
+  const spendUnit = ' 幣（SC 幣優先）';
+  const numberFormat = new Intl.NumberFormat('zh-TW');
+  let cost = PLAY_COST;
+  let refundEarly = true;
+  let closed = false;
+  let tiers = [
+    { limit: 100, reward: 500 },
+    { limit: 150, reward: 300 },
+    { limit: 200, reward: 200 },
+  ];
+  let state = 'idle';
+  let torch;
+  let torchLoad;
+  let record = 0;
+  let memberRound;
+  let memberBalance;
+  let signalToken;
+  let litAt;
+
+  try { record = Number(localStorage.getItem(bestKey)) || 0; } catch {}
+  const format = ms => ms ? ms + ' ms' : '—';
+
+  function show(next, title, detail) {
+    state = next;
+    pad.dataset.state = next;
+    signal.textContent = title;
+    hint.textContent = detail;
+    torch?.setLit(next === 'lit');
+  }
+
+  function loadTorch() {
+    const rendererUrl = new URL('./reaction/torch-view.js', document.baseURI).href;
+    const modelUrl = new URL('./assets/egypt-reaction-torch.glb', document.baseURI).href;
+    torchLoad ??= import(/* @vite-ignore */ rendererUrl)
+      .then(({ mountTorch }) => mountTorch(document.getElementById('reactionTorch'), modelUrl))
+      .then(view => {
+        torch = view;
+        document.getElementById('reactionTorch').hidden = false;
+        document.getElementById('reactionVisual').classList.add('is-3d');
+        torch.setLit(state === 'lit');
+      })
+      .catch(error => {
+        console.warn('3D torch could not load:', error);
+        torchLoad = undefined;
+      });
+  }
+
+  function cancelRound() {
+    memberRound = null;
+    signalToken = null;
+    litAt = undefined;
+  }
+
+  function updateBalance() {
+    balance.textContent = memberBalance ? numberFormat.format(memberBalance.s_balance + memberBalance.sc_balance) : '—';
+  }
+
+  function reset() {
+    cancelRound();
+    result.textContent = '—';
+    best.textContent = format(record);
+    updateBalance();
+    show('idle', '點擊開始', '每局 ' + cost + spendUnit);
+  }
+
+  async function start() {
+    if (!inMemberApp) {
+      show('idle', '請先登入會員', '請從會員系統的奪寶進入遊戲');
+      return;
+    }
+    show('charging', '準備開始', '正在扣除 ' + cost + spendUnit);
+    back.disabled = true;
+    try {
+      if (!memberRound) {
+        const prepared = await prepareArcadeRound('reaction');
+        if (!prepared?.success) {
+          show('idle', prepared?.status === 401 ? '請先登入會員' : '暫時無法開始', prepared?.error || '點擊重試');
+          return;
+        }
+        memberRound = prepared.id;
+        cost = prepared.rules.cost;
+      }
+      const payment = await requestMember('round', 'reaction', 'start', { id: memberRound });
+      const paid = payment?.success && payment.status === 'playing';
+      if (payment?.success) memberBalance = payment;
+      updateBalance();
+      if (!paid) {
+        show('idle', payment?.error || '餘額不足', '每局需 ' + cost + spendUnit);
+        return;
+      }
+    } catch (error) {
+      console.error('Unable to start reaction game:', error);
+      show('idle', '暫時無法開始', '點擊重試');
+      return;
+    } finally {
+      back.disabled = false;
+    }
+
+    result.textContent = '—';
+    if (document.hidden) {
+      cancelPaidRound();
+      return;
+    }
+    show('waiting', '等待火炬點亮', '先別點，注意火炬的變化');
+    signalToken = null;
+    void waitForSignal(memberRound);
+  }
+
+  async function waitForSignal(id) {
+    while (state === 'waiting' && memberRound === id) {
+      const response = await requestMember('round', 'reaction', 'signal', { id });
+      if (state !== 'waiting' || memberRound !== id) return;
+      if (!response?.success) {
+        cancelPaidRound();
+        return;
+      }
+      if (response.ready) {
+        requestAnimationFrame(() => {
+          if (state !== 'waiting' || memberRound !== id) return;
+          signalToken = response.signal_token;
+          litAt = performance.now();
+          show('lit', '現在點擊！', '火炬已點亮');
+        });
+        return;
+      }
+    }
+  }
+
+  async function finishMember(early, elapsed) {
+    const body = { id: memberRound, signal_token: signalToken, measured_ms: elapsed };
+    if (!early) result.textContent = format(elapsed);
+    show('settling', early ? '搶跑了！' : '挑戰完成', '正在結算');
+    back.disabled = true;
+    let response = await requestMember('round', 'reaction', 'finish', body);
+    if (!response?.success && (!response?.status || response.status === 409)) response = await requestMember('round', 'reaction', 'finish', body);
+    cancelRound();
+    back.disabled = false;
+    if (!response?.success) {
+      show('result', '結算暫時失敗', response?.error || '點擊再試一次');
+      return;
+    }
+    memberBalance = response;
+    updateBalance();
+    const officialTime = response.elapsed;
+    result.textContent = format(officialTime);
+    if (officialTime > 0 && (!record || officialTime < record)) {
+      record = officialTime;
+      best.textContent = format(record);
+      try { localStorage.setItem(bestKey, String(record)); } catch {}
+    }
+    const detail = response.refund ? '已退回 ' + response.refund + ' 幣' : '本局獲得 ' + response.reward + ' S 幣';
+    show('result', early ? '搶跑了！' : '挑戰完成', detail + ' · 點擊再玩一次');
+  }
+
+  function cancelPaidRound() {
+    cancelRound();
+    show('result', '挑戰已中止', '本局獲得 0 S 幣 · 點擊重試');
+  }
+
+  function activate(inputTime) {
+    if (help.open) return;
+    if (state === 'waiting') void finishMember(true);
+    else if (state === 'lit') {
+      const now = performance.now();
+      const tappedAt = Number.isFinite(inputTime) && inputTime > 0 && inputTime <= now + 1 ? inputTime : now;
+      if (tappedAt >= litAt) void finishMember(false, Math.max(1, Math.ceil(tappedAt - litAt)));
+    }
+    else if (state === 'idle' || state === 'result') void start();
+  }
+
+  pad.addEventListener('pointerdown', event => {
+    if (event.isPrimary && event.button === 0) activate(event.timeStamp);
+  });
+  pad.addEventListener('click', event => {
+    if (event.detail === 0) activate(event.timeStamp);
+  });
+
+  entry.addEventListener('click', async () => {
+    if (entry.disabled) return;
+    entry.disabled = true;
+    try { await configReady; } finally { entry.disabled = closed; }
+    if (closed) return;
+    reset();
+    lobby.inert = true;
+    screen.classList.add('active');
+    screen.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+    help.showModal();
+    loadTorch();
+  });
+
+  function close() {
+    if (state === 'charging' || state === 'settling') return;
+    if (help.open) help.close();
+    reset();
+    lobby.inert = false;
+    screen.classList.remove('active');
+    document.body.style.overflow = '';
+    entry.focus({ preventScroll: true });
+  }
+
+  const configReady = getArcadeSettings().then(({ reaction }) => {
+    if (reaction) {
+      cost = reaction.cost;
+      refundEarly = Boolean(reaction.refundEarly);
+      tiers = getRewardTiers(reaction);
+      closed = !reaction.enabled;
+      entry.disabled = closed;
+    }
+    entry.querySelector('.tag').textContent = closed ? '暫停開放' : '可遊玩';
+    const [intro, summary] = help.querySelectorAll('p');
+    intro.textContent = reaction?.help || '點擊石門開始，每局扣 ' + cost + spendUnit + '。等火炬亮起後立刻點擊。';
+    summary.textContent = refundEarly ? '搶跑將退回本局費用。' : '搶跑會結束本局。';
+    screen.querySelector('.rules').textContent = '火炬亮起後再點擊。' + summary.textContent;
+    const rules = document.getElementById('reactionTiers');
+    for (const tier of [...tiers].reverse()) {
+      const row = document.createElement('li');
+      row.textContent = tier.limit + ' 毫秒內，獲得 ' + tier.reward + ' S 幣';
+      rules.append(row);
+    }
+  });
+  document.getElementById('reactionHelpButton').addEventListener('click', () => help.showModal());
+  back.addEventListener('click', close);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !help.open && screen.classList.contains('active')) close();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && (state === 'waiting' || state === 'lit')) cancelPaidRound();
+  });
+})();
+</script>
+<script>
+for (const link of document.querySelectorAll('.activity-float')) {
+  let drag;
+  let suppressClick = false;
+  let position;
+
+  function move(x, y) {
+    const maxX = Math.max(8, document.documentElement.clientWidth - link.offsetWidth - 8);
+    const maxY = Math.max(8, window.innerHeight - link.offsetHeight - 8);
+    position = {
+      x: Math.min(Math.max(8, x), maxX),
+      y: Math.min(Math.max(8, y), maxY),
+    };
+    Object.assign(link.style, { left: position.x + 'px', top: position.y + 'px', right: 'auto', bottom: 'auto' });
+  }
+
+  link.addEventListener('dragstart', event => event.preventDefault());
+  link.addEventListener('pointerdown', event => {
+    if (!event.isPrimary || event.button !== 0 || drag) return;
+    suppressClick = false;
+    const rect = link.getBoundingClientRect();
+    drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: rect.left, top: rect.top, moved: false };
+    link.setPointerCapture(event.pointerId);
+  });
+  link.addEventListener('pointermove', event => {
+    if (event.pointerId !== drag?.id) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+    drag.moved = true;
+    move(drag.left + dx, drag.top + dy);
+  });
+  function end(event) {
+    if (event.pointerId !== drag?.id) return;
+    suppressClick = drag.moved;
+    drag = undefined;
+  }
+  link.addEventListener('pointerup', end);
+  link.addEventListener('pointercancel', end);
+  link.addEventListener('lostpointercapture', end);
+  link.addEventListener('click', event => {
+    if (suppressClick && event.detail !== 0) event.preventDefault();
+    suppressClick = false;
+  });
+  window.addEventListener('resize', () => {
+    if (position) move(position.x, position.y);
+  });
+}
+</script>
+</body></html>

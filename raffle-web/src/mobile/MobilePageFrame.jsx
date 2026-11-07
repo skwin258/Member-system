@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function MobilePageFrame({ title, onBack, children, plain = false }) {
+export default function MobilePageFrame({ title, onBack, children, topRight, plain = false }) {
   return (
     <div className={`mbPageFrame ${plain ? "mbPageFrame--plain" : ""}`}>
       <div className="mbPageTopBar">
@@ -11,7 +11,7 @@ export default function MobilePageFrame({ title, onBack, children, plain = false
 
         <div className="mbPageTitle">{title}</div>
 
-        <div className="mbTopSpacer" />
+        <div className="mbTopSpacer">{topRight}</div>
       </div>
 
       {plain ? (

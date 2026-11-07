@@ -1,0 +1,14 @@
+# Copied to dist/ by Vite; Wrangler reads it from the assets directory.
+# The nine heavy AI-generated source plushes (~23 MB each) are build-time input
+# for tools/optimize_plushies.py only — the game loads library.glb. They are
+# gitignored, so CI never sees them, but a local `wrangler deploy` would
+# otherwise try to upload them and hit the 25 MiB per-asset limit.
+models/plushies/bear.glb
+models/plushies/bird.glb
+models/plushies/dinosaurs.glb
+models/plushies/dragons.glb
+models/plushies/duck.glb
+models/plushies/kangaroo.glb
+models/plushies/mouse.glb
+models/plushies/shark.glb
+models/plushies/sloth.glb

@@ -7,80 +7,12 @@ import LoginBox from "../../LoginBox";
 import RegisterModal from "../../components/RegisterModal.jsx";
 
 import PromoPage from "./PromoPage.jsx";
-import TreasurePage from "./TreasurePage.jsx";
+import ArcadeFrame from "../../components/ArcadeFrame.jsx";
 import RecordsPage from "./RecordsPage.jsx";
 import SupportPage from "./SupportPage.jsx";
 import ShopPage from "./ShopPage.jsx";
 import InvitePage from "./InvitePage.jsx";
 import MyPage from "./MyPage.jsx";
-
-function TreasureTabs({ value, onChange }) {
-  const items = [
-    { k: "redpacket", t: "紅包" },
-    { k: "wheel", t: "輪盤" },
-    { k: "number", t: "數字" },
-    { k: "scratch", t: "刮刮樂" },
-    { k: "dice", t: "骰子" },
-  ];
-
-  const btnBase = {
-    height: 38,
-    padding: "0 30px",
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.10)",
-    background: "rgba(255,255,255,0.06)",
-    color: "rgba(255,255,255,0.82)",
-    fontWeight: 900,
-    fontSize: 20,
-    cursor: "pointer",
-    lineHeight: "38px",
-    transition: "all .15s ease",
-    whiteSpace: "nowrap",
-  };
-
-  const btnActive = {
-    ...btnBase,
-    border: "1px solid rgba(255,70,70,0.55)",
-    background: "rgba(255,70,70,0.14)",
-    color: "#ff4d4d",
-    boxShadow: "0 0 0 2px rgba(255,70,70,0.08) inset",
-  };
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        marginLeft: 10,
-        transform: "translateY(-1px)",
-      }}
-    >
-      {items.map((it) => {
-        const active = value === it.k;
-
-        return (
-          <button
-            key={it.k}
-            type="button"
-            onClick={() => onChange(it.k)}
-            style={active ? btnActive : btnBase}
-            onMouseEnter={(e) => {
-              if (active) return;
-              e.currentTarget.style.background = "rgba(255,255,255,0.09)";
-            }}
-            onMouseLeave={(e) => {
-              if (active) return;
-              e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-            }}
-          >
-            {it.t}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function GuestLoginCard({ onLoginSuccess }) {
   return <LoginBox mode="user" onLoggedIn={onLoginSuccess} compact />;
@@ -88,7 +20,6 @@ function GuestLoginCard({ onLoginSuccess }) {
 
 export default function FrontShell({
   me,
-  activities,
   loading,
   onRefresh,
   onRefreshMe,
@@ -105,7 +36,7 @@ export default function FrontShell({
   const menu = useMemo(
     () => [
       { key: "promo", title: "活動公告", desc: "抽獎說明/任務/平台優惠",guestAllowed: true },
-      { key: "treasure", title: "奪寶", desc: "紅包/輪盤/數字抽獎", guestAllowed: true },
+      { key: "treasure", title: "奪寶", desc: "遊戲大廳", guestAllowed: true },
       { key: "records", title: "抽獎紀錄", desc: "中獎清單與明細", guestAllowed: false },
       { key: "support", title: "聯絡客服", desc: "客服/常見問題", guestAllowed: true },
       { key: "shop", title: "商城", desc: "兌換/商品/點數", guestAllowed: true },
@@ -117,7 +48,6 @@ export default function FrontShell({
 
   const [activeKey, setActiveKey] = useState("treasure");
   const [recordsView, setRecordsView] = useState("raffle");
-  const [treasureTab, setTreasureTab] = useState("redpacket");
 
   const [showGuestAuth, setShowGuestAuth] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
@@ -157,19 +87,7 @@ export default function FrontShell({
   function renderContent() {
     if (activeKey === "promo") return <PromoPage me={me} />;
 
-    if (activeKey === "treasure") {
-      return (
-        <TreasurePage
-          me={me}
-          activities={activities}
-          onRefreshMe={onRefreshMe || onRefresh}
-          tab={treasureTab}
-          onTabChange={setTreasureTab}
-          isGuest={isGuest}
-          onNeedLogin={needLogin}
-        />
-      );
-    }
+    if (activeKey === "treasure") return <ArcadeFrame onWalletChange={onRefreshMe || onRefresh} />;
 
     if (activeKey === "records") {
       if (isGuest) return null;
@@ -281,9 +199,6 @@ export default function FrontShell({
             <div style={{ width: "100%" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
                 <div className="frontTopbarTitle">{titleMap[activeKey] || "—"}</div>
-                {activeKey === "treasure" && (
-                  <TreasureTabs value={treasureTab} onChange={setTreasureTab} />
-                )}
               </div>
 
               <div className="frontTopbarSub">{subMap[activeKey] || ""}</div>

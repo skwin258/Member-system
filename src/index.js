@@ -1,4 +1,8 @@
 // raffle-api/src/index.js
+import { SC_GRANT, SC_SCHEMA, FOOTBALL_BASE_BET } from "./sc-wallet.js";
+import { GAME_RULES, defaultGameRules, parseGamePatch } from "./game-settings.js";
+import { ARCADE_ROUND_SCHEMA, handleArcadeRound, handleClawRound } from "./arcade-rounds.js";
+import { arcadeChallengePage, verifyArcadePreparation } from "./arcade-verification.js";
 
 // ✅ PERF FIX (2026-03-02):
 // 以前每一個 request 都會跑一次「建表/欄位檢查/seed」，會導致讀 D1 需要 2~30 秒。
@@ -8,7 +12,7 @@
 const __BOOTSTRAP_STATE__ = { promise: null };
 // Bump when changing the schema/bootstrap below. Persisted in D1 so a new
 // Worker isolate does not repeat hundreds of schema/seed queries on first load.
-const SCHEMA_VERSION = '2026-11-07.bootstrap-v1';
+const SCHEMA_VERSION = '2026-11-07.arcade-v4';
 
 const __HOT_CACHE__ = new Map();
 
@@ -207,6 +211,8 @@ await ensureTable({
     display_name TEXT,
     welfare_balance INTEGER NOT NULL DEFAULT 0,
     s_balance INTEGER NOT NULL DEFAULT 0,
+    sc_balance INTEGER NOT NULL DEFAULT 0,
+    sc_claim_day TEXT,
     discount_balance INTEGER NOT NULL DEFAULT 0,
     line_id TEXT,
     birthday TEXT,
@@ -227,6 +233,8 @@ await ensureTable({
     { col: "display_name", sql: "ALTER TABLE users ADD COLUMN display_name TEXT" },
     { col: "welfare_balance", sql: "ALTER TABLE users ADD COLUMN welfare_balance INTEGER NOT NULL DEFAULT 0" },
     { col: "s_balance", sql: "ALTER TABLE users ADD COLUMN s_balance INTEGER NOT NULL DEFAULT 0" },
+    { col: "sc_balance", sql: "ALTER TABLE users ADD COLUMN sc_balance INTEGER NOT NULL DEFAULT 0" },
+    { col: "sc_claim_day", sql: "ALTER TABLE users ADD COLUMN sc_claim_day TEXT" },
     { col: "discount_balance", sql: "ALTER TABLE users ADD COLUMN discount_balance INTEGER NOT NULL DEFAULT 0" },
     { col: "line_id", sql: "ALTER TABLE users ADD COLUMN line_id TEXT" },
     { col: "birthday", sql: "ALTER TABLE users ADD COLUMN birthday TEXT" },
@@ -244,7 +252,7 @@ await ensureTable({
     { col: "created_at", sql: "ALTER TABLE users ADD COLUMN created_at TEXT" },
   ],
   rebuildIfMissing: ["id", "username", "password"],
-  requiredCols: ["id", "username", "password", "enabled", "locked"],
+  requiredCols: ["id", "username", "password", "enabled", "locked", "sc_balance", "sc_claim_day"],
 });
 
 await ensureTable({
@@ -434,6 +442,7 @@ await ensureTable({
     user_id INTEGER NOT NULL,
     username TEXT NOT NULL DEFAULT '',
     bet_amount INTEGER NOT NULL DEFAULT 1000,
+    request_id TEXT,
     current_step INTEGER NOT NULL DEFAULT 0,
     current_win INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'playing',
@@ -444,6 +453,7 @@ await ensureTable({
     { col: "user_id", sql: "ALTER TABLE football_games ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0" },
     { col: "username", sql: "ALTER TABLE football_games ADD COLUMN username TEXT NOT NULL DEFAULT ''" },
     { col: "bet_amount", sql: "ALTER TABLE football_games ADD COLUMN bet_amount INTEGER NOT NULL DEFAULT 1000" },
+    { col: "request_id", sql: "ALTER TABLE football_games ADD COLUMN request_id TEXT" },
     { col: "current_step", sql: "ALTER TABLE football_games ADD COLUMN current_step INTEGER NOT NULL DEFAULT 0" },
     { col: "current_win", sql: "ALTER TABLE football_games ADD COLUMN current_win INTEGER NOT NULL DEFAULT 0" },
     { col: "status", sql: "ALTER TABLE football_games ADD COLUMN status TEXT NOT NULL DEFAULT 'playing'" },
@@ -451,7 +461,7 @@ await ensureTable({
     { col: "updated_at", sql: "ALTER TABLE football_games ADD COLUMN updated_at TEXT" },
   ],
   rebuildIfMissing: ["id", "user_id", "status"],
-  requiredCols: ["id", "user_id", "bet_amount", "current_step", "current_win", "status"],
+  requiredCols: ["id", "user_id", "bet_amount", "current_step", "current_win", "status", "request_id"],
 });
 
 // ---- redpacket_config
@@ -746,17 +756,25 @@ await ensureTable({
     action TEXT,
     status TEXT,
     delta_s INTEGER NOT NULL DEFAULT 0,
+    delta_sc INTEGER NOT NULL DEFAULT 0,
     delta_welfare INTEGER NOT NULL DEFAULT 0,
     delta_discount INTEGER NOT NULL DEFAULT 0,
     result TEXT,
     note TEXT,
     admin_account TEXT
   )`,
+  addCols: [{ col: "delta_sc", sql: "ALTER TABLE wallet_logs ADD COLUMN delta_sc INTEGER NOT NULL DEFAULT 0" }],
+  requiredCols: ["delta_sc"],
   rebuildIfMissing: ["id","created_at","user_id","account"],
 });
 
 await tryRun("CREATE INDEX IF NOT EXISTS idx_wallet_logs_user ON wallet_logs(user_id, created_at)");
 await tryRun("CREATE INDEX IF NOT EXISTS idx_wallet_logs_created ON wallet_logs(created_at)");
+for (const sql of SC_SCHEMA) await db.prepare(sql).run();
+await db.prepare(`CREATE TABLE IF NOT EXISTS arcade_game_settings (
+  game_key TEXT PRIMARY KEY, config TEXT NOT NULL CHECK(json_valid(config))
+)`).run();
+for (const sql of ARCADE_ROUND_SCHEMA) await db.prepare(sql).run();
 
 // ---- shop_orders (redeem logs)
 await ensureTable({
@@ -840,20 +858,6 @@ for (const a of seedActivities) {
     .bind(a.name, a.key)
     .run();
 }
-
-// seed superadmin
-await db
-  .prepare(
-    "INSERT OR IGNORE INTO admin_accounts (username, password, role, status, official_line_url, created_at) VALUES ('superadmin','123456','superadmin','active',NULL,datetime('now'))"
-  )
-  .run();
-await db
-  .prepare(
-    "INSERT OR IGNORE INTO admins (username, password, role, created_at) VALUES ('superadmin','123456','superadmin',datetime('now'))"
-  )
-  .run();
-
-
 
   await db.prepare('CREATE TABLE IF NOT EXISTS app_schema_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
   await db.prepare("INSERT INTO app_schema_state (key,value) VALUES ('schema_version',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
@@ -1671,7 +1675,7 @@ const respondMe = async () => {
 const user = await db
   .prepare(
     `SELECT id, username, display_name,
-            welfare_balance, discount_balance, s_balance,
+            welfare_balance, discount_balance, s_balance, sc_balance, sc_claim_day,
             line_id, birthday, bank_holder, bank_name, bank_branch, bank_account,
             line_verified, num_authorized, uses_left, times_override,
             enabled, locked, created_by_admin_id
@@ -1728,6 +1732,11 @@ if (Number(user.created_by_admin_id || 0) > 0) {
     used[key] = Math.max(0, limit - left);
   }
 
+  const redpacketClaim = await db.prepare(
+    `SELECT 1 FROM draw_records WHERE user_id=? AND activity_key='redpacket'
+     AND note='daily_claim' AND date(created_at, '+8 hours')=date('now', '+8 hours') LIMIT 1`
+  ).bind(userId).first();
+
 return json({
   success: true,
   user: {
@@ -1737,6 +1746,9 @@ return json({
     welfare_balance: Number(user.welfare_balance || 0),
     discount_balance: Number(user.discount_balance || 0),
     s_balance: Number(user.s_balance || 0),
+    sc_balance: Number(user.sc_balance || 0),
+    sc_claim_day: user.sc_claim_day,
+    sc_claimed_today: user.sc_claim_day === new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
     line_id: user.line_id || "",
     birthday: user.birthday || "",
     bank_holder: user.bank_holder || "",
@@ -1754,6 +1766,7 @@ return json({
   },
   limits,
   used,
+  daily: { redpacket_claimed: Boolean(redpacketClaim) },
 });
 };
 
@@ -1761,6 +1774,35 @@ return json({
  * Routes
  * ========================= */
 if (url.pathname === "/" && request.method === "GET") return text("OK");
+if (url.pathname === "/arcade/challenge" && request.method === "GET") return arcadeChallengePage(url, env);
+
+if (url.pathname === "/arcade/settings" && request.method === "GET") {
+  const rows = await db.prepare("SELECT game_key, config FROM arcade_game_settings").all();
+  const saved = new Map((rows.results || []).map(row => [row.game_key, JSON.parse(row.config)]));
+  const settings = Object.fromEntries(Object.keys(GAME_RULES).map(key => [
+    key, { ...defaultGameRules(key), ...saved.get(key), ...(key === "claw" ? { paidAvailable: Boolean(env.CLAW_VERIFIER) } : {}) },
+  ]));
+  return json({ success: true, settings });
+}
+
+const arcadeRound = url.pathname.match(/^\/arcade\/(numbers|reaction|claw)\/(prepare|start|signal|finish)$/);
+if (arcadeRound && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+  const [, game, action] = arcadeRound;
+  const body = await safeJson(request);
+  if (game === "claw") {
+    if (!env.CLAW_VERIFIER) return forbid("夾娃娃機暫停開放", 503);
+    const result = await handleClawRound(db, env.CLAW_VERIFIER, Number(sess.user_id), action, body);
+    return json(result, { status: result.status && !result.success ? result.status : 200 });
+  }
+  if (action === "prepare") {
+    const error = await verifyArcadePreparation(request, env, game, body?.proof);
+    if (error) return json({ success: false, error: error.error }, { status: error.status });
+  }
+  const result = await handleArcadeRound(db, Number(sess.user_id), game, action, body);
+  return json(result, { status: result.status && !result.success ? result.status : 200 });
+}
 
 // =========================
 // MODULE: electronic room status
@@ -3346,6 +3388,17 @@ if (url.pathname === "/user/profile" && request.method === "PATCH") {
   return await respondMe();
 }
 
+if (url.pathname === "/wallet/sc/claim" && request.method === "POST") {
+  const sess = await requireUser();
+  if (!sess) return forbid("Unauthorized", 401);
+  const result = await db.prepare(
+    `UPDATE users SET sc_balance = sc_balance + ?, sc_claim_day = date('now', '+8 hours')
+     WHERE id = ? AND sc_claim_day IS NOT date('now', '+8 hours')`
+  ).bind(SC_GRANT, Number(sess.user_id)).run();
+  if (!result.meta?.changes) return forbid("今天已領取 SC 幣", 409);
+  return await respondMe();
+}
+
 // ===== User wallet logs =====
 if (url.pathname === "/wallet/logs" && request.method === "GET") {
   const sess = await requireUser();
@@ -3354,7 +3407,7 @@ if (url.pathname === "/wallet/logs" && request.method === "GET") {
   const days = Math.max(1, Math.min(365, Number(url.searchParams.get("days") || 90)));
   const rows = await db
     .prepare(
-      `SELECT id, created_at, category, action, status, delta_s, delta_welfare, delta_discount, result, note
+      `SELECT id, created_at, category, action, status, delta_s, delta_sc, delta_welfare, delta_discount, result, note
        FROM wallet_logs
        WHERE user_id=? AND created_at >= datetime('now', ?)
        ORDER BY id DESC
@@ -3466,6 +3519,42 @@ if (url.pathname === "/shop/orders" && request.method === "GET") {
       const isAdminRoute =
         url.pathname.startsWith("/admin/") || url.pathname.startsWith("/auth/admin/");
       const admin = isAdminRoute ? await requireAdmin() : null;
+
+const arcadeGame = url.pathname.match(/^\/admin\/arcade\/settings\/([a-z]+)$/)?.[1];
+if (arcadeGame && request.method === "PATCH") {
+  if (!admin) return forbid("Unauthorized", 401);
+  if (!Object.hasOwn(GAME_RULES, arcadeGame)) return forbid("找不到遊戲", 404);
+  const patch = parseGamePatch(arcadeGame, await safeJson(request));
+  if (!patch || !Object.keys(patch).length) return forbid("設定超出範圍或格式不正確", 400);
+  await db.prepare(
+    `INSERT INTO arcade_game_settings (game_key, config) VALUES (?, ?)
+     ON CONFLICT(game_key) DO UPDATE SET config=json_patch(config, excluded.config)`
+  ).bind(arcadeGame, JSON.stringify(patch)).run();
+  return json({ success: true });
+}
+
+if (url.pathname === "/admin/arcade/football-prizes" && request.method === "GET") {
+  if (!admin) return forbid("Unauthorized", 401);
+  return json({ success: true, prizes: await getCachedFootballPrizes() });
+}
+
+if (url.pathname === "/admin/arcade/football-prizes" && request.method === "PUT") {
+  if (!admin) return forbid("Unauthorized", 401);
+  const body = await safeJson(request);
+  const existing = await getCachedFootballPrizes();
+  const prizes = body?.prizes;
+  if (!Array.isArray(prizes) || prizes.length !== existing.length || !prizes.length ||
+      prizes.some((p, i) => !p || p.id !== existing[i].id || !Number.isFinite(p.probability) ||
+        p.probability < 0 || p.probability > 100 || !Number.isSafeInteger(p.reward_s) ||
+        p.reward_s < 0 || p.reward_s > 100000)) {
+    return forbid("足球獎項金額或機率格式不正確", 400);
+  }
+  await db.batch(prizes.map(p => db.prepare(
+    "UPDATE football_prizes SET probability=?, reward_s=?, updated_at=datetime('now') WHERE id=?"
+  ).bind(p.probability, p.reward_s, p.id)));
+  hotCacheDel("cfg:football_prizes");
+  return json({ success: true });
+}
 
 // ===== ADMIN: shop orders (all users) =====
 if (url.pathname === "/admin/shop/orders" && request.method === "GET") {
@@ -5566,24 +5655,32 @@ if (url.pathname === "/football/config" && request.method === "GET") {
   const prizes = await getCachedFootballPrizes();
 
   const user = await db
-    .prepare("SELECT id, username, s_balance FROM users WHERE id=? LIMIT 1")
+    .prepare("SELECT id, username, s_balance, sc_balance FROM users WHERE id=? LIMIT 1")
     .bind(Number(sess.user_id))
     .first();
+  const activeGame = await db.prepare(
+    `SELECT id, bet_amount, current_step, current_win FROM football_games
+     WHERE user_id=? AND status='playing' AND request_id IS NOT NULL ORDER BY id DESC LIMIT 1`
+  ).bind(Number(sess.user_id)).first();
 
   return json({
     success: true,
     activity: {
-      enabled: Number(act?.enabled || 0) === 1 ? 1 : 0,
+      enabled: activityEnabledNow(act) ? 1 : 0,
       activity_key: "football",
       activity_name: act?.activity_name || "足球射門",
     },
-    bet_amount: 1000,
+    bet_amount: FOOTBALL_BASE_BET,
+    bet_options: Array.from({ length: 10 }, (_, i) => (i + 1) * 100),
+    active_game: activeGame ?? null,
+    sc_balance: Number(user?.sc_balance || 0),
     s_balance: Number(user?.s_balance || 0),
     prizes: prizes.map((p) => ({
       id: Number(p.id),
       ball_no: Number(p.ball_no),
       title: String(p.title || ""),
       reward_s: Number(p.reward_s || 0),
+      multiplier: Number(p.reward_s || 0) / FOOTBALL_BASE_BET,
       probability: Number(p.probability || 0),
       enabled: Number(p.enabled || 0),
       sort: Number(p.sort || 0),
@@ -5595,396 +5692,120 @@ if (url.pathname === "/football/config" && request.method === "GET") {
 // football start
 // POST /football/start
 // =========================
-if (url.pathname === "/football/start" && request.method === "POST") {
+
+if (["/football/start", "/football/start-shoot"].includes(url.pathname) && request.method === "POST") {
   const sess = await requireUser();
   if (!sess) return forbid("Unauthorized", 401);
-
-const act = await getFootballActivityDirect();
-if (Number(act?.enabled || 0) !== 1) {
-  return forbid("活動未開放", 403);
-}
-
-  const betAmount = 1000;
-
-  const upd = await db
-    .prepare(
-      `UPDATE users
-       SET s_balance = COALESCE(s_balance,0) - ?
-       WHERE id=? AND COALESCE(s_balance,0) >= ?`
-    )
-    .bind(Number(betAmount), Number(sess.user_id), Number(betAmount))
-    .run();
-
-  if (Number(upd?.meta?.changes || 0) <= 0) {
-    return json({ success: false, error: "S幣不足" }, { status: 400 });
-  }
-
-  const ins = await db
-    .prepare(
-      `INSERT INTO football_games
-       (user_id, username, bet_amount, current_step, current_win, status, created_at, updated_at)
-       VALUES (?,?,?,?,?,'playing',datetime('now'),datetime('now'))`
-    )
-    .bind(
-      Number(sess.user_id),
-      String(sess.username || ""),
-      Number(betAmount),
-      0,
-      0
-    )
-    .run();
-
-  await insertWalletLog({
-    user_id: Number(sess.user_id),
-    username: String(sess.username || ""),
-    category: "raffle",
-    action: "football_start",
-    status: "success",
-    delta_s: -Number(betAmount),
-    delta_welfare: 0,
-    delta_discount: 0,
-    result: `足球射門投注 ${Number(betAmount)} S幣`,
-    note: "足球射門開始遊戲",
-  });
-
-  const user = await db
-    .prepare("SELECT s_balance FROM users WHERE id=? LIMIT 1")
-    .bind(Number(sess.user_id))
-    .first();
-
-  return json({
-    success: true,
-    game_id: Number(ins?.meta?.last_row_id || 0),
-    bet_amount: betAmount,
-    current_step: 0,
-    current_win: 0,
-    s_balance: Number(user?.s_balance || 0),
-  });
-}
-
-// =========================
-// football start + first shoot
-// POST /football/start-shoot
-// 第一球專用：扣 S幣、建立遊戲、直接判斷第一球結果
-// =========================
-if (url.pathname === "/football/start-shoot" && request.method === "POST") {
-  const sess = await requireUser();
-  if (!sess) return forbid("Unauthorized", 401);
-
   const act = await getFootballActivityDirect();
-  if (Number(act?.enabled || 0) !== 1) {
-    return forbid("活動未開放", 403);
+  if (!activityEnabledNow(act)) return forbid("活動未開放", 403);
+
+  const body = await safeJson(request);
+  const bet = body?.bet_amount === undefined ? FOOTBALL_BASE_BET : Number(body.bet_amount);
+  if (!Number.isInteger(bet) || bet < 100 || bet > 1000 || bet % 100 !== 0) {
+    return forbid("請選擇 100 至 1,000，每 100 幣一檔", 400);
+  }
+  const requestId = body?.request_id ?? crypto.randomUUID();
+  if (typeof requestId !== "string" || !/^[a-z0-9-]{16,64}$/i.test(requestId)) {
+    return forbid("無效的交易編號", 400);
   }
 
-  const betAmount = 1000;
+  const shoot = url.pathname === "/football/start-shoot";
+  const prize = shoot ? (await getCachedFootballPrizes()).find(p => Number(p.ball_no) === 1) : null;
+  if (shoot && !prize) return forbid("第一球尚未設定", 400);
 
-  const prizes = await getCachedFootballPrizes();
-  const prize = prizes.find((p) => Number(p.ball_no) === 1);
+  const goal = shoot && Math.random() * 100 < Number(prize.probability);
+  const win = goal ? Math.floor(bet * Number(prize.reward_s) / FOOTBALL_BASE_BET) : 0;
+  const userId = Number(sess.user_id);
+  const inserted = await db.prepare(
+    `INSERT INTO football_games (user_id, username, bet_amount, request_id, current_step, current_win, status)
+     SELECT id, username, ?, ?, ?, ?, ? FROM users
+     WHERE id = ? AND s_balance + sc_balance >= ?
+     ON CONFLICT(user_id, request_id) DO NOTHING`
+  ).bind(bet, requestId, Number(goal), win, shoot && !goal ? "lost" : "playing", userId, bet).run();
 
-  if (!prize) {
-    return json({ success: false, error: "第一球尚未設定" }, { status: 400 });
-  }
+  const game = await db.prepare("SELECT * FROM football_games WHERE user_id=? AND request_id=?")
+    .bind(userId, requestId).first();
+  if (!game) return forbid("SC 幣與 S 幣餘額不足", 400);
+  if (game.bet_amount !== bet) return forbid("交易編號已使用", 409);
 
-  const probability = Number(prize.probability || 0);
-  const rewardS = Number(prize.reward_s || 0);
-  const isGoal = Math.random() * 100 < probability;
-
-  const upd = await db
-    .prepare(
-      `UPDATE users
-       SET s_balance = COALESCE(s_balance,0) - ?
-       WHERE id=? AND COALESCE(s_balance,0) >= ?`
-    )
-    .bind(Number(betAmount), Number(sess.user_id), Number(betAmount))
-    .run();
-
-  if (Number(upd?.meta?.changes || 0) <= 0) {
-    return json({ success: false, error: "S幣不足" }, { status: 400 });
-  }
-
-  const nextStatus = isGoal ? "playing" : "lost";
-  const currentStep = isGoal ? 1 : 0;
-  const currentWin = isGoal ? rewardS : 0;
-
-  const ins = await db
-    .prepare(
-      `INSERT INTO football_games
-       (user_id, username, bet_amount, current_step, current_win, status, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,datetime('now'),datetime('now'))`
-    )
-    .bind(
-      Number(sess.user_id),
-      String(sess.username || ""),
-      Number(betAmount),
-      Number(currentStep),
-      Number(currentWin),
-      String(nextStatus)
-    )
-    .run();
-
-  const gameId = Number(ins?.meta?.last_row_id || 0);
-
-  await insertWalletLog({
-    user_id: Number(sess.user_id),
-    username: String(sess.username || ""),
-    category: "raffle",
-    action: "football_start_shoot",
-    status: "success",
-    delta_s: -Number(betAmount),
-    delta_welfare: 0,
-    delta_discount: 0,
-    result: `足球射門投注 ${Number(betAmount)} S幣`,
-    note: "足球射門第一球",
-  });
-
-  if (!isGoal) {
+  if (inserted.meta?.changes && shoot && !goal) {
     await addDrawRecord({
-      activity_key: "football",
-      user_id: Number(sess.user_id),
-      username: String(sess.username || ""),
-      status: "lose",
-      prize_title: "足球射門第1球失敗",
-      prize_amount: 0,
-      note: "football_first_miss",
-      meta: {
-        game_id: Number(gameId),
-        ball_no: 1,
-        probability,
-      },
+      activity_key: "football", user_id: userId, username: sess.username,
+      status: "lose", prize_title: "足球射門第1球失敗", note: "football_first_miss",
+      meta: { game_id: game.id, ball_no: 1, probability: Number(prize.probability) },
     });
   }
 
-  const user = await db
-    .prepare("SELECT s_balance FROM users WHERE id=? LIMIT 1")
-    .bind(Number(sess.user_id))
-    .first();
-
+  const wallet = await db.prepare("SELECT s_balance, sc_balance FROM users WHERE id=?").bind(userId).first();
   return json({
-    success: true,
-    result: isGoal ? "goal" : "save",
-    is_goal: Boolean(isGoal),
-    game_id: Number(gameId),
-    ball_no: 1,
-    bet_amount: Number(betAmount),
-    current_step: Number(currentStep),
-    current_win: Number(currentWin),
-    probability,
-    game_over: !isGoal,
-    s_balance: Number(user?.s_balance || 0),
+    success: true, game_id: game.id, bet_amount: bet, current_step: game.current_step, current_win: game.current_win,
+    ...wallet,
+    ...(shoot ? {
+      result: game.status === "lost" ? "save" : "goal", is_goal: game.status !== "lost",
+      ball_no: 1, probability: Number(prize.probability), game_over: game.status !== "playing",
+    } : {}),
   });
 }
 
-// =========================
-// football shoot
-// POST /football/shoot
-// body: { game_id }
-// =========================
 if (url.pathname === "/football/shoot" && request.method === "POST") {
   const sess = await requireUser();
   if (!sess) return forbid("Unauthorized", 401);
+  const act = await getFootballActivityDirect();
+  if (!activityEnabledNow(act)) return forbid("活動未開放", 403);
 
-const act = await getFootballActivityDirect();
-if (Number(act?.enabled || 0) !== 1) {
-  return forbid("活動未開放", 403);
-}
-
-  const body = await request.json().catch(() => ({}));
+  const body = await safeJson(request);
   const gameId = Number(body?.game_id || 0);
-  if (!gameId) return json({ success: false, error: "缺少 game_id" }, { status: 400 });
-
-  const game = await db
-    .prepare(
-      `SELECT * FROM football_games
-       WHERE id=? AND user_id=? AND status='playing'
-       LIMIT 1`
-    )
-    .bind(Number(gameId), Number(sess.user_id))
-    .first();
-
-  if (!game) {
-    return json({ success: false, error: "遊戲不存在或已結束" }, { status: 400 });
+  const userId = Number(sess.user_id);
+  const game = await db.prepare("SELECT * FROM football_games WHERE id=? AND user_id=? AND status='playing'")
+    .bind(gameId, userId).first();
+  if (!game) return forbid("遊戲不存在或已結束", 400);
+  if (body?.expected_step !== undefined && body.expected_step !== game.current_step) {
+    return forbid("本球已處理", 409);
   }
 
-  const nextBallNo = Number(game.current_step || 0) + 1;
-  if (nextBallNo > 5) {
-    return json({ success: false, error: "已完成 5 球，請領取" }, { status: 400 });
-  }
+  const ball = game.current_step + 1;
+  if (ball > 5) return forbid("已完成 5 球，請領取", 400);
+  const prize = (await getCachedFootballPrizes()).find(p => Number(p.ball_no) === ball);
+  if (!prize) return forbid(`第 ${ball} 球尚未設定`, 400);
+  const probability = Number(prize.probability);
+  const goal = Math.random() * 100 < probability;
+  const step = goal ? ball : game.current_step;
+  const win = goal ? Math.floor(game.bet_amount * Number(prize.reward_s) / FOOTBALL_BASE_BET) : 0;
 
-  const prizes = await getCachedFootballPrizes();
-  const prize = prizes.find((p) => Number(p.ball_no) === Number(nextBallNo));
+  const result = await db.prepare(
+    `UPDATE football_games SET current_step=?, current_win=?, status=?, updated_at=datetime('now')
+     WHERE id=? AND user_id=? AND status='playing' AND current_step=?`
+  ).bind(step, win, goal ? "playing" : "lost", gameId, userId, game.current_step).run();
+  if (!result.meta?.changes) return forbid("本球已處理", 409);
 
-  if (!prize) {
-    return json({ success: false, error: `第 ${nextBallNo} 球尚未設定` }, { status: 400 });
-  }
-
-  const probability = Number(prize.probability || 0);
-  const rewardS = Number(prize.reward_s || 0);
-
-  const r = Math.random() * 100;
-  const isGoal = r < probability;
-
-  if (!isGoal) {
-    await db
-      .prepare(
-        `UPDATE football_games
-         SET current_win=0, status='lost', updated_at=datetime('now')
-         WHERE id=? AND user_id=?`
-      )
-      .bind(Number(gameId), Number(sess.user_id))
-      .run();
-
+  if (!goal) {
     await addDrawRecord({
-      activity_key: "football",
-      user_id: Number(sess.user_id),
-      username: String(sess.username || ""),
-      status: "lose",
-      prize_title: `足球射門第${nextBallNo}球失敗`,
-      prize_amount: 0,
-      note: "football_miss",
-      meta: {
-        game_id: Number(gameId),
-        ball_no: Number(nextBallNo),
-        probability,
-      },
-    });
-
-    return json({
-      success: true,
-      result: "save",
-      is_goal: false,
-      game_id: Number(gameId),
-      ball_no: Number(nextBallNo),
-      current_step: Number(game.current_step || 0),
-      current_win: 0,
-      probability,
-      game_over: true,
+      activity_key: "football", user_id: userId, username: sess.username, status: "lose",
+      prize_title: `足球射門第${ball}球失敗`, note: "football_miss",
+      meta: { game_id: gameId, ball_no: ball, probability },
     });
   }
-
-  await db
-    .prepare(
-      `UPDATE football_games
-       SET current_step=?, current_win=?, updated_at=datetime('now')
-       WHERE id=? AND user_id=?`
-    )
-    .bind(
-      Number(nextBallNo),
-      Number(rewardS),
-      Number(gameId),
-      Number(sess.user_id)
-    )
-    .run();
-
   return json({
-    success: true,
-    result: "goal",
-    is_goal: true,
-    game_id: Number(gameId),
-    ball_no: Number(nextBallNo),
-    current_step: Number(nextBallNo),
-    current_win: Number(rewardS),
-    probability,
-    game_over: Number(nextBallNo) >= 5,
+    success: true, result: goal ? "goal" : "save", is_goal: goal, game_id: gameId,
+    ball_no: ball, current_step: step, current_win: win, probability, game_over: !goal || ball === 5,
   });
 }
 
-// =========================
-// football claim
-// POST /football/claim
-// body: { game_id }
-// =========================
 if (url.pathname === "/football/claim" && request.method === "POST") {
   const sess = await requireUser();
   if (!sess) return forbid("Unauthorized", 401);
-
-  const body = await request.json().catch(() => ({}));
+  const body = await safeJson(request);
   const gameId = Number(body?.game_id || 0);
-  if (!gameId) return json({ success: false, error: "缺少 game_id" }, { status: 400 });
-
-  const game = await db
-    .prepare(
-      `SELECT * FROM football_games
-       WHERE id=? AND user_id=? AND status='playing'
-       LIMIT 1`
-    )
-    .bind(Number(gameId), Number(sess.user_id))
-    .first();
-
-  if (!game) {
-    return json({ success: false, error: "遊戲不存在或已結束" }, { status: 400 });
-  }
-
-  const winAmount = Number(game.current_win || 0);
-  if (winAmount <= 0) {
-    return json({ success: false, error: "目前沒有可領取獎金" }, { status: 400 });
-  }
-
-  await db
-    .prepare("UPDATE users SET s_balance = COALESCE(s_balance,0) + ? WHERE id=?")
-    .bind(Number(winAmount), Number(sess.user_id))
-    .run();
-
-  await db
-    .prepare(
-      `UPDATE football_games
-       SET status='claimed', updated_at=datetime('now')
-       WHERE id=? AND user_id=?`
-    )
-    .bind(Number(gameId), Number(sess.user_id))
-    .run();
-
-  await insertWalletLog({
-    user_id: Number(sess.user_id),
-    username: String(sess.username || ""),
-    category: "raffle",
-    action: "football_claim",
-    status: "success",
-    delta_s: Number(winAmount),
-    delta_welfare: 0,
-    delta_discount: 0,
-    result: `足球射門領取 ${Number(winAmount)} S幣`,
-    note: `足球射門第 ${Number(game.current_step || 0)} 球領取`,
-  });
-
-  await addDrawRecord({
-    activity_key: "football",
-    user_id: Number(sess.user_id),
-    username: String(sess.username || ""),
-    status: "win",
-    prize_title: `足球射門第${Number(game.current_step || 0)}球領取`,
-    prize_amount: Number(winAmount),
-    note: "football_claim",
-    meta: {
-      game_id: Number(gameId),
-      current_step: Number(game.current_step || 0),
-    },
-  });
-
-  await db
-    .prepare(
-      "INSERT INTO winners (activity_key, user_id, username, prize_title, prize_amount, meta_json, created_at) VALUES (?,?,?,?,?,?,datetime('now'))"
-    )
-    .bind(
-      "football",
-      Number(sess.user_id),
-      String(sess.username || ""),
-      `足球射門第${Number(game.current_step || 0)}球領取`,
-      Number(winAmount),
-      JSON.stringify({ game_id: Number(gameId) })
-    )
-    .run();
-
-  const user = await db
-    .prepare("SELECT s_balance FROM users WHERE id=? LIMIT 1")
-    .bind(Number(sess.user_id))
-    .first();
-
-  return json({
-    success: true,
-    amount: Number(winAmount),
-    game_id: Number(gameId),
-    s_balance: Number(user?.s_balance || 0),
-  });
+  const userId = Number(sess.user_id);
+  await db.prepare(
+    `UPDATE football_games SET status='claimed', updated_at=datetime('now')
+     WHERE id=? AND user_id=? AND status='playing' AND current_win>0`
+  ).bind(gameId, userId).run();
+  const game = await db.prepare("SELECT current_win FROM football_games WHERE id=? AND user_id=? AND status='claimed'")
+    .bind(gameId, userId).first();
+  if (!game) return forbid("目前沒有可領取獎金", 400);
+  const wallet = await db.prepare("SELECT s_balance, sc_balance FROM users WHERE id=?").bind(userId).first();
+  return json({ success: true, amount: game.current_win, game_id: gameId, ...wallet });
 }
 
       if (url.pathname === "/wheel/spin" && request.method === "POST") {

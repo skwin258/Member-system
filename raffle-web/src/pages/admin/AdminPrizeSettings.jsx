@@ -2,6 +2,7 @@ import { API_BASE } from '../../config';
 // raffle-web/src/pages/admin/AdminPrizeSettings.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api";
+import AdminArcadeRules from "./AdminArcadeRules";
 import "./AdminPrizeSettings.css";
 
 
@@ -504,6 +505,7 @@ export default function AdminPrizeSettings() {
   return (
     <div style={{ textAlign: "left" }}>
       <h2 style={{ marginTop: 0 }}>獎項設定</h2>
+      <AdminArcadeRules prizes />
 
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         <button className={`btn ${tab === "redpacket" ? "btnActive" : ""}`} onClick={() => setTab("redpacket")}>

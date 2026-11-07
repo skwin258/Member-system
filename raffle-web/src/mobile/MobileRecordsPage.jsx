@@ -351,6 +351,7 @@ export default function MobileRecordsPage({ me, initialView = "raffle" }) {
                   <span>變動</span>
                   <strong>
                     {r.delta_s ? `S${r.delta_s}` : ""}
+                    {r.delta_sc ? ` SC${r.delta_sc}` : ""}
                     {r.delta_welfare ? ` 福利${r.delta_welfare}` : ""}
                     {r.delta_discount ? ` 折抵${r.delta_discount}` : ""}
                   </strong>

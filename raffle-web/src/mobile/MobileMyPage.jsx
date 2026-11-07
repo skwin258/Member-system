@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { api } from "../api";
 import "./MobileMyPage.css";
 import { formatTaipeiDate } from "../utils/taipeiTime";
+import DailyScButton from "../components/DailyScButton";
 
 function fmtDate(s) {
   return formatTaipeiDate(s) || "-";
@@ -296,6 +297,13 @@ export default function MobileMyPage({ me, onRefreshMe, goPage }) {
             <div className="mMyContentTitle">我的錢包</div>
 
             <div className="mMyWalletSection">
+              <div className="mMyWalletBlock">
+                <div className="mMyWalletLeft">
+                  <div className="mMyWalletLabel">SC 幣（遊戲專用）</div>
+                  <div className="mMyWalletAmount">{u.sc_balance === undefined ? "—" : fmtNum(u.sc_balance)}</div>
+                </div>
+                <DailyScButton user={u} onRefreshMe={onRefreshMe} className="mMyWalletBtn" />
+              </div>
               <div className="mMyWalletBlock">
                 <div className="mMyWalletLeft">
                   <div className="mMyWalletLabel">S幣</div>
