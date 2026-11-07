@@ -647,7 +647,7 @@ test('shop redemption, owner scope, session revocation and referral awards are e
   } finally { sqlite.close(); }
 });
 
-test('wheel honors zero weights and safely handles concurrent spins and failed configuration writes', async () => {
+test('wheel uses configured weights on the first spin and handles concurrent spins and failed configuration writes', async () => {
   const { db, sqlite } = database();
   try {
     const worker = await isolate();
@@ -663,18 +663,18 @@ test('wheel honors zero weights and safely handles concurrent spins and failed c
       INSERT INTO user_sessions(token,user_id,username) VALUES ('spinner',10,'spinner');
       INSERT INTO user_activity_usage(user_id,activity_key,times_left) VALUES (10,'wheel',2);`);
     const setPrizes = items => call('/admin/wheel/prizes','admin','PUT',{items});
-    assert.equal((await setPrizes([{title:'S幣9999',amount:9999,weight:0}])).status,200);
+    assert.equal((await setPrizes([{title:'5000折抵金',prize_type:'discount',amount:5000,weight:0}])).status,200);
     assert.equal((await call('/wheel/spin','spinner','POST',{})).status,400);
     assert.equal(sqlite.prepare("SELECT times_left AS n FROM user_activity_usage WHERE user_id=10").get().n,2);
-    assert.equal((await setPrizes([{title:'S幣9999',amount:9999,weight:0},{title:'S幣8',amount:8,weight:1}])).status,200);
+    assert.equal((await setPrizes([{title:'5000折抵金',prize_type:'discount',amount:5000,weight:0},{title:'S幣8',amount:8,weight:1}])).status,200);
     sqlite.exec("CREATE TRIGGER reject_wheel_prize BEFORE INSERT ON wheel_prizes WHEN NEW.title='reject' BEGIN SELECT RAISE(ABORT,'test failure'); END;");
     assert.equal((await setPrizes([{title:'first',weight:2},{title:'reject',weight:1}])).status,500);
-    assert.deepEqual(sqlite.prepare("SELECT title FROM wheel_prizes ORDER BY id").all().map(p=>p.title),['S幣9999','S幣8']);
+    assert.deepEqual(sqlite.prepare("SELECT title FROM wheel_prizes ORDER BY id").all().map(p=>p.title),['5000折抵金','S幣8']);
     const results = await Promise.all([1,2].map(() => call('/wheel/spin','spinner','POST',{})));
     assert.deepEqual(results.map(r=>r.status),[200,200]);
     const payloads = await Promise.all(results.map(r=>r.json()));
-    assert.deepEqual(payloads.map(p=>p.result.prize_value).sort((a,b)=>a-b),[8,5000]);
-    assert.deepEqual({...sqlite.prepare("SELECT s_balance,discount_balance FROM users WHERE id=10").get()},{s_balance:8,discount_balance:5000});
+    assert.deepEqual(payloads.map(p=>p.result.prize_value),[8,8]);
+    assert.deepEqual({...sqlite.prepare("SELECT s_balance,discount_balance FROM users WHERE id=10").get()},{s_balance:16,discount_balance:0});
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM draw_records WHERE activity_key='wheel'").get().n,2);
   } finally { sqlite.close(); }
 });

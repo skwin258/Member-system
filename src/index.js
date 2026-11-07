@@ -5449,20 +5449,8 @@ if (url.pathname === "/football/claim" && request.method === "POST") {
           const eligible = prizes.filter(p => Number.isFinite(Number(p.weight)) && Number(p.weight)>0);
           if (!eligible.length) return forbid("尚無獎項", 400);
           const order_ids = prizes.map(p => Number(p.id));
-          const user = await db.prepare("SELECT created_by_admin_id, first_wheel_forced_done FROM users WHERE id=?")
-            .bind(sess.user_id).first();
-          if (!user) return forbid("Unauthorized", 401);
-          const forced = !Number(user.created_by_admin_id) && Number(user.first_wheel_forced_done) !== 1;
-
-          let pick;
-          if (forced) {
-            pick = eligible.find(p => Number(p.amount) === 5000 &&
-              (String(p.prize_type).toLowerCase() === "discount" || String(p.title).includes("折抵"))) ||
-              { id: -5000, title: "5000折抵金", amount: 5000, weight: 0, prize_type: "discount" };
-          } else {
-            let roll = Math.random() * eligible.reduce((sum, p) => sum + Number(p.weight), 0);
-            pick = eligible.find(p => (roll -= Number(p.weight)) < 0) || eligible.at(-1);
-          }
+          let roll = Math.random() * eligible.reduce((sum, p) => sum + Number(p.weight), 0);
+          const pick = eligible.find(p => (roll -= Number(p.weight)) < 0) || eligible.at(-1);
           const result_index = Math.max(0, order_ids.indexOf(Number(pick.id)));
 
           const rawTitle = String(pick.title || "").trim();
@@ -5515,15 +5503,13 @@ if (url.pathname === "/football/claim" && request.method === "POST") {
 
           const settled = await db.prepare(
             `INSERT INTO wheel_spin_settlements (user_id, username, prize_id, title, amount, currency, forced)
-             SELECT u.id, u.username, ?, ?, ?, ?, ?
+             SELECT u.id, u.username, ?, ?, ?, ?, 0
              FROM users u JOIN user_activity_usage a ON a.user_id=u.id AND a.activity_key='wheel'
              WHERE u.id=? AND u.enabled=1 AND COALESCE(u.locked,0)=0 AND a.times_left>0
-               AND (CASE WHEN COALESCE(u.created_by_admin_id,0)=0 AND COALESCE(u.first_wheel_forced_done,0)<>1 THEN 1 ELSE 0 END)=?
-               AND (?=1 OR EXISTS(SELECT 1 FROM wheel_prizes WHERE id=? AND enabled=1 AND weight>0))
-               AND EXISTS(SELECT 1 FROM wheel_prizes WHERE enabled=1 AND weight>0)
+               AND EXISTS(SELECT 1 FROM wheel_prizes WHERE id=? AND enabled=1 AND weight>0)
              RETURNING id`
           ).bind(pick.id, rawTitle || "輪盤", amount, isScoin ? "scoin" : isDiscount ? "discount" : "welfare",
-            Number(forced), sess.user_id, Number(forced), Number(forced), pick.id).first();
+            sess.user_id, pick.id).first();
           const current = await db.prepare("SELECT times_left FROM user_activity_usage WHERE user_id=? AND activity_key='wheel'")
             .bind(sess.user_id).first();
           const left = Number(current?.times_left || 0);
