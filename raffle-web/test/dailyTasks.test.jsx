@@ -24,6 +24,7 @@ it("shows the six tasks, opens official LINE instructions, and submits Instagram
   mocks.claimDailyTask.mockResolvedValue({ success:true, tasks:{ ...tasks, instagram:"pending", checkin:"claimed" }, progress:1 });
   try {
     render(<DailyTasks onClose={() => {}} lineUrl="https://lin.ee/example" />);
+    expect(screen.queryByText("驗證 Instagram")).toBeNull();
     const action = (title, label) => within(screen.getByText(title).closest(".daily-task-row")).getByRole("button", { name:label });
     await waitFor(() => expect(action("點讚貼文", "前往").disabled).toBe(false));
     expect(screen.getByText("0/4")).toBeTruthy();
