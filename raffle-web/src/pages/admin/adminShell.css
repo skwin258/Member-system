@@ -578,3 +578,21 @@ html, body{
 @media (max-width: 1150px) {
   .admin-shop-products { grid-template-columns: minmax(0, 1fr); }
 }
+
+.home-banner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+}
+
+.home-banner-editor, .home-banner-editor label {
+  display: grid;
+  gap: 8px;
+}
+
+.home-banner-editor img {
+  width: 100%;
+  aspect-ratio: 2.64;
+  object-fit: cover;
+  border-radius: 8px;
+}

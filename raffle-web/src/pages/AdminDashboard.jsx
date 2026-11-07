@@ -12,6 +12,7 @@ import AdminPromotions from './admin/AdminPromotions.jsx';
 import AdminShopPage from './admin/AdminShopPage.jsx';
 import AdminAiControl from './admin/AdminAiControl.jsx';
 import AdminLoginPromotions from './admin/AdminLoginPromotions.jsx';
+import AdminHomeBanners from './admin/AdminHomeBanners.jsx';
 
 const TABS=[
   {key:'activity',title:'活動設定',desc:'活動時間與開關',Component:AdminActivitySettings},
@@ -20,6 +21,7 @@ const TABS=[
   {key:'aiControl',title:'AI 控制',desc:'AI 與電子功能權限',Component:AdminAiControl},
   {key:'createUser',title:'新增使用者',desc:'建立帳戶與初始權限',Component:AdminCreateUser},
   {key:'loginPromotions',title:'登入活動圖',desc:'PNG 上傳與逐張顯示',Component:AdminLoginPromotions},
+  {key:'homeBanners',title:'首頁 Banner',desc:'輪播圖片與跳轉連結',Component:AdminHomeBanners},
   {key:'promotions',title:'優惠內容',desc:'優惠圖片與說明',Component:AdminPromotions},
   {key:'shop',title:'商城管理',desc:'商品、公告與兌換',Component:AdminShopPage},
   {key:'admins',title:'管理員權限',desc:'管理員與角色管理',superOnly:true,Component:AdminAdminRoles},

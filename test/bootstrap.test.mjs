@@ -25,6 +25,40 @@ function database() {
 }
 const request = () => new Request('https://api.skclub.vip/activities');
 
+test('home banner overrides are public, while changes and image uploads require admin access', async () => {
+  const { db, sqlite } = database();
+  try {
+    const worker = await isolate();
+    const env = { raffle_db: db, RAFFLE_R2: { async put(key, stream) {
+      assert.match(key, /^banner\/.+\.png$/);
+      await new Response(stream).arrayBuffer();
+    } } };
+    const call = (path, method = 'GET', body, authorized = false) => worker.fetch(new Request('https://api.skclub.vip' + path, {
+      method,
+      headers: {
+        ...(authorized ? { Authorization: 'Bearer banner-admin' } : {}),
+        ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      },
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }), env);
+    assert.deepEqual((await (await call('/home/banners')).json()).items, []);
+    sqlite.exec("INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('banner-admin',1,'owner','admin')");
+    const path = '/admin/home/banners/2';
+    assert.equal((await call(path, 'PATCH', { link_url:'/welcome' })).status, 401);
+    assert.equal((await call(path, 'PATCH', { link_url:'javascript:alert(1)' }, true)).status, 400);
+    assert.equal((await call(path, 'PATCH', { link_url:'/\\example.com' }, true)).status, 400);
+    const form = new FormData();
+    form.append('file', new Blob([new Uint8Array([137,80,78,71])], { type:'image/png' }), 'banner.png');
+    assert.equal((await call('/admin/home/banners/upload', 'POST', form)).status, 401);
+    const { url } = await (await call('/admin/home/banners/upload', 'POST', form, true)).json();
+    assert.match(url, /^\/r2\/banner\//);
+    const saved = await (await call(path, 'PATCH', { image_url:url, link_url:'https://example.com/activity' }, true)).json();
+    assert.deepEqual(saved.item, { slot:2, image_url:url, link_url:'https://example.com/activity' });
+    assert.equal((await call(path, 'PATCH', { link_url:'  ' }, true)).status, 200);
+    assert.deepEqual((await (await call('/home/banners')).json()).items, [{ slot:2, image_url:url, link_url:'' }]);
+  } finally { sqlite.close(); }
+});
+
 test('admin shop keeps hidden products editable and batch deletion preserves product records', async () => {
   const { db, sqlite } = database();
   try {

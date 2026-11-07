@@ -3,12 +3,17 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, expect, it, vi } from "vitest";
 import AdminShopPage from "../src/pages/admin/AdminShopPage.jsx";
 import AdminUserControl from "../src/pages/admin/AdminUserControl.jsx";
+import AdminHomeBanners from "../src/pages/admin/AdminHomeBanners.jsx";
+import FantasyHome from "../src/mobile/FantasyHome.jsx";
 
 const mocks = vi.hoisted(() => ({
   adminListUsers: vi.fn(),
   adminGetUser: vi.fn(),
   adminUserWalletLogs: vi.fn(),
   adminUserOrders: vi.fn(),
+  homeBanners: vi.fn(),
+  adminUploadBanner: vi.fn(),
+  adminSaveBanner: vi.fn(),
 }));
 vi.mock("../src/api", () => ({ api: mocks, getAdminToken: () => "test-admin", clearAdminToken: vi.fn() }));
 
@@ -16,6 +21,53 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+it("changes a banner image and clears its link independently", async () => {
+  mocks.homeBanners.mockResolvedValue({ success: true, items: [{ slot: 2, link_url: "https://example.com/" }] });
+  mocks.adminUploadBanner.mockResolvedValue({ success: true, url: "/r2/banner/new.png" });
+  mocks.adminSaveBanner.mockResolvedValue({ success: true, item: { slot: 2, image_url: "/r2/banner/new.png", link_url: "" } });
+  render(<AdminHomeBanners />);
+  const link = (await screen.findAllByLabelText("跳轉連結"))[1];
+  fireEvent.change(link, { target: { value: "" } });
+  const file = new File(["banner"], "new.png", { type: "image/png" });
+  fireEvent.change(screen.getAllByLabelText("更換圖片")[1], { target: { files: [file] } });
+  fireEvent.click(screen.getAllByRole("button", { name: "儲存 Banner" })[1]);
+  await screen.findByText("已儲存");
+  expect(mocks.adminUploadBanner).toHaveBeenCalledWith(file);
+  expect(mocks.adminSaveBanner).toHaveBeenCalledWith(2, { image_url: "/r2/banner/new.png", link_url: "" });
+  expect(screen.getByAltText("目前的 Banner 2").src).toMatch(/\/r2\/banner\/new\.png$/);
+});
+
+it("keeps unlinked banners inert and suppresses navigation after swiping a linked banner", async () => {
+  mocks.homeBanners.mockResolvedValue({ success: true, items: [{ slot: 1, link_url: "/welcome" }] });
+  vi.stubGlobal("matchMedia", () => ({ matches: true }));
+  const animations = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "getAnimations");
+  Object.defineProperty(HTMLImageElement.prototype, "getAnimations", { configurable: true, value: () => [] });
+  const view = render(<FantasyHome isGuest />);
+  try {
+    const link = await screen.findByRole("link", { name: "活動 Banner 1" });
+    expect(link.getAttribute("href")).toBe("/welcome");
+    expect(screen.getByAltText("活動 Banner 2").closest("a")).toBeNull();
+    const viewport = view.container.querySelector(".fh-banner-window");
+    viewport.setPointerCapture = vi.fn();
+    function pointer(target, type, x) {
+      const event = new Event(type, { bubbles: true });
+      Object.assign(event, { isPrimary: true, button: 0, pointerId: 1, clientX: x, clientY: 20 });
+      target.dispatchEvent(event);
+    }
+    pointer(link, "pointerdown", 100);
+    expect(viewport.setPointerCapture).not.toHaveBeenCalled();
+    pointer(link, "pointermove", 20);
+    pointer(link, "pointerup", 20);
+    expect(viewport.setPointerCapture).toHaveBeenCalledWith(1);
+    expect(link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }))).toBe(false);
+    expect(screen.getByRole("button", { name: "第 2 張 Banner" }).getAttribute("aria-current")).toBe("true");
+  } finally {
+    view.unmount();
+    if (animations) Object.defineProperty(HTMLImageElement.prototype, "getAnimations", animations);
+    else delete HTMLImageElement.prototype.getAnimations;
+  }
 });
 
 it("edits a hidden product, saves the uploaded image, and deletes the checked products", async () => {

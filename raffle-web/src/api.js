@@ -103,7 +103,7 @@ async function request(path, opts = {}) {
   const auth = opts.auth; // "user" | "admin" | undefined
 
   const headers = {
-    "Content-Type": "application/json",
+    ...(opts.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     ...(opts.headers || {}),
   };
 
@@ -199,6 +199,15 @@ async function adminRequest(path, { method = "GET", body, headers } = {}) {
 }
 
 export const api = {
+  homeBanners: ({ signal } = {}) => request("/home/banners", { signal }),
+  adminSaveBanner: (slot, patch) => request(`/admin/home/banners/${slot}`, {
+    method: "PATCH", auth: "admin", body: JSON.stringify(patch),
+  }),
+  adminUploadBanner(file) {
+    const body = new FormData();
+    body.append("file", file);
+    return request("/admin/home/banners/upload", { method: "POST", auth: "admin", body });
+  },
   API_BASE,
   async getMyReferrals() {
     return await request("/referral/my", {

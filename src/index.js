@@ -2624,6 +2624,14 @@ if (url.pathname === "/shop/config" && request.method === "GET") {
   });
 }   
 
+if (url.pathname === "/home/banners" && request.method === "GET") {
+  const { results } = await db.prepare(
+    "SELECT key, value FROM shop_config WHERE key IN ('home_banner_1','home_banner_2','home_banner_3','home_banner_4')"
+  ).all();
+  const items = (results || []).map(row => ({ ...JSON.parse(row.value), slot: Number(row.key.at(-1)) }));
+  return json({ success: true, items });
+}
+
 // PUBLIC promotion positions
 // GET /promotion-positions
 if (url.pathname === "/promotion-positions" && request.method === "GET") {
@@ -3700,11 +3708,11 @@ if (url.pathname === "/admin/r2/upload" && request.method === "POST") {
 }
 
 // =========================
-// SHOP (admin): upload product image to R2
+// Admin: upload product or home banner images to R2
 // POST /admin/shop/upload
 // multipart/form-data: file
 // =========================
-if (url.pathname === "/admin/shop/upload" && request.method === "POST") {
+if (["/admin/shop/upload", "/admin/home/banners/upload"].includes(url.pathname) && request.method === "POST") {
   if (!admin) return forbid("Unauthorized", 401);
 
   const bucket = env.RAFFLE_R2;
@@ -3743,13 +3751,44 @@ if (url.pathname === "/admin/shop/upload" && request.method === "POST") {
   if (!ext || !file.size || file.size > 8 * 1024 * 1024) {
     return forbid("請上傳 8 MB 以內的 JPG、PNG、WebP 或 GIF 照片", 400);
   }
-  const key = `shop/${Date.now()}_${crypto.randomUUID()}.${ext}`;
+  const folder = url.pathname === "/admin/shop/upload" ? "shop" : "banner";
+  const key = `${folder}/${Date.now()}_${crypto.randomUUID()}.${ext}`;
 
   await bucket.put(key, file.stream(), {
     httpMetadata: { contentType: file.type || "application/octet-stream" },
   });
 
   return json({ success: true, key, url: `/r2/${key}` });
+}
+
+const bannerSlot = url.pathname.match(/^\/admin\/home\/banners\/([1-4])$/)?.[1];
+if (bannerSlot && request.method === "PATCH") {
+  if (!admin) return forbid("Unauthorized", 401);
+  const body = await safeJson(request);
+  const patch = {};
+  if (body?.image_url !== undefined) {
+    if (typeof body.image_url !== "string" || !/^\/r2\/banner\/\d+_[\da-f-]+\.(jpg|png|webp|gif)$/i.test(body.image_url)) {
+      return forbid("請先上傳 Banner 圖片", 400);
+    }
+    patch.image_url = body.image_url;
+  }
+  if (body?.link_url !== undefined) {
+    const link = typeof body.link_url === "string" ? body.link_url.trim() : null;
+    const internal = link?.startsWith("/") && !link.startsWith("//");
+    const external = /^https?:\/\//i.test(link || "") && URL.canParse(link);
+    if (link === null || link.length > 2048 || /[\\\s\u0000-\u001f\u007f]/.test(link) || (link && !internal && !external)) {
+      return forbid("請填寫有效的 http、https 或站內路徑，亦可留空", 400);
+    }
+    patch.link_url = link;
+  }
+  if (!Object.keys(patch).length) return forbid("請提供圖片或連結", 400);
+
+  const row = await db.prepare(
+    `INSERT INTO shop_config (key, value, updated_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(key) DO UPDATE SET value=json_patch(shop_config.value, excluded.value), updated_at=excluded.updated_at
+     RETURNING value`
+  ).bind(`home_banner_${bannerSlot}`, JSON.stringify(patch)).first();
+  return json({ success: true, item: { ...JSON.parse(row.value), slot: Number(bannerSlot) } });
 }
 
 // =========================
