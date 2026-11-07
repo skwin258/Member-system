@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   adminGetUser: vi.fn(),
   adminUserWalletLogs: vi.fn(),
   adminUserOrders: vi.fn(),
+  adminDailyTasks: vi.fn(async () => ({ success: true, items: [] })),
   homeBanners: vi.fn(),
   adminUploadBanner: vi.fn(),
   adminSaveBanner: vi.fn(),

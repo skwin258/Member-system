@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import "./mobileShell.css";
 import FantasyHome from './FantasyHome.jsx';
+import DailyTasks from './DailyTasks.jsx';
 import MobilePageFrame from "./MobilePageFrame.jsx";
 import { api } from "../api";
 import LoginBox from "../LoginBox";
@@ -272,6 +273,7 @@ export default function MobileShell({
   const [recordsView, setRecordsView] = useState("raffle");
 
 const [showGuestAuth, setShowGuestAuth] = useState(false);
+const [showDailyTasks, setShowDailyTasks] = useState(false);
 const [authDefaultView, setAuthDefaultView] = useState("login");
 
 const [electronicStatus, setElectronicStatus] = useState({
@@ -538,5 +540,14 @@ const electronicBadgeNumber = (() => {
     );
   }
 
-  return <><FantasyHome isGuest={isGuest} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>{renderBottomNav()}{authModal}</>;
+  return <>
+    <FantasyHome isGuest={isGuest} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>
+    <button className="daily-task-launch" type="button" aria-haspopup="dialog"
+      onClick={() => { if (isGuest) needLogin(); else setShowDailyTasks(true); }}>
+      <img src="/daily-tasks/icon.png" alt="" />每日任務
+    </button>
+    {!isGuest && showDailyTasks && <DailyTasks lineUrl={me?.user?.support_line_url}
+      onClose={() => setShowDailyTasks(false)} onWalletChange={onRefreshMe || onRefresh} />}
+    {renderBottomNav()}{authModal}
+  </>;
 }

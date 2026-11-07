@@ -199,6 +199,25 @@ async function adminRequest(path, { method = "GET", body, headers } = {}) {
 }
 
 export const api = {
+  dailyTasks: () => request("/daily-tasks", { auth: "user" }),
+  claimDailyTask: task => request(`/daily-tasks/claim/${task}`, { auth: "user", method: "POST" }),
+  uploadDailyTaskProof(task, file) {
+    const body = new FormData();
+    body.append("file", file);
+    return request(`/daily-tasks/proof/${task}`, { auth: "user", method: "POST", body });
+  },
+  dailyTaskNotifications: () => request("/admin/daily-tasks/notifications", { auth: "admin" }),
+  adminDailyTasks: id => request(`/admin/daily-tasks/users/${id}`, { auth: "admin" }),
+  adminReviewDailyTask: (id, task, approved, proofId) => request(`/admin/daily-tasks/users/${id}/${task}`, {
+    auth: "admin", method: "PATCH", body: JSON.stringify({ approved, proofId }),
+  }),
+  async adminDailyTaskImage(id, signal) {
+    const response = await fetch(`${API_BASE}/admin/daily-tasks/proof/${id}`, {
+      headers: { Authorization: `Bearer ${getAdminToken()}` }, signal,
+    });
+    if (!response.ok) throw new Error("無法讀取驗證截圖");
+    return response.blob();
+  },
   homeBanners: ({ signal } = {}) => request("/home/banners", { signal }),
   adminSaveBanner: (slot, patch) => request(`/admin/home/banners/${slot}`, {
     method: "PATCH", auth: "admin", body: JSON.stringify(patch),

@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api, clearAdminToken } from "../../api";
 import "./adminUsers.css";
+import AdminMemberDailyTasks from "./AdminMemberDailyTasks.jsx";
 import { formatTaipeiDateTime } from "../../utils/taipeiTime";
 
 function fmtDT(s) {
   return formatTaipeiDateTime(s) || "";
 }
 
-export default function AdminUserControl() {
+export default function AdminUserControl({ initialUserId } = {}) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
@@ -34,6 +35,7 @@ const [redeemRows, setRedeemRows] = useState([]);
   // 詳細資料編輯欄位
   const [account, setAccount] = useState("");
   const [name, setName] = useState("");
+  const [nickname, setNickname] = useState("");
   const [lineId, setLineId] = useState("");
   const [lineVerified, setLineVerified] = useState(0);
   const [birthday, setBirthday] = useState("");
@@ -133,6 +135,11 @@ const toggleReview = async (id) => {
   }, []);
 
   useEffect(() => {
+    const id = Number(initialUserId);
+    if (Number.isSafeInteger(id) && id > 0) void openUser({ id });
+  }, [initialUserId]);
+
+  useEffect(() => {
   if (view === "redeems") {
     loadRedeems();
   }
@@ -187,6 +194,7 @@ const toggleReview = async (id) => {
 
       setAccount(full?.account || full?.username || "");
       setName(full?.name || full?.display_name || "");
+      setNickname(full?.admin_nickname || "");
       setLineId(full?.line_id || "");
       setLineVerified(Number(full?.line_verified || 0));
       setBirthday(full?.birthday || "");
@@ -218,6 +226,7 @@ const toggleReview = async (id) => {
       const patch = {
         username: String(account || "").trim(),
         name: String(name || "").trim(),
+        admin_nickname: nickname.trim(),
         birthday: String(birthday || "").trim(),
         line_id: String(lineId || "").trim(),
         line_verified: Number(lineVerified || 0),
@@ -243,6 +252,7 @@ const toggleReview = async (id) => {
         account: String(account || "").trim(),
         username: String(account || "").trim(),
         name: String(name || "").trim(),
+        admin_nickname: nickname.trim(),
         display_name: String(name || "").trim(),
         birthday: String(birthday || "").trim(),
         line_id: String(lineId || "").trim(),
@@ -265,6 +275,7 @@ const toggleReview = async (id) => {
                 username: updatedUser.username,
                 account: updatedUser.username,
                 name: updatedUser.name,
+                admin_nickname: updatedUser.admin_nickname,
                 display_name: updatedUser.display_name,
                 line_id: updatedUser.line_id,
                 line_verified: updatedUser.line_verified,
@@ -413,7 +424,7 @@ const toggleReview = async (id) => {
   <div className="auSearchBar">
     <input
       className="auSearch"
-      placeholder="搜尋 ID / 帳號 / 姓名（例：1234 / 小明）"
+      placeholder="搜尋 ID／帳號／姓名／暱稱"
       value={q}
       onChange={(e) => setQ(e.target.value)}
       onKeyDown={(e) => {
@@ -451,7 +462,7 @@ const toggleReview = async (id) => {
             <span className="auIdBadge">#{u.id}</span>
             <span className="auAccount">{u.account || u.username || "-"}</span>
           </div>
-          <div className="auName">{u.name || u.display_name || "-"}</div>
+          <div className="auName">{u.name || u.display_name || "-"}{u.admin_nickname && `（${u.admin_nickname}）`}</div>
         </button>
       );
     })}
@@ -505,6 +516,11 @@ const toggleReview = async (id) => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
+            </label>
+
+            <label className="auField">
+              <div className="auLab">暱稱（僅後台）</div>
+              <input className="auInp" value={nickname} maxLength={80} onChange={event => setNickname(event.target.value)} />
             </label>
 
             <label className="auField wide">
@@ -672,6 +688,8 @@ const toggleReview = async (id) => {
             </label>
           </div>
         </div>
+
+        <AdminMemberDailyTasks key={user.id} userId={user.id} />
 
         <div className="auSection">
           <div className="auSectionTitle">抽獎紀錄 / 異動紀錄（近90天）</div>

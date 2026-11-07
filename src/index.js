@@ -3,6 +3,7 @@ import { SC_GRANT, SC_SCHEMA, FOOTBALL_BASE_BET } from "./sc-wallet.js";
 import { GAME_RULES, defaultGameRules, parseGamePatch } from "./game-settings.js";
 import { ARCADE_ROUND_SCHEMA, handleArcadeRound, handleClawRound } from "./arcade-rounds.js";
 import { arcadeChallengePage, verifyArcadePreparation } from "./arcade-verification.js";
+import { DAILY_TASK_SCHEMA, DAILY_TASK_PROOF_PREFIX, handleDailyTasks } from "./daily-tasks.js";
 
 // ✅ PERF FIX (2026-03-02):
 // 以前每一個 request 都會跑一次「建表/欄位檢查/seed」，會導致讀 D1 需要 2~30 秒。
@@ -12,7 +13,7 @@ import { arcadeChallengePage, verifyArcadePreparation } from "./arcade-verificat
 const __BOOTSTRAP_STATE__ = { promise: null };
 // Bump when changing the schema/bootstrap below. Persisted in D1 so a new
 // Worker isolate does not repeat hundreds of schema/seed queries on first load.
-const SCHEMA_VERSION = '2026-11-07.admin-shop-v5';
+const SCHEMA_VERSION = '2026-11-07.daily-tasks-v6';
 
 const __HOT_CACHE__ = new Map();
 
@@ -80,8 +81,20 @@ async function ensureBootstrapped(db) {
       }
       await db.prepare("CREATE INDEX IF NOT EXISTS idx_users_created_by ON users(created_by_admin_id)").run();
     };
-    if (previousVersion === '2026-11-07.arcade-v4') {
-      await ensureShopAdminSchema();
+    const ensureDailyTasks = async () => {
+      const { results } = await db.prepare("PRAGMA table_info(users)").all();
+      if (!results.some(column => column.name === "admin_nickname")) {
+        try {
+          await db.prepare("ALTER TABLE users ADD COLUMN admin_nickname TEXT NOT NULL DEFAULT ''").run();
+        } catch (error) {
+          if (!/duplicate column name/i.test(String(error?.message || error))) throw error;
+        }
+      }
+      for (const sql of DAILY_TASK_SCHEMA) await db.prepare(sql).run();
+    };
+    if (["2026-11-07.arcade-v4", "2026-11-07.admin-shop-v5"].includes(previousVersion)) {
+      if (previousVersion === '2026-11-07.arcade-v4') await ensureShopAdminSchema();
+      await ensureDailyTasks();
       await updateSchemaVersion();
       return;
     }
@@ -883,6 +896,7 @@ for (const a of seedActivities) {
 
   await db.prepare('CREATE TABLE IF NOT EXISTS app_schema_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
   await ensureShopAdminSchema();
+  await ensureDailyTasks();
   await updateSchemaVersion();
 
   })().catch((err) => {
@@ -1796,6 +1810,8 @@ return json({
  * Routes
  * ========================= */
 if (url.pathname === "/" && request.method === "GET") return text("OK");
+const dailyTaskResponse = await handleDailyTasks({ request, url, db, env, requireUser, requireAdmin, isSuperAdmin, json, forbid });
+if (dailyTaskResponse) return dailyTaskResponse;
 if (url.pathname === "/arcade/challenge" && request.method === "GET") return arcadeChallengePage(url, env);
 
 if (url.pathname === "/arcade/settings" && request.method === "GET") {
@@ -2727,6 +2743,7 @@ if (url.pathname.startsWith("/r2/") && request.method === "GET") {
 
   const key = decodeURIComponent(url.pathname.slice("/r2/".length));
   if (!key) return json({ success: false, error: "bad key" }, { status: 400 });
+  if (key.startsWith(DAILY_TASK_PROOF_PREFIX)) return forbid("找不到圖片", 404);
 
   const object = await bucket.get(key);
 
@@ -4687,6 +4704,7 @@ if (url.pathname === "/admin/users" && request.method === "GET") {
       u.id,
       u.username,
       u.display_name,
+      u.admin_nickname,
       u.welfare_balance,
       u.discount_balance,
       u.s_balance,
@@ -4731,8 +4749,8 @@ if (url.pathname === "/admin/users" && request.method === "GET") {
     const search = String(url.searchParams.get("q") || "").trim().toLowerCase();
     if (search) {
       conditions.push(`(CAST(u.id AS TEXT)=? OR instr(lower(u.username),?)>0
-        OR instr(lower(u.display_name),?)>0 OR instr(lower(u.line_id),?)>0)`);
-      binds.push(search, search, search, search);
+        OR instr(lower(u.display_name),?)>0 OR instr(lower(u.line_id),?)>0 OR instr(lower(u.admin_nickname),?)>0)`);
+      binds.push(search, search, search, search, search);
     }
   }
 
@@ -4755,6 +4773,7 @@ if (url.pathname === "/admin/users" && request.method === "GET") {
       id: Number(r.id || 0),
       username: r.username || "",
       name: r.display_name || "",
+      admin_nickname: r.admin_nickname || "",
 
       enabled: Number(r.enabled || 0),
       uses_left: Number(r.uses_left || 0),
@@ -5217,7 +5236,7 @@ if (
 
   const row = await db
     .prepare(
-      `SELECT id, username, display_name, line_id, birthday,
+      `SELECT id, username, display_name, admin_nickname, line_id, birthday,
               bank_holder, bank_name, bank_branch, bank_account,
               line_verified, num_authorized, uses_left, times_override,
               welfare_balance, s_balance, discount_balance,
@@ -5329,6 +5348,7 @@ if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
         }
         if (body.display_name !== undefined) setIf("display_name", String(body.display_name || ""));
         if (body.name !== undefined) setIf("display_name", String(body.name || ""));
+        if (body.admin_nickname !== undefined) setIf("admin_nickname", String(body.admin_nickname || "").trim().slice(0, 80));
         if (body.uses_left !== undefined) setIf("uses_left", Number(body.uses_left || 0));
         if (body.times_override !== undefined) setIf("times_override", body.times_override === null ? null : Number(body.times_override || 0));
         if (body.welfare_balance !== undefined) setIf("welfare_balance", Number(body.welfare_balance || 0));

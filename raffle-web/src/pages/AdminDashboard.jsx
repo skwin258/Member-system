@@ -13,8 +13,10 @@ import AdminShopPage from './admin/AdminShopPage.jsx';
 import AdminAiControl from './admin/AdminAiControl.jsx';
 import AdminLoginPromotions from './admin/AdminLoginPromotions.jsx';
 import AdminHomeBanners from './admin/AdminHomeBanners.jsx';
+import AdminTaskNotifications from './admin/AdminTaskNotifications.jsx';
 
 const TABS=[
+  {key:'notifications',title:'最新通知',desc:'每日任務驗證待審核',Component:AdminTaskNotifications},
   {key:'activity',title:'活動設定',desc:'活動時間與開關',Component:AdminActivitySettings},
   {key:'prizes',title:'獎項設定',desc:'獎項、機率與輪盤',Component:AdminPrizeSettings},
   {key:'users',title:'使用者管理',desc:'帳戶、授權與用量',Component:AdminUserControl},
@@ -35,19 +37,26 @@ export default function AdminDashboard({adminMe,onAdminLogout}){
   const name=adminMe?.admin?.username||adminMe?.admin?.display_name||adminMe?.user?.username||'管理員';
   const visibleTabs=useMemo(()=>TABS.filter(t=>!t.superOnly||isSuper),[isSuper]);
   const [tab,setTab]=useState(()=>{const key=new URLSearchParams(location.search).get('tab');return visibleTabs.some(t=>t.key===key)?key:'activity'});
+  const [targetUser,setTargetUser]=useState(()=>new URLSearchParams(location.search).get('user'));
   const [navOpen,setNavOpen]=useState(false);
   const menuButton=useRef(null),sidebar=useRef(null);
   const current=visibleTabs.find(t=>t.key===tab)||visibleTabs[0];
   const Content=current.Component;
   const live=API_BASE.includes('api.skclub.vip');
-  useEffect(()=>{const url=new URL(location.href);url.searchParams.set('tab',current.key);history.replaceState(null,'',url)},[current.key]);
+  useEffect(()=>{
+    const url=new URL(location.href);
+    url.searchParams.set('tab',current.key);
+    if(current.key==='users' && targetUser)url.searchParams.set('user',targetUser);
+    else url.searchParams.delete('user');
+    history.replaceState(null,'',url);
+  },[current.key,targetUser]);
   useEffect(()=>{
     if(!navOpen)return;
     sidebar.current?.querySelector('button')?.focus();
     const keydown=e=>{if(e.key==='Escape'){setNavOpen(false);menuButton.current?.focus()}};
     window.addEventListener('keydown',keydown);return()=>window.removeEventListener('keydown',keydown);
   },[navOpen]);
-  function navigate(key){setTab(key);setNavOpen(false);requestAnimationFrame(()=>document.querySelector('.ra-pageHeading h1')?.focus())}
+  function navigate(key,user=null){setTab(key);setTargetUser(user);setNavOpen(false);requestAnimationFrame(()=>document.querySelector('.ra-pageHeading h1')?.focus())}
   function trapNavigation(e){
     if(!navOpen||e.key!=='Tab'||!matchMedia('(max-width: 980px)').matches)return;
     const buttons=[...sidebar.current.querySelectorAll('button:not(:disabled)')];
@@ -66,7 +75,8 @@ export default function AdminDashboard({adminMe,onAdminLogout}){
     </aside>
     <main className="ra-adminMain">
       <header className="ra-topBar"><button className="ra-menuToggle" type="button" ref={menuButton} aria-controls="admin-navigation" aria-expanded={navOpen} onClick={()=>setNavOpen(v=>!v)}>☰<span>選單</span></button><div className="ra-pageHeading"><h1 tabIndex="-1">{current.title}</h1><p>{current.desc}</p></div><div className="ra-environment"><span/>{live?'正式資料':'本機環境'}</div></header>
-      <section className="ra-contentScroll" key={current.key} aria-label={current.title}><Content adminMe={adminMe}/></section>
+      <section className="ra-contentScroll" key={current.key} aria-label={current.title}><Content adminMe={adminMe}
+        initialUserId={targetUser} onOpenUser={id=>navigate('users',id)}/></section>
     </main>
   </div>;
 }

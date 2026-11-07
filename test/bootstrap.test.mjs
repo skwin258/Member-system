@@ -25,6 +25,63 @@ function database() {
 }
 const request = () => new Request('https://api.skclub.vip/activities');
 
+test('daily task proofs stay private, approval unlocks one reward, and nicknames stay internal', async () => {
+  const { db, sqlite } = database();
+  const files = new Map();
+  const env = { raffle_db: db, RAFFLE_R2: {
+    async put(key, stream, { httpMetadata }) { files.set(key, { body: await new Response(stream).arrayBuffer(), httpMetadata }); },
+    async get(key) { return files.get(key); },
+    async delete(key) { files.delete(key); },
+  } };
+  try {
+    const worker = await isolate();
+    await worker.fetch(request(), env);
+    sqlite.exec(`INSERT INTO admin_accounts(id,username,password,role,status) VALUES
+      (10,'admin','test','admin','active'),(20,'other','test','admin','active');
+      INSERT INTO admin_sessions(token,admin_id,role,username) VALUES ('owner',10,'admin','admin'),('other',20,'admin','other');
+      INSERT INTO users(id,username,password,created_by_admin_id) VALUES (1,'test-member','test',10);
+      INSERT INTO user_sessions(token,user_id,username) VALUES ('member',1,'test-member');`);
+    const call = (path, token, method = 'GET', body) => worker.fetch(new Request('https://api.skclub.vip' + path, {
+      method,
+      headers: {
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      },
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }), env);
+    assert.equal((await call('/daily-tasks', null)).status, 401);
+    assert.equal((await call('/daily-tasks/claim/instagram', 'member', 'POST')).status, 409);
+    const form = new FormData();
+    form.append('file', new Blob([new Uint8Array([137,80,78,71,13,10,26,10])], { type:'image/png' }), 'proof.png');
+    const submit = await (await call('/daily-tasks/proof/instagram', 'member', 'POST', form)).json();
+    assert.equal(submit.tasks.instagram, 'pending');
+    const notice = (await (await call('/admin/daily-tasks/notifications', 'owner')).json()).items[0];
+    assert.equal(notice.username, 'test-member');
+    assert.deepEqual((await (await call('/admin/daily-tasks/notifications', 'other')).json()).items, []);
+    const image = '/admin/daily-tasks/proof/' + notice.id;
+    assert.equal((await call(image, 'other')).status, 404);
+    assert.equal((await call(image, 'owner')).headers.get('cache-control'), 'private, no-store');
+    assert.equal((await call('/r2/' + [...files.keys()][0], null)).status, 404);
+    assert.equal((await call('/admin/daily-tasks/users/1/instagram', 'other', 'PATCH', { approved:true, proofId:notice.id })).status, 403);
+    assert.equal((await call('/admin/daily-tasks/users/1/instagram', 'owner', 'PATCH', { approved:true, proofId:notice.id })).status, 200);
+    const repeated = await Promise.all([1, 2].map(() => call('/daily-tasks/claim/instagram', 'member', 'POST')));
+    assert.ok(repeated.every(result => result.status === 200));
+    const usage = () => sqlite.prepare("SELECT times_left FROM user_activity_usage WHERE user_id=1 AND activity_key='redpacket'").get().times_left;
+    assert.equal(usage(), 1);
+    assert.equal((await (await call('/daily-tasks', 'member')).json()).progress, 1);
+    assert.equal((await call('/admin/daily-tasks/users/1/instagram', 'owner', 'PATCH', { approved:false, proofId:notice.id })).status, 200);
+    assert.equal((await call('/admin/daily-tasks/users/1/share_post', 'owner', 'PATCH', { approved:true })).status, 200);
+    assert.equal((await call('/daily-tasks/claim/share_post', 'member', 'POST')).status, 200);
+    assert.equal((await call('/daily-tasks/claim/checkin', 'member', 'POST')).status, 200);
+    assert.equal(usage(), 3);
+    await call('/admin/users/1', 'owner', 'PATCH', { admin_nickname:'內部暱稱' });
+    const list = await (await call('/admin/users?limit=50&q=' + encodeURIComponent('內部暱稱'), 'owner')).json();
+    assert.equal(list.items[0].admin_nickname, '內部暱稱');
+    const me = await (await call('/auth/me', 'member')).json();
+    assert.equal(me.user.admin_nickname, undefined);
+  } finally { sqlite.close(); }
+});
+
 test('home banner overrides are public, while changes and image uploads require admin access', async () => {
   const { db, sqlite } = database();
   try {
@@ -164,7 +221,7 @@ test('a schema version change reruns initialization, then marks the completed ve
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
     assert.ok(data.queries.length > 100);
-    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-07.admin-shop-v5');
+    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-07.daily-tasks-v6');
   } finally { data.sqlite.close(); }
 });
 
@@ -178,7 +235,7 @@ test('existing arcade databases only run the additive shop upgrade', async () =>
     data.queries.length = 0;
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
-    assert.ok(data.queries.length < 10);
+    assert.ok(data.queries.length < 20);
     const row = data.sqlite.prepare("SELECT reward_discount,reward_welfare FROM shop_products WHERE id='saved'").get();
     assert.deepEqual([row.reward_discount, row.reward_welfare], [0,25]);
   } finally { data.sqlite.close(); }

@@ -58,7 +58,7 @@ function settle(step){
 function move(step){if(!busy&&!start)settle(step)}
 root.querySelector('.fh-prev').onclick=()=>move(-1);
 root.querySelector('.fh-next').onclick=()=>move(1);
-listen(document,'keydown',e=>{if(e.target.closest('input,textarea,select,.mbAuthOverlay,.login-promotion-overlay'))return;if(e.key==='ArrowRight'){e.preventDefault();move(1)}if(e.key==='ArrowLeft'){e.preventDefault();move(-1)}});
+listen(document,'keydown',e=>{if(e.target.closest('input,textarea,select,.mbAuthOverlay,.login-promotion-overlay,.daily-tasks-dialog'))return;if(e.key==='ArrowRight'){e.preventDefault();move(1)}if(e.key==='ArrowLeft'){e.preventDefault();move(-1)}});
 listen(scene,'pointerdown',e=>{
  if(busy||e.target.closest('button,header,.fh-banner,.fh-announcement')||!e.isPrimary||e.button!==0)return;
  start={x:e.clientX,y:e.clientY,id:e.pointerId,time:performance.now(),horizontal:false};
