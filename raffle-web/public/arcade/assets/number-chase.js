@@ -1,4 +1,4 @@
-import { PLAY_COST, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember } from './s-wallet.js';
+import { PLAY_COST, allowArcadeEntry, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember } from './s-wallet.js';
 
 let tiers = [
   { limit: 9000, reward: 1000 },
@@ -195,7 +195,10 @@ async function finish(elapsed) {
 entry.addEventListener('click', async () => {
   if (entry.disabled) return;
   entry.disabled = true;
-  try { await configReady; } finally { entry.disabled = closed; }
+  try {
+    if (!await allowArcadeEntry()) return;
+    await configReady;
+  } finally { entry.disabled = closed; }
   if (closed) return;
   lobby.inert = true;
   screen.classList.add('active');
@@ -260,7 +263,8 @@ popup.addEventListener('click', event => {
   if (event.target === popup) void dismissResult();
 });
 document.querySelectorAll('[data-game="soon"]').forEach(tile => {
-  tile.addEventListener('click', () => {
+  tile.addEventListener('click', async () => {
+    if (!await allowArcadeEntry()) return;
     byId('popupTitle').textContent = '即將開放';
     byId('popupText').textContent = '這座神殿仍在封印中，敬請期待。';
     popupOk.textContent = '知道了';

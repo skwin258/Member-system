@@ -499,7 +499,7 @@ h1, h2, h3, p { margin: 0; }
 </section>
 <script type="module" src="./assets/number-chase.js"></script>
 <script type="module">
-import { PLAY_COST, dismissOnBackdrop, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember, listenForArcadeBack } from './assets/s-wallet.js';
+import { PLAY_COST, allowArcadeEntry, dismissOnBackdrop, getArcadeSettings, getRewardTiers, inMemberApp, prepareArcadeRound, requestMember, listenForArcadeBack } from './assets/s-wallet.js';
 
 document.querySelectorAll('dialog').forEach(dismissOnBackdrop);
 
@@ -515,6 +515,12 @@ void getArcadeSettings().then(({ claw }) => {
 });
 
 if (inMemberApp) {
+  document.addEventListener('click', async event => {
+    const link = event.target.closest('.claw-entry, a.activity-float');
+    if (!link || event.defaultPrevented) return;
+    event.preventDefault();
+    if (await allowArcadeEntry() && link.hasAttribute('href')) window.location.assign(link.href);
+  });
   for (const button of document.querySelectorAll('.game-top .back')) button.hidden = true;
   listenForArcadeBack(() => {
     const verification = document.querySelector('.arcade-proof-dialog[open]');
@@ -587,8 +593,9 @@ if (inMemberApp) {
     }
   }
 
-  document.getElementById('checkinButton').addEventListener('click', event => {
+  document.getElementById('checkinButton').addEventListener('click', async event => {
     if (event.defaultPrevented || dialog.open) return;
+    if (!await allowArcadeEntry() || dialog.open) return;
     dialog.showModal();
     updateCountdown();
     clearInterval(interval);
@@ -812,7 +819,10 @@ if (inMemberApp) {
   entry.addEventListener('click', async () => {
     if (entry.disabled) return;
     entry.disabled = true;
-    try { await configReady; } finally { entry.disabled = closed; }
+    try {
+      if (!await allowArcadeEntry()) return;
+      await configReady;
+    } finally { entry.disabled = closed; }
     if (closed) return;
     reset();
     lobby.inert = true;

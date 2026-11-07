@@ -1,6 +1,6 @@
 import { API_BASE } from '../../config';
 // raffle-web/src/pages/front/FrontShell.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import "./frontShell.css";
 
 import LoginBox from "../../LoginBox";
@@ -50,6 +50,7 @@ export default function FrontShell({
   const [recordsView, setRecordsView] = useState("raffle");
 
   const [showGuestAuth, setShowGuestAuth] = useState(false);
+  const arcadeFrame = useRef(null);
   const [showRegister, setShowRegister] = useState(false);
 
   const titleMap = {
@@ -87,7 +88,8 @@ export default function FrontShell({
   function renderContent() {
     if (activeKey === "promo") return <PromoPage me={me} />;
 
-    if (activeKey === "treasure") return <ArcadeFrame onWalletChange={onRefreshMe || onRefresh} />;
+    if (activeKey === "treasure") return <ArcadeFrame ref={arcadeFrame}
+      onWalletChange={onRefreshMe || onRefresh} onLoginRequired={needLogin} loginOpen={showGuestAuth} />;
 
     if (activeKey === "records") {
       if (isGuest) return null;
@@ -245,6 +247,7 @@ export default function FrontShell({
               onLoggedIn={async () => {
                 setShowGuestAuth(false);
                 await onUserLoggedIn?.();
+                arcadeFrame.current?.reset();
               }}
             />
           </div>

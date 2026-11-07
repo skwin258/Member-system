@@ -427,7 +427,8 @@ function needLogin() {
             <span>S 幣餘額 <strong>{isGuest ? "—" : Number(me?.user?.s_balance || 0).toLocaleString("zh-TW")}</strong></span>
           </div>
         }>
-          <ArcadeFrame ref={arcadeFrame} onWalletChange={onRefreshMe || onRefresh} />
+          <ArcadeFrame ref={arcadeFrame} onWalletChange={onRefreshMe || onRefresh}
+            onLoginRequired={needLogin} loginOpen={showGuestAuth} />
         </MobilePageFrame>
       );
     }
@@ -510,6 +511,7 @@ function needLogin() {
     setShowGuestAuth(false);
     setAuthDefaultView("login");
     await onUserLoggedIn?.();
+    arcadeFrame.current?.reset();
   }}
 />
       </div>

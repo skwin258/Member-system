@@ -47,6 +47,15 @@ export function requestMember(action, ...args) {
   });
 }
 
+export async function allowArcadeEntry() {
+  if (!inMemberApp) return true;
+  const result = await requestMember('checkLogin');
+  if (result?.status === 401) return false;
+  if (result?.success) return true;
+  window.alert(result?.error || '目前無法確認登入狀態，請重新整理後再試。');
+  return false;
+}
+
 function askForArcadeProof(url) {
   return new Promise(resolve => {
     const challenge = new URL(url);
