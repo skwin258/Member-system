@@ -1,51 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { api, clearAdminToken } from "../../api";
 import "./adminUsers.css";
 import { formatTaipeiDateTime } from "../../utils/taipeiTime";
 
-console.log("🔥 AdminUserControl loaded");
-
-function norm(s) {
-  return String(s ?? "").trim().toLowerCase();
-}
-
-function isDigits(s) {
-  return /^[0-9]+$/.test(String(s ?? "").trim());
-}
-
 function fmtDT(s) {
   return formatTaipeiDateTime(s) || "";
-}
-
-function filterUsersByQ(list, qRaw) {
-  const q = String(qRaw ?? "").trim();
-  if (!q) return list;
-
-  const qLower = q.toLowerCase();
-  const qIsDigits = isDigits(q);
-
-  return (Array.isArray(list) ? list : []).filter((u) => {
-    const idStr = String(u?.id ?? "");
-    const username = norm(u?.username || u?.account);
-    const name = norm(u?.name || u?.display_name);
-    const lineId = norm(u?.line_id);
-
-    if (qIsDigits) {
-      if (idStr === q) return true;
-      return (
-        username.includes(qLower) ||
-        name.includes(qLower) ||
-        lineId.includes(qLower)
-      );
-    }
-
-    return (
-      idStr.includes(q) ||
-      username.includes(qLower) ||
-      name.includes(qLower) ||
-      lineId.includes(qLower)
-    );
-  });
 }
 
 export default function AdminUserControl() {
@@ -53,6 +12,11 @@ export default function AdminUserControl() {
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
   const [items, setItems] = useState([]);
+  const [nextBefore, setNextBefore] = useState(null);
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const listRequest = useRef(0);
+  const detailRequest = useRef(0);
+  const logsRequest = useRef(0);
 
   const [selectedId, setSelectedId] = useState(null);
   const [view, setView] = useState("users");
@@ -62,6 +26,8 @@ export default function AdminUserControl() {
   const [user, setUser] = useState(null);
   const [logs, setLogs] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [logsStatus, setLogsStatus] = useState("");
+  const [ordersStatus, setOrdersStatus] = useState("");
   const [redeemLoading, setRedeemLoading] = useState(false);
 const [redeemRows, setRedeemRows] = useState([]);
 
@@ -87,38 +53,30 @@ const [redeemRows, setRedeemRows] = useState([]);
   const [adjAction, setAdjAction] = useState("新增");
   const [adjNote, setAdjNote] = useState("");
 
-  const load = async () => {
+  const load = async (before = null) => {
+    const requestId = ++listRequest.current;
     setErr("");
     setLoading(true);
 
     try {
-      const query = String(q ?? "").trim();
-      const r = await api.adminListUsers(query);
-
-      if (!r?.success) {
-        setErr(r?.error || "讀取失敗");
-        setItems([]);
-        return;
-      }
-
-      const raw = Array.isArray(r.items)
-        ? r.items
-        : Array.isArray(r.users)
-        ? r.users
-        : [];
-
-      const filtered = query ? filterUsersByQ(raw, query) : raw;
-      setItems(filtered);
+      const query = before ? appliedQuery : q.trim();
+      const r = await api.adminListUsers(query, { limit: 50, before });
+      if (requestId !== listRequest.current) return;
+      if (!r?.success) throw new Error(r?.error || "讀取失敗");
+      const page = Array.isArray(r.items) ? r.items : [];
+      setItems(previous => before ? [...previous, ...page] : page);
+      setNextBefore(r.next_before ?? null);
+      setAppliedQuery(query);
     } catch (e) {
+      if (requestId !== listRequest.current) return;
       console.error(e);
       setErr(e?.message || "讀取失敗");
-      setItems([]);
 
       if (String(e?.message || "").toLowerCase().includes("unauthorized")) {
         clearAdminToken();
       }
     } finally {
-      setLoading(false);
+      if (requestId === listRequest.current) setLoading(false);
     }
   };
 
@@ -181,27 +139,42 @@ const toggleReview = async (id) => {
 }, [view]);
 
   async function openUser(u) {
-    if (!u?.id) return;
+    if (!u?.id || saving) return;
 
+    const requestId = ++detailRequest.current;
+    const current = () => requestId === detailRequest.current;
     setSelectedId(u.id);
     setDetailLoading(true);
     setUser(null);
     setLogs([]);
     setOrders([]);
+    setLogsStatus("讀取中…");
+    setOrdersStatus("讀取中…");
     setErr("");
 
-    try {
-      let full = u;
-
+    async function loadHistory(promise, field, setRows, setStatus, isCurrent = current) {
       try {
-        const data = await api.adminGetUser(u.id);
-        if (data?.success !== false && data?.user) {
-          full = data.user;
+        const data = await promise;
+        if (!data?.success) throw new Error(data?.error || "紀錄讀取失敗");
+        if (isCurrent()) {
+          setRows(data.items || data[field] || []);
+          setStatus("");
         }
-      } catch (_) {
-        // 後端如果沒有 /admin/users/:id，就沿用列表資料
+      } catch (error) {
+        if (isCurrent()) setStatus(error.message || "紀錄讀取失敗");
       }
+    }
 
+    const detail = api.adminGetUser(u.id);
+    const logId = ++logsRequest.current;
+    void loadHistory(api.adminUserWalletLogs(u.id, { days: 90 }), "logs", setLogs, setLogsStatus,
+      () => current() && logId === logsRequest.current);
+    void loadHistory(api.adminUserOrders(u.id, { days: 90 }), "orders", setOrders, setOrdersStatus);
+    try {
+      const data = await detail;
+      if (!current()) return;
+      if (!data?.success || !data.user) throw new Error(data?.error || "讀取使用者失敗");
+      const full = data.user;
       setUser(full);
 
       // 每次切換使用者時重置錢包異動欄位
@@ -210,6 +183,7 @@ const toggleReview = async (id) => {
       setDeltaD(0);
       setAdjAction("新增");
       setAdjNote("");
+      setPw("");
 
       setAccount(full?.account || full?.username || "");
       setName(full?.name || full?.display_name || "");
@@ -225,27 +199,12 @@ const toggleReview = async (id) => {
         Number(full?.bank_locked ?? full?.bank?.bank_locked ?? 0)
       );
 
-      const [l1, o1] = await Promise.allSettled([
-        api.adminUserWalletLogs(u.id, { days: 90 }),
-        api.adminUserOrders(u.id, { days: 90 }),
-      ]);
-
-      setLogs(
-        l1.status === "fulfilled"
-          ? l1.value?.items || l1.value?.logs || []
-          : []
-      );
-
-      setOrders(
-        o1.status === "fulfilled"
-          ? o1.value?.items || o1.value?.orders || []
-          : []
-      );
     } catch (e) {
+      if (!current()) return;
       console.error(e);
       setErr(e?.message || "讀取使用者失敗");
     } finally {
-      setDetailLoading(false);
+      if (current()) setDetailLoading(false);
     }
   }
 
@@ -383,10 +342,13 @@ const toggleReview = async (id) => {
       );
 
       try {
+        logsRequest.current++;
+        setLogsStatus("讀取中…");
         const l1 = await api.adminUserWalletLogs(user.id, { days: 90 });
         setLogs(l1?.items || l1?.logs || []);
+        setLogsStatus(l1?.success ? "" : l1?.error || "紀錄讀取失敗");
       } catch (_) {
-        // 不影響主流程
+        setLogsStatus("紀錄讀取失敗");
       }
 
       setDeltaS(0);
@@ -415,6 +377,7 @@ const toggleReview = async (id) => {
       if (!r?.success) throw new Error(r?.error || "刪除失敗");
 
       setItems((prev) => prev.filter((x) => String(x.id) !== String(user.id)));
+      detailRequest.current++;
       setSelectedId(null);
       setUser(null);
       setLogs([]);
@@ -427,14 +390,6 @@ const toggleReview = async (id) => {
       setSaving(false);
     }
   }
-
-  const sorted = useMemo(() => {
-    return [...items].sort((a, b) =>
-      String(a.username ?? a.account ?? "").localeCompare(
-        String(b.username ?? b.account ?? "")
-      )
-    );
-  }, [items]);
 
   return (
     <div className="auZ auNoPageScroll">
@@ -465,7 +420,7 @@ const toggleReview = async (id) => {
         if (e.key === "Enter") load();
       }}
     />
-    <button className="auBtn primary" onClick={load} disabled={loading}>
+    <button className="auBtn primary" onClick={() => load()} disabled={loading}>
       {loading ? "讀取中..." : "搜尋"}
     </button>
   </div>
@@ -483,13 +438,14 @@ const toggleReview = async (id) => {
   </div>
 
   <div className="auLeftList">
-    {sorted.map((u) => {
+    {items.map((u) => {
       const active = String(selectedId) === String(u.id);
       return (
         <button
           key={u.id}
           className={`auItem ${active ? "active" : ""}`}
           onClick={() => openUser(u)}
+          disabled={saving}
         >
           <div className="auItemTop">
             <span className="auIdBadge">#{u.id}</span>
@@ -500,9 +456,13 @@ const toggleReview = async (id) => {
       );
     })}
 
-    {!sorted.length ? (
+    {nextBefore && <button className="auBtn" type="button" disabled={loading} onClick={() => load(nextBefore)}>
+      載入更多使用者
+    </button>}
+
+    {!items.length ? (
       <div className="auEmpty">
-        {q.trim() ? "沒有符合的使用者" : "目前沒有資料"}
+        {loading ? "讀取中…" : appliedQuery ? "沒有符合的使用者" : "目前沒有資料"}
       </div>
     ) : null}
   </div>
@@ -753,7 +713,7 @@ const toggleReview = async (id) => {
                 {!logs.length ? (
                   <tr>
                     <td colSpan={6} className="empty">
-                      無紀錄
+                      {logsStatus || "無紀錄"}
                     </td>
                   </tr>
                 ) : null}
@@ -798,7 +758,7 @@ const toggleReview = async (id) => {
                 {!orders.length ? (
                   <tr>
                     <td colSpan={5} className="empty">
-                      無紀錄
+                      {ordersStatus || "無紀錄"}
                     </td>
                   </tr>
                 ) : null}

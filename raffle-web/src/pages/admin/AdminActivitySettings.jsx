@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../../api";
-import AdminArcadeRules from "./AdminArcadeRules";
+import AdminArcadeRules, { ARCADE_GAME_TABS } from "./AdminArcadeRules";
 
 export default function AdminActivitySettings() {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [err, setErr] = useState("");
   const [savingKey, setSavingKey] = useState("");
+  const [tab, setTab] = useState("redpacket");
 
   const load = async () => {
     setErr("");
@@ -26,9 +27,15 @@ export default function AdminActivitySettings() {
     load();
   }, []);
 
+  const tabs = [["redpacket", "紅包抽獎"], ["wheel", "輪盤抽獎"], ...ARCADE_GAME_TABS, ["number", "數字抽獎"]];
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => (Number(a.sort || 0) - Number(b.sort || 0)) || String(a.key).localeCompare(String(b.key)));
   }, [items]);
+  for (const row of sorted) {
+    if (!tabs.some(([key]) => key === row.key)) tabs.push([row.key, row.name || row.key]);
+  }
+  const activity = sorted.filter(row => row.key === tab);
+  const hasGameRules = tab === "redpacket" || tab === "wheel" || ARCADE_GAME_TABS.some(([key]) => key === tab);
 
   const setRow = (key, patch) => {
     setItems((prev) =>
@@ -64,7 +71,10 @@ export default function AdminActivitySettings() {
   return (
     <div style={{ textAlign: "left" }}>
       <h2 style={{ marginTop: 0 }}>活動設定</h2>
-      <AdminArcadeRules />
+      <div className="admin-settings-tabs" aria-label="活動與遊戲">
+        {tabs.map(([key, name]) => <button key={key} type="button" className={`btn ${tab === key ? "btnActive" : ""}`}
+          aria-pressed={tab === key} onClick={() => setTab(key)}>{name}</button>)}
+      </div>
 
       <div style={{ opacity: 0.85, marginBottom: 12, lineHeight: 1.6 }}>
         此頁面控制前台活動的開啟/關閉與基本規則。變更後前台會即時生效。
@@ -74,13 +84,13 @@ export default function AdminActivitySettings() {
         <div style={{ marginBottom: 12, color: "#ffb3b3" }}>{err}</div>
       ) : null}
 
-      <div style={{ marginBottom: 12 }}>
+      {(activity.length > 0 || loading || err) && <div style={{ marginBottom: 12 }}>
         <button className="btn" onClick={load} disabled={loading}>
           {loading ? "讀取中..." : "重新讀取"}
         </button>
-      </div>
+      </div>}
 
-      <div style={{ overflowX: "auto" }}>
+      {activity.length > 0 && <div style={{ overflowX: "auto" }}>
         <div className="temple-table-scroll"><table className="adminTable" style={{ width: "100%" }}>
           <thead>
             <tr>
@@ -98,7 +108,7 @@ export default function AdminActivitySettings() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((row) => (
+            {activity.map((row) => (
               <tr key={row.key}>
                 <td>{row.key}</td>
                 <td>
@@ -198,11 +208,12 @@ export default function AdminActivitySettings() {
             ))}
           </tbody>
         </table></div>
-      </div>
+      </div>}
 
-      <div style={{ marginTop: 12, opacity: 0.75, lineHeight: 1.6 }}>
+      {activity.length > 0 && <div style={{ marginTop: 12, opacity: 0.75, lineHeight: 1.6 }}>
         注意：活動時間欄位若留空，代表不限制；若填寫，格式建議使用 （例如 2026-03-01 12:00）。
-      </div>
+      </div>}
+      {hasGameRules && <AdminArcadeRules key={tab} game={tab} />}
     </div>
   );
 }

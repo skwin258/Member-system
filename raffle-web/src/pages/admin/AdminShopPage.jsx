@@ -1,18 +1,15 @@
 import { API_BASE } from '../../config';
 // raffle-web/src/pages/admin/AdminShopPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getAdminToken } from "../../api";
 
-/**
- * 後台：商城管理（不依賴 api.request / api.requestAdmin2）
- * - 跑馬燈 marquee_text：GET/POST /admin/shop/config（admin auth）
- * - 商品列表：GET /shop/products（public）
- * - 商品新增：POST /admin/shop/products（admin auth，後端若未做會顯示錯誤）
- * - 商品刪除：DELETE /admin/shop/products/:id（admin auth）
- */
-
-
 const CATEGORIES = ["稀有商品", "折抵金", "現金"];
+const emptyProduct = {
+  name: "", image_url: "", cost_s: 0, reward_discount: 0, reward_welfare: 0,
+  category: "折抵金", enabled: 1, sort: 0,
+};
+const imageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const imageSource = url => url.startsWith("/r2/") ? API_BASE + url : url;
 
 function toNum(v, fallback = 0) {
   const n = Number(v);
@@ -25,6 +22,8 @@ function normalizeProduct(p) {
     name: String(p?.name ?? ""),
     image_url: String(p?.image_url ?? ""),
     cost_s: toNum(p?.cost_s, 0),
+    reward_discount: toNum(p?.reward_discount, 0),
+    reward_welfare: toNum(p?.reward_welfare, 0),
     category: String(p?.category ?? ""),
     enabled: toNum(p?.enabled, 1),
     deleted: toNum(p?.deleted, 0),
@@ -44,7 +43,8 @@ async function safeJson(res) {
 
 async function http(path, { method = "GET", body, auth } = {}) {
   const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const multipart = body instanceof FormData;
+  if (body !== undefined && !multipart) headers["Content-Type"] = "application/json";
   if (auth === "admin") {
     const t = getAdminToken?.() || "";
     if (t) headers["Authorization"] = `Bearer ${t}`;
@@ -53,7 +53,7 @@ async function http(path, { method = "GET", body, auth } = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: multipart ? body : body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   const data = await safeJson(res);
@@ -80,27 +80,26 @@ export default function AdminShopPage() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
 
-  // create product
-  const [creating, setCreating] = useState(false);
-const [form, setForm] = useState({
-  name: "",
-  image_url: "",
-  cost_s: 0,
-  reward_discount: 0,
-  reward_welfare: 0,
-  category: "折抵金",
-  enabled: 1,
-  sort: 0,
-});
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [form, setForm] = useState(emptyProduct);
+  const [image, setImage] = useState(null);
+  const [fileKey, setFileKey] = useState(0);
+  const [selected, setSelected] = useState([]);
+  const productForm = useRef(null);
+  const productBusy = savingProduct || deleting || loadingProducts;
 
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
   useEffect(() => {
     loadConfig();
-    loadProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (tab === "products") void loadProducts();
+  }, [tab]);
 
   async function loadConfig() {
     setErr("");
@@ -138,8 +137,12 @@ const [form, setForm] = useState({
     setMsg("");
     setLoadingProducts(true);
     try {
-      const r = await http("/shop/products", { method: "GET" });
-      if (r?.success) setProducts((r.items || []).map(normalizeProduct));
+      const r = await http("/admin/shop/products", { auth: "admin" });
+      if (r?.success) {
+        const list = (r.items || []).map(normalizeProduct).filter(p => !p.deleted);
+        setProducts(list);
+        setSelected(ids => ids.filter(id => list.some(p => p.id === id)));
+      }
       else setErr(r?.error || "讀取商品失敗");
     } catch (e) {
       setErr(String(e?.message || e));
@@ -150,7 +153,6 @@ const [form, setForm] = useState({
 
   const filtered = useMemo(() => {
     let list = Array.isArray(products) ? [...products] : [];
-    list = list.filter((p) => !p.deleted);
 
     if (cat !== "all") list = list.filter((p) => p.category === cat);
     if (q.trim()) {
@@ -166,43 +168,55 @@ const [form, setForm] = useState({
     return list;
   }, [products, q, cat]);
 
-  async function softDeleteProduct(id) {
-    if (!id) return;
-    if (!confirm(`確定刪除商品：${id}？（soft delete）`)) return;
-
+  function editProduct(product = emptyProduct) {
+    setForm(product);
+    setImage(null);
+    setFileKey(key => key + 1);
     setErr("");
     setMsg("");
+    if (product.id) productForm.current?.scrollIntoView?.({ block: "nearest" });
+  }
+
+  async function deleteProducts(ids, description) {
+    if (productBusy || !ids.length || !confirm(`確定刪除${description}？`)) return;
+    setErr("");
+    setMsg("");
+    setDeleting(true);
     try {
-      const r = await http(`/admin/shop/products/${encodeURIComponent(id)}`, {
-        method: "DELETE",
+      const r = await http("/admin/shop/products/batch-delete", {
+        method: "POST",
         auth: "admin",
+        body: { ids },
       });
-      if (r?.success) {
-        setMsg("✅ 已刪除（soft delete）");
-        await loadProducts();
-      } else {
-        setErr(r?.error || "刪除失敗");
-      }
+      if (!r?.success) throw new Error(r?.error || "刪除失敗");
+      setProducts(list => list.filter(product => !ids.includes(product.id)));
+      setSelected(list => list.filter(id => !ids.includes(id)));
+      if (ids.includes(form.id)) editProduct();
+      setMsg(`已刪除 ${r.deleted} 件商品`);
     } catch (e) {
       setErr(String(e?.message || e));
+    } finally {
+      setDeleting(false);
     }
   }
 
-  async function createProduct() {
+  async function saveProduct(event) {
+    event.preventDefault();
+    if (productBusy) return;
     setErr("");
     setMsg("");
-    setCreating(true);
+    setSavingProduct(true);
     try {
-const payload = {
-  name: String(form.name || "").trim(),
-  image_url: String(form.image_url || "").trim(),
-  cost_s: toNum(form.cost_s, 0),
-  reward_discount: toNum(form.reward_discount, 0),
-  reward_welfare: toNum(form.reward_welfare, 0),
-  category: String(form.category || "").trim(),
-  enabled: toNum(form.enabled, 1),
-  sort: toNum(form.sort, 0),
-};
+      const payload = {
+        name: form.name.trim(),
+        image_url: form.image_url.trim(),
+        cost_s: toNum(form.cost_s, 0),
+        reward_discount: toNum(form.reward_discount, 0),
+        reward_welfare: toNum(form.reward_welfare, 0),
+        category: form.category.trim(),
+        enabled: toNum(form.enabled, 1),
+        sort: toNum(form.sort, 0),
+      };
 
       if (!payload.name) {
         setErr("請輸入商品名稱");
@@ -213,23 +227,38 @@ const payload = {
         return;
       }
 
-      const r = await http("/admin/shop/products", {
-        method: "POST",
+      if (image) {
+        if (!imageTypes.includes(image.type) || !image.size || image.size > 8 * 1024 * 1024) {
+          throw new Error("請上傳 8 MB 以內的 JPG、PNG、WebP 或 GIF 照片");
+        }
+        const body = new FormData();
+        body.append("file", image);
+        const upload = await http("/admin/shop/upload", { method: "POST", auth: "admin", body });
+        if (!upload?.success || !upload.url) throw new Error(upload?.error || "照片上傳失敗");
+        payload.image_url = upload.url;
+        setForm(current => ({ ...current, image_url: upload.url }));
+        setImage(null);
+        setFileKey(key => key + 1);
+      }
+
+      const path = form.id ? `/admin/shop/products/${encodeURIComponent(form.id)}` : "/admin/shop/products";
+      const r = await http(path, {
+        method: form.id ? "PATCH" : "POST",
         auth: "admin",
         body: payload,
       });
 
       if (r?.success) {
-        setMsg("✅ 已新增商品");
-        setForm((s) => ({ ...s, name: "", image_url: "", cost_s: 0, sort: 0 }));
+        editProduct();
         await loadProducts();
+        setMsg(form.id ? "已更新商品" : "已新增商品");
       } else {
-        setErr(r?.error || "新增失敗（後端可能尚未提供 POST /admin/shop/products）");
+        setErr(r?.error || "商品儲存失敗");
       }
     } catch (e) {
       setErr(String(e?.message || e));
     } finally {
-      setCreating(false);
+      setSavingProduct(false);
     }
   }
 
@@ -343,7 +372,7 @@ const payload = {
       )}
 
       {tab === "products" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 14 }}>
+        <div className="admin-shop-products">
           {/* 左：列表 */}
           <div
             style={{
@@ -354,11 +383,12 @@ const payload = {
               minHeight: 380,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <div style={{ fontWeight: 700 }}>商品列表</div>
 
               <button
                 onClick={loadProducts}
+                disabled={productBusy}
                 style={{
                   marginLeft: "auto",
                   padding: "8px 10px",
@@ -370,6 +400,10 @@ const payload = {
                 }}
               >
                 重新載入
+              </button>
+              <button className="btn" type="button" disabled={productBusy || !selected.length}
+                onClick={() => deleteProducts(selected, `這 ${selected.length} 件商品`)}>
+                批量刪除{selected.length ? `（${selected.length}）` : ""}
               </button>
             </div>
 
@@ -422,7 +456,7 @@ const payload = {
                     key={p.id}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "84px 1fr auto",
+                      gridTemplateColumns: "auto minmax(40px, 84px) minmax(0, 1fr) auto",
                       gap: 12,
                       padding: 10,
                       borderRadius: 14,
@@ -431,9 +465,14 @@ const payload = {
                       alignItems: "center",
                     }}
                   >
+                    <input type="checkbox" aria-label={`選取 ${p.name}`} checked={selected.includes(p.id)}
+                      disabled={productBusy} onChange={event => {
+                        const checked = event.target.checked;
+                        setSelected(ids => checked ? [...ids, p.id] : ids.filter(id => id !== p.id));
+                      }} />
                     <div
                       style={{
-                        width: 84,
+                        width: "100%",
                         height: 64,
                         borderRadius: 12,
                         overflow: "hidden",
@@ -443,8 +482,9 @@ const payload = {
                     >
                       {p.image_url ? (
                         <img
-                          src={p.image_url}
+                          src={imageSource(p.image_url)}
                           alt={p.name}
+                          loading="lazy"
                           style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         />
                       ) : null}
@@ -455,14 +495,18 @@ const payload = {
                         {p.name}
                       </div>
                       <div style={{ opacity: 0.85, fontSize: 13, marginTop: 2 }}>
-                        分類：{p.category || "-"}｜S幣：{p.cost_s}｜sort：{p.sort}｜enabled：{p.enabled}
+                        {p.category || "未分類"}｜{p.cost_s} S 幣｜{p.enabled ? "顯示" : "隱藏"}
                       </div>
                       <div style={{ opacity: 0.6, fontSize: 12, marginTop: 2 }}>id: {p.id}</div>
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <button type="button" className="btn" onClick={() => editProduct(p)} disabled={productBusy}>
+                        編輯
+                      </button>
                       <button
-                        onClick={() => softDeleteProduct(p.id)}
+                        onClick={() => deleteProducts([p.id], `「${p.name}」`)}
+                        disabled={productBusy}
                         style={{
                           padding: "8px 10px",
                           borderRadius: 12,
@@ -481,8 +525,7 @@ const payload = {
             )}
           </div>
 
-          {/* 右：新增 */}
-          <div
+          <form ref={productForm} onSubmit={saveProduct}
             style={{
               border: "1px solid rgba(255,255,255,.14)",
               background: "rgba(0,0,0,.25)",
@@ -491,9 +534,9 @@ const payload = {
               minHeight: 380,
             }}
           >
-            <div style={{ fontWeight: 700, marginBottom: 10 }}>新增商品</div>
+            <div style={{ fontWeight: 700, marginBottom: 10 }}>{form.id ? `編輯商品 ${form.name}` : "新增商品"}</div>
 
-            <div style={{ display: "grid", gap: 10 }}>
+            <fieldset disabled={productBusy} style={{ display: "grid", gap: 10, border: 0, padding: 0, margin: 0, minWidth: 0 }}>
               <label style={{ display: "grid", gap: 6 }}>
                 <div style={{ opacity: 0.85, fontSize: 13 }}>名稱</div>
                 <input
@@ -511,10 +554,14 @@ const payload = {
               </label>
 
               <label style={{ display: "grid", gap: 6 }}>
-                <div style={{ opacity: 0.85, fontSize: 13 }}>圖片 URL</div>
+                <div style={{ opacity: 0.85, fontSize: 13 }}>商品照片</div>
+                {form.image_url && <img src={imageSource(form.image_url)} alt="目前商品照片"
+                  style={{ width: 96, height: 72, objectFit: "cover", borderRadius: 8 }} />}
                 <input
-                  value={form.image_url}
-                  onChange={(e) => setForm((s) => ({ ...s, image_url: e.target.value }))}
+                  key={fileKey}
+                  type="file"
+                  accept={imageTypes.join(",")}
+                  onChange={event => setImage(event.target.files[0] || null)}
                   style={{
                     padding: "10px 12px",
                     borderRadius: 12,
@@ -596,7 +643,7 @@ const payload = {
                       outline: "none",
                     }}
                   >
-                    {CATEGORIES.map((c) => (
+                    {[...new Set([...CATEGORIES, form.category])].map((c) => (
                       <option key={c} value={c}>
                         {c}
                       </option>
@@ -624,9 +671,12 @@ const payload = {
                 </label>
               </div>
 
+              <label>排序
+                <input className="input" type="number" value={form.sort}
+                  onChange={event => setForm(current => ({ ...current, sort: event.target.value }))} />
+              </label>
               <button
-                onClick={createProduct}
-                disabled={creating}
+                type="submit"
                 style={{
                   marginTop: 6,
                   padding: "10px 14px",
@@ -635,13 +685,14 @@ const payload = {
                   background: "rgba(0,255,120,.12)",
                   color: "#fff",
                   cursor: "pointer",
-                  opacity: creating ? 0.6 : 1,
+                  opacity: savingProduct ? 0.6 : 1,
                 }}
               >
-                {creating ? "新增中..." : "新增商品"}
+                {savingProduct ? "儲存中…" : form.id ? "儲存商品" : "新增商品"}
               </button>
-            </div>
-          </div>
+              {form.id && <button type="button" className="btn" onClick={() => editProduct()}>取消編輯</button>}
+            </fieldset>
+          </form>
         </div>
       )}
     </div>

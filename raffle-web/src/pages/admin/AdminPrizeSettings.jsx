@@ -2,7 +2,7 @@ import { API_BASE } from '../../config';
 // raffle-web/src/pages/admin/AdminPrizeSettings.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api";
-import AdminArcadeRules from "./AdminArcadeRules";
+import AdminArcadeRules, { ARCADE_GAME_TABS } from "./AdminArcadeRules";
 import "./AdminPrizeSettings.css";
 
 
@@ -505,9 +505,7 @@ export default function AdminPrizeSettings() {
   return (
     <div style={{ textAlign: "left" }}>
       <h2 style={{ marginTop: 0 }}>獎項設定</h2>
-      <AdminArcadeRules prizes />
-
-      <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+      <div className="admin-settings-tabs" aria-label="獎項類別">
         <button className={`btn ${tab === "redpacket" ? "btnActive" : ""}`} onClick={() => setTab("redpacket")}>
           紅包抽獎
         </button>
@@ -515,6 +513,10 @@ export default function AdminPrizeSettings() {
         <button className={`btn ${tab === "wheel" ? "btnActive" : ""}`} onClick={() => setTab("wheel")}>
           輪盤抽獎
         </button>
+
+        {ARCADE_GAME_TABS.map(([key, name]) => <button key={key} type="button"
+          className={`btn ${tab === key ? "btnActive" : ""}`} aria-pressed={tab === key}
+          onClick={() => setTab(key)}>{name}</button>)}
 
         <button className="btn" onClick={() => setShowGiveModal(true)} title="給使用者抽獎次數">
           給次數
@@ -525,13 +527,16 @@ export default function AdminPrizeSettings() {
         此頁面調整的設定會直接影響前台抽獎結果與顯示。
       </div>
 
-      {err ? <div style={{ marginBottom: 12, color: "#ffb3b3" }}>{err}</div> : null}
+      {ARCADE_GAME_TABS.some(([key]) => key === tab) && <AdminArcadeRules key={tab} game={tab} prizes />}
 
-      <div style={{ marginBottom: 12 }}>
+      {(tab === "redpacket" || tab === "wheel") && <>
+        {err && <div style={{ marginBottom: 12, color: "#ffb3b3" }}>{err}</div>}
+        <div style={{ marginBottom: 12 }}>
         <button className="btn" onClick={load} disabled={loading}>
           {loading ? "讀取中..." : "重新讀取"}
         </button>
-      </div>
+        </div>
+      </>}
 
       {tab === "redpacket" ? (
         <div className="cardBox">

@@ -12,7 +12,7 @@ import { arcadeChallengePage, verifyArcadePreparation } from "./arcade-verificat
 const __BOOTSTRAP_STATE__ = { promise: null };
 // Bump when changing the schema/bootstrap below. Persisted in D1 so a new
 // Worker isolate does not repeat hundreds of schema/seed queries on first load.
-const SCHEMA_VERSION = '2026-11-07.arcade-v4';
+const SCHEMA_VERSION = '2026-11-07.admin-shop-v5';
 
 const __HOT_CACHE__ = new Map();
 
@@ -55,13 +55,35 @@ async function ensureBootstrapped(db) {
   if (__BOOTSTRAP_STATE__.promise) return __BOOTSTRAP_STATE__.promise;
 
   __BOOTSTRAP_STATE__.promise = (async () => {
+    let previousVersion;
     try {
       const state = await db.prepare("SELECT value FROM app_schema_state WHERE key='schema_version' LIMIT 1").first();
       if (state?.value === SCHEMA_VERSION) return;
+      previousVersion = state?.value;
     } catch (error) {
       // Only an absent marker table means initialization is needed. A transient
       // database error must not trigger schema changes or be marked successful.
       if (!/no such table:\s*app_schema_state/i.test(String(error?.message || error))) throw error;
+    }
+    const updateSchemaVersion = () => db.prepare(
+      "INSERT INTO app_schema_state (key,value) VALUES ('schema_version',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).bind(SCHEMA_VERSION).run();
+    const ensureShopAdminSchema = async () => {
+      const { results } = await db.prepare('PRAGMA table_info(shop_products)').all();
+      for (const name of ['reward_discount', 'reward_welfare']) {
+        if (results.some(column => column.name === name)) continue;
+        try {
+          await db.prepare(`ALTER TABLE shop_products ADD COLUMN ${name} INTEGER NOT NULL DEFAULT 0`).run();
+        } catch (error) {
+          if (!/duplicate column name/i.test(String(error?.message || error))) throw error;
+        }
+      }
+      await db.prepare("CREATE INDEX IF NOT EXISTS idx_users_created_by ON users(created_by_admin_id)").run();
+    };
+    if (previousVersion === '2026-11-07.arcade-v4') {
+      await ensureShopAdminSchema();
+      await updateSchemaVersion();
+      return;
     }
 /* =========================
  * Schema bootstrap + migrations
@@ -860,8 +882,8 @@ for (const a of seedActivities) {
 }
 
   await db.prepare('CREATE TABLE IF NOT EXISTS app_schema_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
-  await db.prepare("INSERT INTO app_schema_state (key,value) VALUES ('schema_version',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
-    .bind(SCHEMA_VERSION).run();
+  await ensureShopAdminSchema();
+  await updateSchemaVersion();
 
   })().catch((err) => {
     // 如果初始化失敗，允許下次再嘗試（避免整個服務卡死）
@@ -3717,8 +3739,10 @@ if (url.pathname === "/admin/shop/upload" && request.method === "POST") {
     return json({ success: false, error: "file required" }, { status: 400 });
   }
 
-  const origName = String(file.name || "upload.bin");
-  const ext = origName.includes(".") ? origName.split(".").pop() : "bin";
+  const ext = new Map([["image/jpeg", "jpg"], ["image/png", "png"], ["image/webp", "webp"], ["image/gif", "gif"]]).get(file.type);
+  if (!ext || !file.size || file.size > 8 * 1024 * 1024) {
+    return forbid("請上傳 8 MB 以內的 JPG、PNG、WebP 或 GIF 照片", 400);
+  }
   const key = `shop/${Date.now()}_${crypto.randomUUID()}.${ext}`;
 
   await bucket.put(key, file.stream(), {
@@ -3737,7 +3761,7 @@ if (url.pathname === "/admin/shop/products" && request.method === "GET") {
 
   const rows = await db
     .prepare(
-      `SELECT id, name, image_url, cost_s, category, enabled, deleted, sort, updated_at, created_at
+      `SELECT id, name, image_url, cost_s, category, reward_discount, reward_welfare, enabled, deleted, sort, updated_at, created_at
        FROM shop_products
        ORDER BY sort ASC, datetime(created_at) DESC`
     )
@@ -3750,6 +3774,8 @@ if (url.pathname === "/admin/shop/products" && request.method === "GET") {
       name: String(r.name || ""),
       image_url: String(r.image_url || ""),
       cost_s: Number(r.cost_s || 0),
+      reward_discount: Number(r.reward_discount || 0),
+      reward_welfare: Number(r.reward_welfare || 0),
       category: String(r.category || ""),
       enabled: Number(r.enabled || 0),
       deleted: Number(r.deleted || 0),
@@ -3829,6 +3855,8 @@ if (url.pathname.startsWith("/admin/shop/products/") && request.method === "PATC
   if (body.name !== undefined) setIf("name", String(body.name || "").trim());
   if (body.image_url !== undefined) setIf("image_url", String(body.image_url || "").trim());
   if (body.cost_s !== undefined) setIf("cost_s", Math.max(0, Math.floor(Number(body.cost_s || 0))));
+  if (body.reward_discount !== undefined) setIf("reward_discount", Math.max(0, Math.floor(Number(body.reward_discount || 0))));
+  if (body.reward_welfare !== undefined) setIf("reward_welfare", Math.max(0, Math.floor(Number(body.reward_welfare || 0))));
   if (body.category !== undefined) setIf("category", String(body.category || "").trim());
   if (body.enabled !== undefined) setIf("enabled", Number(body.enabled) ? 1 : 0);
   if (body.deleted !== undefined) setIf("deleted", Number(body.deleted) ? 1 : 0);
@@ -3854,6 +3882,18 @@ if (url.pathname.startsWith("/admin/shop/products/") && request.method === "PATC
 // SHOP (admin): "delete" product (soft delete)
 // DELETE /admin/shop/products/:id
 // =========================
+if (url.pathname === "/admin/shop/products/batch-delete" && request.method === "POST") {
+  if (!admin) return forbid("Unauthorized", 401);
+  const ids = (await safeJson(request))?.ids;
+  if (!Array.isArray(ids) || !ids.length || ids.some(id => typeof id !== "string" || !id.trim())) {
+    return forbid("請選擇要刪除的商品", 400);
+  }
+  const result = await db.prepare(
+    "UPDATE shop_products SET deleted=1, updated_at=datetime('now') WHERE deleted=0 AND id IN (SELECT value FROM json_each(?))"
+  ).bind(JSON.stringify(ids)).run();
+  return json({ success: true, deleted: Number(result.meta?.changes || 0) });
+}
+
 if (url.pathname.startsWith("/admin/shop/products/") && request.method === "DELETE") {
   if (!admin) return forbid("Unauthorized", 401);
 
@@ -4588,6 +4628,9 @@ if (url.pathname === "/admin/users" && request.method === "GET") {
 
   const isSuper = isSuperAdmin(admin);
   const binds = [];
+  const conditions = [];
+  const limitParam = url.searchParams.get("limit");
+  const limit = limitParam === null ? 0 : Math.min(100, Math.max(1, Math.trunc(Number(limitParam) || 50)));
 
   let q = `
     SELECT
@@ -4626,18 +4669,39 @@ if (url.pathname === "/admin/users" && request.method === "GET") {
   `;
 
   if (!isSuper) {
-    q += ` WHERE u.created_by_admin_id=? `;
+    conditions.push("u.created_by_admin_id=?");
     binds.push(Number(admin.admin_id || 0));
   }
+  if (limit) {
+    const before = Number(url.searchParams.get("before"));
+    if (Number.isSafeInteger(before) && before > 0) {
+      conditions.push("u.id < ?");
+      binds.push(before);
+    }
+    const search = String(url.searchParams.get("q") || "").trim().toLowerCase();
+    if (search) {
+      conditions.push(`(CAST(u.id AS TEXT)=? OR instr(lower(u.username),?)>0
+        OR instr(lower(u.display_name),?)>0 OR instr(lower(u.line_id),?)>0)`);
+      binds.push(search, search, search, search);
+    }
+  }
 
+  if (conditions.length) q += " WHERE " + conditions.join(" AND ");
   q += ` ORDER BY u.id DESC `;
+  if (limit) {
+    q += " LIMIT ?";
+    binds.push(limit + 1);
+  }
 
   const stmt = db.prepare(q);
   const rows = binds.length ? await stmt.bind(...binds).all() : await stmt.all();
+  const matches = rows?.results || [];
+  const items = limit ? matches.slice(0, limit) : matches;
 
   return json({
     success: true,
-    items: (rows?.results || []).map((r) => ({
+    ...(limit ? { next_before: matches.length > limit ? items.at(-1).id : null } : {}),
+    items: items.map((r) => ({
       id: Number(r.id || 0),
       username: r.username || "",
       name: r.display_name || "",

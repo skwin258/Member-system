@@ -25,6 +25,65 @@ function database() {
 }
 const request = () => new Request('https://api.skclub.vip/activities');
 
+test('admin shop keeps hidden products editable and batch deletion preserves product records', async () => {
+  const { db, sqlite } = database();
+  try {
+    const worker = await isolate();
+    const bucket = { async put(key, stream, options) {
+      assert.match(key, /^shop\/.+\.png$/);
+      assert.equal(options.httpMetadata.contentType, 'image/png');
+      assert.ok((await new Response(stream).arrayBuffer()).byteLength);
+    } };
+    const call = (path, method = 'GET', body) => worker.fetch(new Request('https://api.skclub.vip' + path, {
+      method,
+      headers: { Authorization: 'Bearer shop-admin', ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }) },
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }), { raffle_db: db, RAFFLE_R2: bucket });
+    await call('/activities');
+    sqlite.exec("INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('shop-admin',1,'owner','admin')");
+    const form = new FormData();
+    form.append('file', new Blob([new Uint8Array([137,80,78,71,13,10,26,10])], { type: 'image/png' }), 'photo.png');
+    const { url } = await (await call('/admin/shop/upload', 'POST', form)).json();
+    assert.match(url, /^\/r2\/shop\/.+\.png$/);
+    assert.equal((await call('/admin/shop/products', 'POST', { id:'a', name:'A', category:'現金', enabled:0, image_url:url })).status, 200);
+    assert.equal((await call('/admin/shop/products/a', 'PATCH', { reward_discount:14, reward_welfare:8 })).status, 200);
+    assert.equal((await call('/admin/shop/products', 'POST', { id:'b', name:'B', category:'現金' })).status, 200);
+    const { items } = await (await call('/admin/shop/products')).json();
+    const hidden = items.find(item => item.id === 'a');
+    assert.deepEqual([hidden.enabled, hidden.reward_discount, hidden.reward_welfare, hidden.image_url], [0,14,8,url]);
+    assert.equal((await (await call('/admin/shop/products/batch-delete', 'POST', { ids:['a','b','a'] })).json()).deleted, 2);
+    assert.equal((await (await call('/admin/shop/products/batch-delete', 'POST', { ids:['a','b'] })).json()).deleted, 0);
+    assert.equal(sqlite.prepare('SELECT count(*) AS count FROM shop_products WHERE deleted=1').get().count, 2);
+    assert.equal((await (await call('/shop/products')).json()).items.length, 0);
+  } finally { sqlite.close(); }
+});
+
+test('admin user pagination searches across pages and retains ownership filtering', async () => {
+  const { db, sqlite } = database();
+  try {
+    const worker = await isolate();
+    await worker.fetch(request(), { raffle_db: db });
+    sqlite.exec(`INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('member-admin',1,'admin','admin');
+      INSERT INTO users (id,username,password,display_name,created_by_admin_id) VALUES
+        (1,'first','pw','小明',1),(2,'second','pw','小明',1),(3,'third','pw','小明',2),(4,'fourth','pw','小華',1);`);
+    const call = async search => {
+      const result = await worker.fetch(new Request('https://api.skclub.vip/admin/users' + search, {
+        headers: { Authorization: 'Bearer member-admin' },
+      }), { raffle_db: db });
+      assert.equal(result.status, 200);
+      return result.json();
+    };
+    const page = await call('?limit=1');
+    assert.deepEqual(page.items.map(item => item.id), [4]);
+    assert.equal(page.next_before, 4);
+    assert.deepEqual((await call('?limit=1&before=4')).items.map(item => item.id), [2]);
+    const search = await call('?limit=50&q=' + encodeURIComponent('小明'));
+    assert.deepEqual(search.items.map(item => item.id), [2,1]);
+    assert.equal(search.next_before, null);
+    assert.deepEqual((await call('')).items.map(item => item.id), [4,2,1]);
+  } finally { sqlite.close(); }
+});
+
 test('new Worker isolates skip completed migrations and retain activity and member data', async () => {
   const data = database();
   try {
@@ -60,7 +119,23 @@ test('a schema version change reruns initialization, then marks the completed ve
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
     assert.ok(data.queries.length > 100);
-    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-07.arcade-v4');
+    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-07.admin-shop-v5');
+  } finally { data.sqlite.close(); }
+});
+
+test('existing arcade databases only run the additive shop upgrade', async () => {
+  const data = database();
+  try {
+    await (await isolate()).fetch(request(), { raffle_db: data.db });
+    data.sqlite.exec(`INSERT INTO shop_products (id,name,reward_welfare) VALUES ('saved','Existing',25);
+      ALTER TABLE shop_products DROP COLUMN reward_discount;
+      UPDATE app_schema_state SET value='2026-11-07.arcade-v4';`);
+    data.queries.length = 0;
+    const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
+    assert.equal(response.status, 200);
+    assert.ok(data.queries.length < 10);
+    const row = data.sqlite.prepare("SELECT reward_discount,reward_welfare FROM shop_products WHERE id='saved'").get();
+    assert.deepEqual([row.reward_discount, row.reward_welfare], [0,25]);
   } finally { data.sqlite.close(); }
 });
 

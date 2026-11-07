@@ -425,7 +425,14 @@ async createElectronicRoomTicket() {
    * Shop (Public)
   ----------------- */
   async shopProducts() {
-    return await request("/shop/products", { method: "GET" });
+    const result = await request("/shop/products", { method: "GET" });
+    if (result?.success && Array.isArray(result.items)) {
+      result.items = result.items.map(item => ({
+        ...item,
+        image_url: item.image_url?.startsWith("/r2/") ? API_BASE + item.image_url : item.image_url,
+      }));
+    }
+    return result;
   },
 
   async shopConfig() {
@@ -794,9 +801,13 @@ async createElectronicRoomTicket() {
   /* -----------------
    * Admin Users
   ----------------- */
-  async adminListUsers(q = "") {
-    const qs = q ? `?q=${encodeURIComponent(q)}` : "";
-    return await request(`/admin/users${qs}`, { method: "GET", auth: "admin" });
+  async adminListUsers(q = "", { limit, before } = {}) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (limit) params.set("limit", limit);
+    if (before) params.set("before", before);
+    const query = params.toString();
+    return await request(`/admin/users${query ? "?" + query : ""}`, { method: "GET", auth: "admin" });
   },
 
   async adminCreateUser(payload) {

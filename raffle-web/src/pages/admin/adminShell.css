@@ -560,3 +560,21 @@ html, body{
   gap: 10px;
 }
 .arcade-rule-form textarea { min-height: 6em; }
+
+.admin-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.admin-shop-products {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 14px;
+}
+
+@media (max-width: 1150px) {
+  .admin-shop-products { grid-template-columns: minmax(0, 1fr); }
+}

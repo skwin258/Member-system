@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { GAME_RULES } from "../../../../src/game-settings.js";
 import { api } from "../../api";
 
-const titles = {
-  numbers: "數字追逐戰", reaction: "極速反應王", claw: "3D 夾娃娃機",
-  football: "足球射門", redpacket: "紅包", wheel: "輪盤",
-};
+export const ARCADE_GAME_TABS = [
+  ["numbers", "數字追逐戰"], ["reaction", "極速反應王"],
+  ["claw", "3D 夾娃娃機"], ["football", "足球射門"],
+];
 const labels = {
   enabled: "開放（1 開啟，0 關閉）", cost: "每局花費", grid: "數字盤每邊格數",
   minWait: "火炬最短等待（毫秒）", waitRange: "額外隨機等待上限（毫秒）",
@@ -22,31 +22,27 @@ for (const n of [1, 2, 3]) {
 }
 const rewardFields = { numbers: thresholdFields, reaction: thresholdFields, claw: ["reward"] };
 
-export default function AdminArcadeRules({ prizes = false }) {
-  const [game, setGame] = useState("numbers");
+export default function AdminArcadeRules({ game, prizes = false }) {
   const [rules, setRules] = useState(null);
   const [football, setFootball] = useState([]);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
-  const games = prizes ? ["numbers", "reaction", "claw", "football"] : Object.keys(titles);
   const footballPrizes = prizes && game === "football";
   const fields = prizes ? rewardFields[game] || [] : [
     ...Object.keys(GAME_RULES[game]).filter(key => !rewardFields[game]?.includes(key)), "help",
   ];
 
   useEffect(() => {
-    api.arcadeSettings().then(result => {
+    let active = true;
+    const request = footballPrizes ? api.adminFootballPrizes() : api.arcadeSettings();
+    request.then(result => {
       if (!result?.success) throw new Error(result?.error || "讀取失敗");
-      setRules(result.settings);
-    }).catch(error => setMessage(error.message));
-  }, []);
-
-  useEffect(() => {
-    if (!footballPrizes) return;
-    api.adminFootballPrizes().then(result => {
-      if (!result?.success) throw new Error(result?.error || "讀取失敗");
-      setFootball(result.prizes);
-    }).catch(error => setMessage(error.message));
+      if (active) {
+        if (footballPrizes) setFootball(result.prizes);
+        else setRules(result.settings);
+      }
+    }).catch(error => { if (active) setMessage(error.message); });
+    return () => { active = false; };
   }, [footballPrizes]);
 
   function update(field, value) {
@@ -76,18 +72,13 @@ export default function AdminArcadeRules({ prizes = false }) {
 
   return <form className="adminCard arcade-rule-form" onSubmit={save}>
     <h3>奪寶遊戲{prizes ? "獎勵與機率" : "玩法與難度"}</h3>
-    <label>選擇遊戲
-      <select className="input" value={game} onChange={event => { setGame(event.target.value); setMessage(""); }} disabled={pending}>
-        {games.map(key => <option key={key} value={key}>{titles[key]}</option>)}
-      </select>
-    </label>
     {footballPrizes ? football.map(row => <fieldset key={row.id}>
       <legend>第 {row.ball_no} 球</legend>
       <label>進球機率（%）<input className="input" type="number" min="0" max="100" step="any" required
         value={row.probability} onChange={event => updatePrize(row.id, "probability", event.target.value)} /></label>
       <label>投注 1,000 的獎金（S 幣）<input className="input" type="number" min="0" max="100000" required
         value={row.reward_s} onChange={event => updatePrize(row.id, "reward_s", event.target.value)} /></label>
-    </fieldset>) : rules && fields.map(field => {
+    </fieldset>) : rules?.[game] && fields.map(field => {
       if (field === "help") return <label key={field}>遊戲說明
         <textarea className="input" maxLength={1600} placeholder="留空時使用預設說明"
           value={rules[game].help} onChange={event => update(field, event.target.value)} />
@@ -98,9 +89,9 @@ export default function AdminArcadeRules({ prizes = false }) {
           value={rules[game][field]} onChange={event => update(field, event.target.valueAsNumber)} />
       </label>;
     })}
-    <button className="btn" type="submit" disabled={pending || !rules || (footballPrizes && !football.length)}>
+    <button className="btn" type="submit" disabled={pending || (footballPrizes ? !football.length : !rules?.[game])}>
       {pending ? "儲存中…" : "儲存遊戲設定"}
     </button>
-    <p role="status">{message}</p>
+    <p role="status">{message || ((footballPrizes ? !football.length : !rules) ? "讀取中…" : "")}</p>
   </form>;
 }
