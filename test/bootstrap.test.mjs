@@ -12,14 +12,25 @@ function database() {
   const db = { prepare(sql) {
     queries.push(sql);
     if (fail?.(sql)) throw new Error('D1 temporarily unavailable');
-    const stmt = sqlite.prepare(sql);
+    const stmt = () => sqlite.prepare(sql);
     let values = [];
     return {
       bind(...args) { values = args; return this; },
-      async run() { const value = stmt.run(...values); return { success: true, meta: { changes: Number(value.changes), last_row_id: Number(value.lastInsertRowid) } }; },
-      async first() { return stmt.get(...values) || null; },
-      async all() { return { results: stmt.all(...values) }; },
+      async run() { const value = stmt().run(...values); return { success: true, meta: { changes: Number(value.changes), last_row_id: Number(value.lastInsertRowid) } }; },
+      async first() { return stmt().get(...values) || null; },
+      async all() { return { results: stmt().all(...values) }; },
     };
+  }, async batch(statements) {
+    sqlite.exec('BEGIN');
+    try {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      sqlite.exec('COMMIT');
+      return results;
+    } catch (error) {
+      sqlite.exec('ROLLBACK');
+      throw error;
+    }
   } };
   return { sqlite, queries, db, setFailure(value) { fail = value; } };
 }
@@ -34,7 +45,7 @@ test('redpacket uses the configured board, prevents duplicate draws and settles 
     sqlite.exec(`INSERT INTO users(id,username,password) VALUES(1,'test-member','test');
       INSERT INTO user_sessions(token,user_id,username) VALUES ('member',1,'test-member');
       INSERT INTO user_activity_usage(user_id,activity_key,times_left) VALUES (1,'redpacket',5);
-      INSERT INTO admin_sessions(token,admin_id,role,username) VALUES ('owner',1,'superadmin','owner');
+      INSERT INTO admin_accounts(id,username,password,role,status) VALUES (1,'owner','fixture','superadmin','active'); INSERT INTO admin_sessions(token,admin_id,role,username) VALUES ('owner',1,'superadmin','owner');
       UPDATE activities SET enabled=1 WHERE activity_key='redpacket';`);
     async function call(path, method = 'GET', body, token = 'member') {
       const response = await worker.fetch(new Request('https://api.skclub.vip' + path, {
@@ -203,7 +214,7 @@ test('home banner overrides are public, while changes and image uploads require 
       body: body instanceof FormData ? body : JSON.stringify(body),
     }), env);
     assert.deepEqual((await (await call('/home/banners')).json()).items, []);
-    sqlite.exec("INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('banner-admin',1,'owner','admin')");
+    sqlite.exec("INSERT INTO admin_accounts(id,username,password,role,status) VALUES (1,'admin','fixture','owner','active'); INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('banner-admin',1,'owner','admin')");
     const path = '/admin/home/banners/2';
     assert.equal((await call(path, 'PATCH', { link_url:'/welcome' })).status, 401);
     assert.equal((await call(path, 'PATCH', { link_url:'javascript:alert(1)' }, true)).status, 400);
@@ -246,7 +257,7 @@ test('admin shop keeps hidden products editable and batch deletion preserves pro
       body: body instanceof FormData ? body : JSON.stringify(body),
     }), { raffle_db: db, RAFFLE_R2: bucket });
     await call('/activities');
-    sqlite.exec("INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('shop-admin',1,'owner','admin')");
+    sqlite.exec("INSERT INTO admin_accounts(id,username,password,role,status) VALUES (1,'admin','fixture','owner','active'); INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('shop-admin',1,'owner','admin')");
     const form = new FormData();
     form.append('file', new Blob([new Uint8Array([137,80,78,71,13,10,26,10])], { type: 'image/png' }), 'photo.png');
     const { url } = await (await call('/admin/shop/upload', 'POST', form)).json();
@@ -269,7 +280,7 @@ test('admin user pagination searches across pages and retains ownership filterin
   try {
     const worker = await isolate();
     await worker.fetch(request(), { raffle_db: db });
-    sqlite.exec(`INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('member-admin',1,'admin','admin');
+    sqlite.exec(`INSERT INTO admin_accounts(id,username,password,role,status) VALUES (1,'admin','fixture','admin','active'); INSERT INTO admin_sessions (token,admin_id,role,username) VALUES ('member-admin',1,'admin','admin');
       INSERT INTO users (id,username,password,display_name,created_by_admin_id) VALUES
         (1,'first','pw','小明',1),(2,'second','pw','小明',1),(3,'third','pw','小明',2),(4,'fourth','pw','小華',1);`);
     const call = async search => {
@@ -325,7 +336,7 @@ test('a schema version change reruns initialization, then marks the completed ve
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
     assert.ok(data.queries.length > 100);
-    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-07.redpacket-v7');
+    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-08.audit-v8');
   } finally { data.sqlite.close(); }
 });
 
@@ -334,12 +345,13 @@ test('existing arcade databases only run the additive shop upgrade', async () =>
   try {
     await (await isolate()).fetch(request(), { raffle_db: data.db });
     data.sqlite.exec(`INSERT INTO shop_products (id,name,reward_welfare) VALUES ('saved','Existing',25);
+      DROP TRIGGER settle_shop_order;
       ALTER TABLE shop_products DROP COLUMN reward_discount;
       UPDATE app_schema_state SET value='2026-11-07.arcade-v4';`);
     data.queries.length = 0;
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
-    assert.ok(data.queries.length < 20);
+    assert.ok(data.queries.length < 26);
     const row = data.sqlite.prepare("SELECT reward_discount,reward_welfare FROM shop_products WHERE id='saved'").get();
     assert.deepEqual([row.reward_discount, row.reward_welfare], [0,25]);
   } finally { data.sqlite.close(); }
@@ -424,7 +436,7 @@ test('arcade activity rules are validated, admin-only and persisted by section',
     }), { raffle_db: db });
     const first = await (await call('/arcade/settings')).json();
     assert.equal(first.settings.reaction.limit3, 200);
-    sqlite.exec("INSERT INTO admin_sessions (token, admin_id, role, username) VALUES ('sc-admin', 1, 'owner', 'admin')");
+    sqlite.exec("INSERT INTO admin_accounts(id,username,password,role,status) VALUES (1,'admin','fixture','owner','active'); INSERT INTO admin_sessions (token, admin_id, role, username) VALUES ('sc-admin', 1, 'owner', 'admin')");
     const route = '/admin/arcade/settings/reaction';
     assert.equal((await call(route, { patch: { cost: 500 } })).status, 401);
     assert.equal((await call(route, { token: 'sc-admin', patch: { cost: 30 } })).status, 400);
@@ -577,5 +589,137 @@ test('paid claw hides the seed until charged and credits only the verifier resul
     assert.equal(stayed.checkpoint.machine.toys.length, 23);
     assert.equal((await call('prepare', { previous: entry.id })).status, 409);
     assert.equal(stayed.s_balance, 1750);
+  } finally { sqlite.close(); }
+});
+
+test('shop redemption, owner scope, session revocation and referral awards are enforced by the API', async () => {
+  const { db, sqlite } = database();
+  try {
+    const worker = await isolate();
+    const call = (path, token, method = 'GET', body) => worker.fetch(new Request('https://api.skclub.vip'+path, {
+      method, headers: { authorization: 'Bearer '+token, 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }), { raffle_db: db });
+    await call('/activities');
+    sqlite.exec(`INSERT INTO admin_accounts(id,username,password,role,status) VALUES
+        (1,'owner','owner-pass','admin','active'),(2,'other','fixture','admin','active');
+      INSERT INTO admin_sessions(token,admin_id,role,username) VALUES
+        ('owner',1,'superadmin','owner'),('other',2,'admin','other');
+      INSERT INTO users(id,username,password,created_by_admin_id,s_balance,line_id) VALUES
+        (10,'buyer','buyer-pass',1,100,'line-buyer'),(11,'referrer','fixture',2,0,'line-referrer');
+      INSERT INTO user_sessions(token,user_id,username) VALUES ('buyer',10,'buyer');
+      INSERT INTO shop_products(id,name,cost_s,reward_discount,reward_welfare) VALUES ('one','One',100,50,20);
+      INSERT INTO referrals(referrer_user_id,referred_user_id,code) VALUES (11,10,'fixture');`);
+    const orders = await Promise.all([1,2].map(() => call('/shop/redeem','buyer','POST',{product_id:'one'})));
+    assert.deepEqual(orders.map(r=>r.status).sort(),[200,400]);
+    const wallet = sqlite.prepare('SELECT s_balance,discount_balance,welfare_balance FROM users WHERE id=10').get();
+    assert.deepEqual({...wallet},{s_balance:0,discount_balance:50,welfare_balance:20});
+    const order = sqlite.prepare("SELECT id,created_at,status FROM shop_orders WHERE user_id=10").get();
+    assert.equal(order.status,'success');
+    assert.ok(order.created_at);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM wallet_logs WHERE action='redeem' AND delta_s=-100").get().n,1);
+    assert.equal((await call('/admin/module/electronic-room/status?user_id=10','other')).status,403);
+    assert.equal((await call('/admin/module/electronic-room/update','other','POST',{user_id:10,enabled:1})).status,403);
+    assert.equal((await call('/admin/module/electronic-room/status?user_id=10','owner')).status,200);
+    assert.equal((await (await call('/admin/shop/orders','other')).json()).items.length,0);
+    assert.equal((await call('/admin/shop/orders/'+order.id+'/review','other','POST',{})).status,403);
+    assert.equal((await call('/admin/shop/orders/'+order.id+'/review','owner','POST',{})).status,200);
+    assert.equal((await call('/admin/admins','owner')).status,403);
+    const verified = await Promise.all([1,2].map(() => call('/admin/users/10/line-verify','owner','POST',{verified:1})));
+    assert.deepEqual(verified.map(r=>r.status),[200,200]);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM draw_records WHERE note='referral_verify_bonus'").get().n,2);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM draw_records WHERE note='line_verify_bonus'").get().n,1);
+    assert.equal(sqlite.prepare("SELECT times_left AS n FROM user_activity_usage WHERE user_id=11 AND activity_key='redpacket'").get().n,1);
+    const register = await call('/auth/user/register',null,'POST',{username:'legacy-new',password:'legacy'});
+    assert.equal(register.status,410);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM users WHERE username='legacy-new'").get().n,0);
+    assert.equal((await call('/auth/admin/login',null,'POST',{username:'owner',password:'owner-pass'})).status,200);
+    assert.match(sqlite.prepare("SELECT password FROM admin_accounts WHERE id=1").get().password,/^pbkdf2-sha256\$/);
+    const login = await call('/auth/user/login',null,'POST',{username:'buyer',password:'buyer-pass'});
+    assert.equal(login.status,200);
+    const { token } = await login.json();
+    assert.match(sqlite.prepare("SELECT password FROM users WHERE id=10").get().password,/^pbkdf2-sha256\$/);
+    sqlite.exec("UPDATE users SET locked=1 WHERE id=10");
+    assert.equal((await call('/wallet/logs',token)).status,401);
+    sqlite.exec("UPDATE users SET locked=0 WHERE id=10; UPDATE admin_accounts SET status='disabled' WHERE id=1");
+    assert.equal((await call('/wallet/logs',token)).status,401);
+    assert.equal((await call('/admin/shop/orders','owner')).status,401);
+  } finally { sqlite.close(); }
+});
+
+test('wheel honors zero weights and safely handles concurrent spins and failed configuration writes', async () => {
+  const { db, sqlite } = database();
+  try {
+    const worker = await isolate();
+    const call = (path, token, method = 'GET', body) => worker.fetch(new Request('https://api.skclub.vip'+path, {
+      method, headers: { authorization: 'Bearer '+token, 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }), { raffle_db: db });
+    await call('/activities');
+    sqlite.exec(`UPDATE activities SET enabled=1 WHERE activity_key='wheel';
+      INSERT INTO admin_accounts(id,username,password,role,status) VALUES (1,'admin','fixture','superadmin','active');
+      INSERT INTO admin_sessions(token,admin_id,role,username) VALUES ('admin',1,'superadmin','admin');
+      INSERT INTO users(id,username,password,created_by_admin_id) VALUES (10,'spinner','fixture',0);
+      INSERT INTO user_sessions(token,user_id,username) VALUES ('spinner',10,'spinner');
+      INSERT INTO user_activity_usage(user_id,activity_key,times_left) VALUES (10,'wheel',2);`);
+    const setPrizes = items => call('/admin/wheel/prizes','admin','PUT',{items});
+    assert.equal((await setPrizes([{title:'S幣9999',amount:9999,weight:0}])).status,200);
+    assert.equal((await call('/wheel/spin','spinner','POST',{})).status,400);
+    assert.equal(sqlite.prepare("SELECT times_left AS n FROM user_activity_usage WHERE user_id=10").get().n,2);
+    assert.equal((await setPrizes([{title:'S幣9999',amount:9999,weight:0},{title:'S幣8',amount:8,weight:1}])).status,200);
+    sqlite.exec("CREATE TRIGGER reject_wheel_prize BEFORE INSERT ON wheel_prizes WHEN NEW.title='reject' BEGIN SELECT RAISE(ABORT,'test failure'); END;");
+    assert.equal((await setPrizes([{title:'first',weight:2},{title:'reject',weight:1}])).status,500);
+    assert.deepEqual(sqlite.prepare("SELECT title FROM wheel_prizes ORDER BY id").all().map(p=>p.title),['S幣9999','S幣8']);
+    const results = await Promise.all([1,2].map(() => call('/wheel/spin','spinner','POST',{})));
+    assert.deepEqual(results.map(r=>r.status),[200,200]);
+    const payloads = await Promise.all(results.map(r=>r.json()));
+    assert.deepEqual(payloads.map(p=>p.result.prize_value).sort((a,b)=>a-b),[8,5000]);
+    assert.deepEqual({...sqlite.prepare("SELECT s_balance,discount_balance FROM users WHERE id=10").get()},{s_balance:8,discount_balance:5000});
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM draw_records WHERE activity_key='wheel'").get().n,2);
+  } finally { sqlite.close(); }
+});
+
+test('activity fields persist, daily limits reset, promotions are sanitized and football records stay within the range', async () => {
+  const { db, sqlite } = database();
+  try {
+    const worker = await isolate();
+    const call = (path, token, method = 'GET', body) => worker.fetch(new Request('https://api.skclub.vip'+path, {
+      method, headers: { authorization: 'Bearer '+token, 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }), { raffle_db: db });
+    await call('/activities');
+    sqlite.exec(`INSERT INTO admin_accounts(id,username,password,role,status) VALUES (1,'admin','fixture','superadmin','active');
+      INSERT INTO admin_sessions(token,admin_id,role,username) VALUES ('admin',1,'superadmin','admin');
+      INSERT INTO users(id,username,password,created_by_admin_id) VALUES (10,'member','fixture',1);
+      INSERT INTO user_sessions(token,user_id,username) VALUES ('member',10,'member');
+      INSERT INTO user_activity_usage(user_id,activity_key,times_left,updated_at) VALUES (10,'wheel',1,'2000-01-01');
+      INSERT INTO wheel_prizes(title,amount,weight) VALUES ('S幣1',1,1);
+      INSERT INTO draw_records(activity_key,user_id,username,status,created_at) VALUES
+        ('football',10,'member','win','2026-01-10 00:00:00'),
+        ('football',10,'member','win','2026-03-10 00:00:00'),
+        ('wheel',10,'member','win','2026-03-10 00:00:00');
+      INSERT INTO wallet_logs(user_id,account,category,action,status,delta_sc,created_at)
+        VALUES (10,'member','system','sc_checkin','success',3000,datetime('now'));`);
+    const settings = { name:'新輪盤', enabled:1, sort:-2, defaultTimes:4, allowOverrideTimes:0, dailyReset:1,
+      requireAuthorized:1, startAt:'2020-01-01T00:00', endAt:'2099-12-31T23:59' };
+    assert.equal((await call('/admin/activities/wheel','admin','PATCH',settings)).status,200);
+    const activities = await (await call('/admin/activities','admin')).json();
+    assert.deepEqual(activities.items[0],{ key:'wheel', ...settings });
+    assert.equal((await call('/admin/users/10/activity-times','admin','POST',{activity_key:'wheel',mode:'set',amount:2})).status,403);
+    assert.equal((await call('/wheel/spin','member','POST',{})).status,403);
+    sqlite.exec('UPDATE users SET num_authorized=1 WHERE id=10');
+    assert.equal((await (await call('/wheel/spin','member','POST',{})).json()).left,3);
+    const record = await (await call('/records?from=2026-01-01&to=2026-03-10&type=football','member')).json();
+    assert.deepEqual(record.items.map(x=>x.type),['football']);
+    assert.equal(record.range.from,'2026-02-08 16:00:00');
+    const logs = await (await call('/admin/users/10/logs','admin')).json();
+    assert.ok(logs.items.some(x=>x.delta_sc===3000));
+    const malicious = '<p><b>優惠</b><img src=x onerror=alert(1)><a href=javascript:alert(1)>點此</a><script>alert(1)</script></p>';
+    sqlite.prepare("INSERT INTO promotions(title,content_html,placement) VALUES ('legacy',?,'coupon')").run(malicious);
+    for (const [path, token] of [['/promotions?placement=coupon',''],['/admin/promotions','admin']]) {
+      const result = await (await call(path,token)).json();
+      assert.match(JSON.stringify(result), /<b>優惠<\/b>/);
+      assert.doesNotMatch(JSON.stringify(result), /onerror|javascript:|<script|alert\(1\)/);
+    }
   } finally { sqlite.close(); }
 });

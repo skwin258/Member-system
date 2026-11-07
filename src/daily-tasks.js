@@ -1,3 +1,14 @@
+export const DAILY_TASK_GRANT_TRIGGER = `CREATE TRIGGER IF NOT EXISTS daily_task_redpacket_grant AFTER INSERT ON daily_task_claims
+    BEGIN
+      INSERT INTO user_activity_usage (user_id, activity_key, times_left, updated_at)
+      VALUES (NEW.user_id, 'redpacket', 1 + COALESCE((SELECT default_times FROM activities WHERE activity_key='redpacket'), 0), datetime('now'))
+      ON CONFLICT(user_id, activity_key) DO UPDATE SET
+        times_left=1+CASE WHEN (SELECT daily_reset FROM activities WHERE activity_key='redpacket')=1
+          AND date(updated_at,'+8 hours') IS NOT NEW.claim_day
+          THEN excluded.times_left-1 ELSE times_left END,
+        updated_at=excluded.updated_at;
+    END`;
+
 export const DAILY_TASK_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS daily_task_proofs (
     id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, task TEXT NOT NULL, task_day TEXT NOT NULL,
@@ -10,12 +21,7 @@ export const DAILY_TASK_SCHEMA = [
     claim_day TEXT NOT NULL, PRIMARY KEY(user_id, task, task_day)
   )`,
   `CREATE INDEX IF NOT EXISTS daily_task_claims_progress ON daily_task_claims(user_id, claim_day)`,
-  `CREATE TRIGGER IF NOT EXISTS daily_task_redpacket_grant AFTER INSERT ON daily_task_claims
-    BEGIN
-      INSERT INTO user_activity_usage (user_id, activity_key, times_left, updated_at)
-      VALUES (NEW.user_id, 'redpacket', 1 + COALESCE((SELECT default_times FROM activities WHERE activity_key='redpacket'), 0), datetime('now'))
-      ON CONFLICT(user_id, activity_key) DO UPDATE SET times_left=times_left+1, updated_at=datetime('now');
-    END`,
+  DAILY_TASK_GRANT_TRIGGER,
 ];
 
 const verification = ["instagram", "threads"];

@@ -701,6 +701,7 @@ const toggleReview = async (id) => {
                   <th>帳號</th>
                   <th>類型</th>
                   <th>狀態</th>
+                  <th>SC 幣異動</th>
                   <th>結果</th>
                   <th>備註</th>
                 </tr>
@@ -721,6 +722,7 @@ const toggleReview = async (id) => {
                       {x.status}
                     </td>
                     
+                    <td className="mono">{Number(x.delta_sc) > 0 ? "+" : ""}{Number(x.delta_sc) || "—"}</td>
                     <td>{x.result}</td>
                     <td className="note">
                       {x.note}
@@ -730,7 +732,7 @@ const toggleReview = async (id) => {
                 ))}
                 {!logs.length ? (
                   <tr>
-                    <td colSpan={6} className="empty">
+                    <td colSpan={7} className="empty">
                       {logsStatus || "無紀錄"}
                     </td>
                   </tr>

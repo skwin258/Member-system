@@ -1,13 +1,9 @@
+import { sanitizePromotionHtml } from "../../lib/promotionHtml.js";
 import { API_BASE } from '../../config';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 
 
-function stripImgs(html = "") {
-  return String(html)
-    .replace(/<img\b[^>]*\/?>/gi, "")
-    .replace(/<img\b[^>]*>(.*?)<\/img>/gi, "");
-}
 
 function resolveCoverUrl(u) {
   const s = String(u || "").trim();
@@ -374,7 +370,7 @@ export default function PromoPage() {
               <div
                 className="promoLightboxHtml"
                 dangerouslySetInnerHTML={{
-                  __html: stripImgs(openItem.content_html || "<p>（無內容）</p>"),
+                  __html: sanitizePromotionHtml(openItem.content_html || "<p>（無內容）</p>", { FORBID_TAGS: ["img"] }),
                 }}
               />
             </div>

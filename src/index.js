@@ -1,9 +1,12 @@
+import { AUDIT_SCHEMA } from "./audit-schema.js";
+import { hashPassword, checkPassword } from "./passwords.js";
+import { sanitizePromotionHtml } from "./promotion-html.js";
 // raffle-api/src/index.js
 import { SC_GRANT, SC_SCHEMA, FOOTBALL_BASE_BET } from "./sc-wallet.js";
 import { GAME_RULES, defaultGameRules, parseGamePatch } from "./game-settings.js";
 import { ARCADE_ROUND_SCHEMA, handleArcadeRound, handleClawRound } from "./arcade-rounds.js";
 import { arcadeChallengePage, verifyArcadePreparation } from "./arcade-verification.js";
-import { DAILY_TASK_SCHEMA, DAILY_TASK_PROOF_PREFIX, handleDailyTasks } from "./daily-tasks.js";
+import { DAILY_TASK_GRANT_TRIGGER, DAILY_TASK_SCHEMA, DAILY_TASK_PROOF_PREFIX, handleDailyTasks } from "./daily-tasks.js";
 import { REDPACKET_SCHEMA, parseRedpacketConfig, redpacketConfigError, handleRedpacket } from "./redpacket.js";
 
 // ✅ PERF FIX (2026-03-02):
@@ -14,7 +17,7 @@ import { REDPACKET_SCHEMA, parseRedpacketConfig, redpacketConfigError, handleRed
 const __BOOTSTRAP_STATE__ = { promise: null };
 // Bump when changing the schema/bootstrap below. Persisted in D1 so a new
 // Worker isolate does not repeat hundreds of schema/seed queries on first load.
-const SCHEMA_VERSION = '2026-11-07.redpacket-v7';
+const SCHEMA_VERSION = '2026-11-08.audit-v8';
 
 const __HOT_CACHE__ = new Map();
 
@@ -96,10 +99,23 @@ async function ensureBootstrapped(db) {
     const ensureRedpacketSchema = async () => {
       for (const sql of REDPACKET_SCHEMA) await db.prepare(sql).run();
     };
+    const ensureAuditSchema = async () => {
+      await db.batch([
+        ...AUDIT_SCHEMA.map(sql => db.prepare(sql)),
+        db.prepare("DROP TRIGGER IF EXISTS daily_task_redpacket_grant"),
+        db.prepare(DAILY_TASK_GRANT_TRIGGER),
+      ]);
+    };
+    if (previousVersion === "2026-11-07.redpacket-v7") {
+      await ensureAuditSchema();
+      await updateSchemaVersion();
+      return;
+    }
     if (["2026-11-07.arcade-v4", "2026-11-07.admin-shop-v5", "2026-11-07.daily-tasks-v6"].includes(previousVersion)) {
       if (previousVersion === '2026-11-07.arcade-v4') await ensureShopAdminSchema();
       if (previousVersion !== '2026-11-07.daily-tasks-v6') await ensureDailyTasks();
       await ensureRedpacketSchema();
+      await ensureAuditSchema();
       await updateSchemaVersion();
       return;
     }
@@ -903,6 +919,7 @@ for (const a of seedActivities) {
   await ensureShopAdminSchema();
   await ensureDailyTasks();
   await ensureRedpacketSchema();
+  await ensureAuditSchema();
   await updateSchemaVersion();
 
   })().catch((err) => {
@@ -1230,6 +1247,7 @@ const insertWalletLog = async ({
   action,
   status = "success",
   delta_s = 0,
+  delta_sc = 0,
   delta_welfare = 0,
   delta_discount = 0,
   result = "",
@@ -1240,7 +1258,7 @@ const insertWalletLog = async ({
     await db
       .prepare(
         `INSERT INTO wallet_logs
-         (created_at, user_id, account, category, action, status, delta_s, delta_welfare, delta_discount, result, note, admin_account)
+         (created_at, user_id, account, category, action, status, delta_s, delta_sc, delta_welfare, delta_discount, result, note, admin_account)
          VALUES (datetime('now'),?,?,?,?,?,?,?,?,?,?,?)`
       )
       .bind(
@@ -1250,6 +1268,7 @@ const insertWalletLog = async ({
         String(action || ""),
         String(status || ""),
         toInt(delta_s, 0),
+        toInt(delta_sc, 0),
         toInt(delta_welfare, 0),
         toInt(delta_discount, 0),
         String(result || ""),
@@ -1277,24 +1296,24 @@ const applyWalletDelta = async ({
   const u = await fetchUserRow(userId);
   if (!u) return { ok: false, error: "User not found" };
 
-  const curS = toInt(u.s_balance, 0);
-  const curW = toInt(u.welfare_balance, 0);
-  const curD = toInt(u.discount_balance, 0);
-
-  const nextS = curS + toInt(delta_s, 0);
-  const nextW = curW + toInt(delta_welfare, 0);
-  const nextD = curD + toInt(delta_discount, 0);
-
-  if (nextS < 0) return { ok: false, error: "S幣不足" };
-  if (nextW < 0) return { ok: false, error: "福利金不足" };
-  if (nextD < 0) return { ok: false, error: "折抵金不足" };
-
-  await db
-    .prepare(
-      "UPDATE users SET s_balance=?, welfare_balance=?, discount_balance=? WHERE id=?"
-    )
-    .bind(nextS, nextW, nextD, Number(userId))
-    .run();
+  const ds = toInt(delta_s, 0);
+  const dw = toInt(delta_welfare, 0);
+  const dd = toInt(delta_discount, 0);
+  const next = await db.prepare(
+    `UPDATE users SET s_balance=COALESCE(s_balance,0)+?,
+      welfare_balance=COALESCE(welfare_balance,0)+?, discount_balance=COALESCE(discount_balance,0)+?
+     WHERE id=? AND COALESCE(s_balance,0)+?>=0 AND COALESCE(welfare_balance,0)+?>=0
+       AND COALESCE(discount_balance,0)+?>=0
+     RETURNING s_balance, welfare_balance, discount_balance`
+  ).bind(ds, dw, dd, Number(userId), ds, dw, dd).first();
+  if (!next) {
+    const current = await fetchUserRow(userId);
+    if (!current) return { ok: false, error: "User not found" };
+    if (Number(current.s_balance || 0) + ds < 0) return { ok: false, error: "S幣不足" };
+    if (Number(current.welfare_balance || 0) + dw < 0) return { ok: false, error: "福利金不足" };
+    if (Number(current.discount_balance || 0) + dd < 0) return { ok: false, error: "折抵金不足" };
+    return { ok: false, error: "餘額已變更，請重試" };
+  }
 
   await insertWalletLog({
     user_id: userId,
@@ -1316,9 +1335,7 @@ const applyWalletDelta = async ({
       id: Number(u.id),
       username: u.username,
       display_name: u.display_name || "",
-      welfare_balance: nextW,
-      discount_balance: nextD,
-      s_balance: nextS,
+      ...next,
     },
   };
 };
@@ -1339,24 +1356,11 @@ const applyWalletDelta = async ({
       await ensureBootstrapped(db);
 
 
-      const getCachedUserSession = async (token) => {
-        const cacheKey = `user_session:${String(token || '')}`;
-        const cached = hotCacheGet(cacheKey);
-        if (cached) return cached;
-
-        const sess = await db
-          .prepare(
-            `SELECT token, user_id, username, created_at, last_seen_at, last_client_activity_at
-             FROM user_sessions
-             WHERE token=?
-             LIMIT 1`
-          )
-          .bind(token)
-          .first();
-
-        if (sess) hotCacheSet(cacheKey, sess, 2500);
-        return sess || null;
-      };
+      const getUserSession = (token) => db.prepare(
+        `SELECT s.token, s.user_id, u.username, s.created_at, s.last_seen_at, s.last_client_activity_at, u.num_authorized
+         FROM user_sessions s JOIN users u ON u.id=s.user_id
+         WHERE s.token=? AND u.enabled=1 AND COALESCE(u.locked,0)=0`
+      ).bind(token).first();
 
       const getCachedActivity = async (activityKey) => {
         const cacheKey = `activity:${String(activityKey || '')}`;
@@ -1429,18 +1433,11 @@ const getFootballActivityDirect = async () => {
   };
 };
 
-const getCachedWheelPrizes = async () => {
-  const cacheKey = "cfg:wheel_prizes";
-  const cached = hotCacheGet(cacheKey);
-  if (cached) return cached;
-
-  const prizesRes = await db
-    .prepare(
-      "SELECT id, title, amount, weight, prize_type, prize_text, image_url, sort FROM wheel_prizes WHERE enabled=1 ORDER BY sort ASC, id ASC"
-    )
-    .all();
-
-  return hotCacheSet(cacheKey, prizesRes?.results || [], 2500);
+const getWheelPrizes = async () => {
+  const { results } = await db.prepare(
+    "SELECT id, title, amount, weight, prize_type, prize_text, image_url, sort, enabled FROM wheel_prizes WHERE enabled=1 ORDER BY sort ASC, id ASC"
+  ).all();
+  return results || [];
 };
 
       /* =========================
@@ -1452,9 +1449,9 @@ const getCachedWheelPrizes = async () => {
 
         const sess = await db
           .prepare(
-            `SELECT token, admin_id, role, username, created_at
-             FROM admin_sessions
-             WHERE token=?
+            `SELECT s.token, s.admin_id, a.role, a.username, s.created_at
+             FROM admin_sessions s JOIN admin_accounts a ON a.id=s.admin_id
+             WHERE s.token=? AND LOWER(TRIM(COALESCE(a.status,''))) IN ('active','enabled','')
              LIMIT 1`
           )
           .bind(token)
@@ -1467,7 +1464,7 @@ const getCachedWheelPrizes = async () => {
         const token = getAuth(request);
         if (!token) return null;
 
-        const sess = await getCachedUserSession(token);
+        const sess = await getUserSession(token);
         if (!sess) return null;
 
         const lastClientActivityAt = Number(sess.last_client_activity_at || 0);
@@ -1475,7 +1472,6 @@ const getCachedWheelPrizes = async () => {
 
         if (lastClientActivityAt > 0 && nowMs - lastClientActivityAt > USER_INACTIVITY_LIMIT_MS) {
           await db.prepare("DELETE FROM user_sessions WHERE token=?").bind(token).run();
-          hotCacheDel(`user_session:${String(token || '')}`);
           return null;
         }
 
@@ -1497,7 +1493,6 @@ const getCachedWheelPrizes = async () => {
             .prepare(`UPDATE user_sessions SET ${updates.join(", ")} WHERE token=?`)
             .bind(...binds, token)
             .run();
-          hotCacheDel(`user_session:${String(token || '')}`);
         }
 
         return sess;
@@ -1510,10 +1505,12 @@ const getCachedWheelPrizes = async () => {
 
         await db
           .prepare(
-            `INSERT OR IGNORE INTO user_activity_usage (user_id, activity_key, times_left, updated_at)
-             VALUES (?,?,?,?)`
+            `INSERT INTO user_activity_usage (user_id, activity_key, times_left, updated_at)
+             VALUES (?,?,?,?)
+             ON CONFLICT(user_id, activity_key) DO UPDATE SET times_left=excluded.times_left, updated_at=excluded.updated_at
+             WHERE ?=1 AND date(user_activity_usage.updated_at,'+8 hours') IS NOT date(excluded.updated_at,'+8 hours')`
           )
-          .bind(userId, activityKey, limitDefault, now)
+          .bind(userId, activityKey, limitDefault, now, Number(act?.daily_reset || 0))
           .run();
 
         return await db
@@ -1522,46 +1519,6 @@ const getCachedWheelPrizes = async () => {
           )
           .bind(userId, activityKey)
           .first();
-      };
-
-      const decUsageIfPossible = async (userId, activityKey) => {
-        const act = await getCachedActivity(activityKey);
-        const limitDefault = Number(act?.default_times || 0);
-        const now = nowIso();
-
-        await db
-          .prepare(
-            `INSERT OR IGNORE INTO user_activity_usage (user_id, activity_key, times_left, updated_at)
-             VALUES (?,?,?,?)`
-          )
-          .bind(userId, activityKey, limitDefault, now)
-          .run();
-
-        const upd = await db
-          .prepare(
-            "UPDATE user_activity_usage SET times_left = times_left - 1, updated_at=? WHERE user_id=? AND activity_key=? AND times_left > 0"
-          )
-          .bind(now, userId, activityKey)
-          .run();
-
-        if (Number(upd?.meta?.changes || 0) <= 0) {
-          const row = await db
-            .prepare(
-              "SELECT times_left FROM user_activity_usage WHERE user_id=? AND activity_key=? LIMIT 1"
-            )
-            .bind(userId, activityKey)
-            .first();
-          return { ok: false, left: Math.max(0, Number(row?.times_left || 0)) };
-        }
-
-        const row = await db
-          .prepare(
-            "SELECT times_left FROM user_activity_usage WHERE user_id=? AND activity_key=? LIMIT 1"
-          )
-          .bind(userId, activityKey)
-          .first();
-
-        return { ok: true, left: Math.max(0, Number(row?.times_left || 0)) };
       };
 
       const grantReferralVerificationRewardsIfEligible = async (verifiedUserId) => {
@@ -1594,73 +1551,14 @@ const getCachedWheelPrizes = async () => {
         if (!ref) return { ok: false, reason: "no_referral" };
         if (String(ref.verified_rewarded_at || "").trim()) return { ok: true, already_rewarded: true };
 
-        const referrerId = Number(ref.referrer_user_id || 0);
-        if (!referrerId) return { ok: false, reason: "bad_referrer" };
+        const result = await db.prepare(
+          `UPDATE referrals SET verified_rewarded_at=datetime('now')
+           WHERE id=? AND COALESCE(verified_rewarded_at,'')=''
+             AND EXISTS (SELECT 1 FROM users WHERE id=referrals.referred_user_id
+                         AND line_verified=1 AND TRIM(COALESCE(line_id,''))<>'')`
+        ).bind(ref.id).run();
 
-        await ensureUsageRow(referrerId, "redpacket");
-        await ensureUsageRow(referrerId, "wheel");
-        await ensureUsageRow(Number(verifiedUserId), "wheel");
-
-        await db
-          .prepare(
-            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='redpacket'"
-          )
-          .bind(nowIso(), referrerId)
-          .run();
-
-        await db
-          .prepare(
-            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='wheel'"
-          )
-          .bind(nowIso(), referrerId)
-          .run();
-
-        await db
-          .prepare(
-            "UPDATE user_activity_usage SET times_left = times_left + 1, updated_at=? WHERE user_id=? AND activity_key='wheel'"
-          )
-          .bind(nowIso(), Number(verifiedUserId))
-          .run();
-
-        await addDrawRecord({
-          activity_key: "redpacket",
-          user_id: referrerId,
-          username: String(ref?.referrer_username || ""),
-          status: "win",
-          prize_title: "推薦驗證獎勵-紅包次數+1",
-          prize_amount: 0,
-          note: "referral_verify_bonus",
-          meta: { code: ref.code, referred_user: String(user.username || "") },
-        });
-
-        await addDrawRecord({
-          activity_key: "wheel",
-          user_id: referrerId,
-          username: String(ref?.referrer_username || ""),
-          status: "win",
-          prize_title: "推薦驗證獎勵-輪盤次數+1",
-          prize_amount: 0,
-          note: "referral_verify_bonus",
-          meta: { code: ref.code, referred_user: String(user.username || "") },
-        });
-
-        await addDrawRecord({
-          activity_key: "wheel",
-          user_id: Number(verifiedUserId),
-          username: String(user.username || ""),
-          status: "win",
-          prize_title: "LINE驗證獎勵-輪盤次數+1",
-          prize_amount: 0,
-          note: "line_verify_bonus",
-          meta: { code: ref.code, referrer_user: String(ref?.referrer_username || "") },
-        });
-
-        await db
-          .prepare("UPDATE referrals SET verified_rewarded_at=datetime('now') WHERE id=?")
-          .bind(Number(ref.id))
-          .run();
-
-        return { success: true, referrerId, referredUserId: Number(verifiedUserId) };
+        return { ok: true, already_rewarded: !result.meta.changes };
       };
 
       const addDrawRecord = async ({
@@ -1737,25 +1635,28 @@ if (Number(user.created_by_admin_id || 0) > 0) {
 }
 
   const actsRes = await db
-    .prepare("SELECT activity_key, default_times, enabled FROM activities ORDER BY id ASC")
+    .prepare("SELECT activity_key, default_times, daily_reset FROM activities ORDER BY sort ASC, id ASC")
     .all();
 
   const usageRes = await db
-    .prepare("SELECT activity_key, times_left FROM user_activity_usage WHERE user_id=?")
+    .prepare("SELECT activity_key, times_left, updated_at FROM user_activity_usage WHERE user_id=?")
     .bind(Number(user.id))
     .all();
 
   const usageLeft = new Map(
-    (usageRes?.results || []).map((r) => [r.activity_key, Number(r.times_left || 0)])
+    (usageRes?.results || []).map((r) => [r.activity_key, r])
   );
 
   const limits = {};
   const used = {};
 
+  const today = formatInTaipei().slice(0, 10);
   for (const a of (actsRes?.results || [])) {
     const key = a.activity_key;
     const defaultLimit = Number(a.default_times || 0);
-    const left = usageLeft.has(key) ? Number(usageLeft.get(key) || 0) : defaultLimit;
+    const row = usageLeft.get(key);
+    const current = row && (!Number(a.daily_reset) || toTaipeiStringFromUtc(row.updated_at).slice(0, 10) === today);
+    const left = current ? Number(row.times_left || 0) : defaultLimit;
 
     const limit = Math.max(defaultLimit, left);
     limits[key] = limit;
@@ -1927,13 +1828,15 @@ if (url.pathname === "/admin/module/electronic-room/update" && request.method ==
   }
 
   const user = await db
-    .prepare("SELECT id, username, display_name FROM users WHERE id=? LIMIT 1")
+    .prepare("SELECT id, username, display_name, created_by_admin_id FROM users WHERE id=? LIMIT 1")
     .bind(userId)
     .first();
 
   if (!user) {
     return json({ success: false, error: "找不到會員" }, { status: 404 });
   }
+
+  if (!isSuperAdmin(admin) && Number(user.created_by_admin_id) !== Number(admin.admin_id)) return forbid("Forbidden", 403);
 
   const moduleKey = "electronic_room";
 
@@ -2132,13 +2035,15 @@ if (url.pathname === "/admin/module/electronic-room/status" && request.method ==
   }
 
   const user = await db
-    .prepare("SELECT id, username, display_name FROM users WHERE id=? LIMIT 1")
+    .prepare("SELECT id, username, display_name, created_by_admin_id FROM users WHERE id=? LIMIT 1")
     .bind(userId)
     .first();
 
   if (!user) {
     return json({ success: false, error: "找不到會員" }, { status: 404 });
   }
+
+  if (!isSuperAdmin(admin) && Number(user.created_by_admin_id) !== Number(admin.admin_id)) return forbid("Forbidden", 403);
 
   const moduleKey = "electronic_room";
 
@@ -2561,7 +2466,7 @@ if (url.pathname === "/module/electronic-room/ticket/use" && request.method === 
 if (url.pathname === "/activities" && request.method === "GET") {
   const rows = await db
     .prepare(
-      "SELECT activity_key, activity_name, enabled, default_times, start_at, end_at, updated_at FROM activities ORDER BY id ASC"
+      "SELECT activity_key, activity_name, enabled, default_times, start_at, end_at, sort, require_authorized, updated_at FROM activities ORDER BY sort ASC, id ASC"
     )
     .all();
   return json({ success: true, activities: rows?.results || [] });
@@ -2693,7 +2598,7 @@ if (url.pathname === "/promotions" && request.method === "GET") {
       id: Number(r.id || 0),
       title: String(r.title || ""),
       cover_image_url: String(r.cover_image_url || ""),
-      content_html: String(r.content_html || ""),
+      content_html: sanitizePromotionHtml(r.content_html),
       placement: String(r.placement || ""),
       enabled: Number(r.enabled || 0),
       sort: Number(r.sort || 0),
@@ -2785,7 +2690,6 @@ if (url.pathname === "/auth/admin/login" && request.method === "POST") {
             error: "INVALID_JSON_BODY",
             hint:
               "請確認送的是合法 JSON。PowerShell 建議用 ConvertTo-Json 或 curl.exe --data-raw \"{\\\"username\\\":\\\"...\\\"}\"",
-            raw,
             contentType: ct,
           },
           { status: 400 }
@@ -2809,7 +2713,7 @@ if (url.pathname === "/auth/admin/login" && request.method === "POST") {
     .bind(username)
     .first();
 
-  if (!acc || String(acc.password || "") !== password) {
+  if (!await checkPassword(db, "admin_accounts", acc, password)) {
     return json({ success: false, error: "帳號或密碼錯誤" }, { status: 401 });
   }
 
@@ -2929,7 +2833,7 @@ if (url.pathname === "/auth/line/login" && request.method === "POST") {
   const lineUserId = String(verified.lineUser.sub || "").trim();
   const user = await db
     .prepare(
-      `SELECT id, username, password, display_name,
+      `SELECT id, username, display_name,
               welfare_balance, discount_balance, s_balance,
               line_id, line_user_id, line_display_name, line_picture_url,
               birthday, bank_holder, bank_name, bank_branch, bank_account,
@@ -3045,7 +2949,7 @@ if (url.pathname === "/auth/line/register" && request.method === "POST") {
   }
 
   const username = await makeLineUsername(lineUserId);
-  const randomPassword = randToken() + randToken();
+  const randomPassword = await hashPassword(randToken() + randToken());
 
   await db
     .prepare(
@@ -3140,133 +3044,9 @@ if (url.pathname === "/auth/line/register" && request.method === "POST") {
 // body: { username, password, display_name, ref_code }
 // =========================
 if (url.pathname === "/auth/user/register" && request.method === "POST") {
-  const body = await safeJson(request);
-  const username = String(body.username || "").trim();
-  const password = String(body.password || "").trim();
-  const display_name = String(body.display_name || body.name || "").trim();
-  const ref_code = String(
-    body.referral_code || body.ref_code || body.ref || ""
-  ).trim();
-
-  let inheritedAdminId = null;
-  let refOwner = null;
-
-  if (!username || !password) {
-    return json({ success: false, error: "缺少帳號或密碼" }, { status: 400 });
-  }
-  if (username.length < 3 || password.length < 3) {
-    return json({ success: false, error: "帳號/密碼長度不足" }, { status: 400 });
-  }
-
-  // 帳號不能重複
-  const exists = await db
-    .prepare("SELECT id FROM users WHERE username=? LIMIT 1")
-    .bind(username)
-    .first();
-  if (exists) {
-    return json({ success: false, error: "此帳號已存在" }, { status: 409 });
-  }
-
-  // 若帶推薦碼，先找推薦人所屬管理員，讓新註冊者繼承同一位管理員
-  if (ref_code) {
-    refOwner = await db
-      .prepare(
-        `SELECT rc.user_id AS referrer_user_id,
-                u.username AS referrer_username,
-                u.created_by_admin_id AS referrer_admin_id
-         FROM referral_codes rc
-         JOIN users u ON u.id = rc.user_id
-         WHERE rc.code=?
-         LIMIT 1`
-      )
-      .bind(ref_code)
-      .first();
-
-    const referrerAdminId = Number(refOwner?.referrer_admin_id || 0);
-    if (referrerAdminId > 0) {
-      inheritedAdminId = referrerAdminId;
-    }
-  }
-
-  // 建立 user：若有推薦碼且推薦人原本屬於某位管理員，則繼承該管理員
-  await db
-    .prepare(
-      `INSERT INTO users
-        (username, password, display_name, welfare_balance, num_authorized, uses_left,
-         times_override, enabled, locked, created_by_admin_id, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))`
-    )
-    .bind(
-      username,
-      password,
-      display_name,
-      0,               // welfare_balance
-      0,               // num_authorized
-      0,               // uses_left
-      null,            // times_override
-      1,               // enabled
-      0,               // locked
-      inheritedAdminId // created_by_admin_id
-    )
-    .run()
-    .catch(() => null);
-
-  const newUser = await db
-    .prepare("SELECT id, username FROM users WHERE username=? LIMIT 1")
-    .bind(username)
-    .first();
-
-  const newUserId = Number(newUser?.id || 0);
-  if (!newUserId) {
-    return json({ success: false, error: "註冊失敗" }, { status: 500 });
-  }
-
-  // 若帶 ref_code：先綁定推薦關係，等 LINE ID 填寫完成並由後台驗證後才發放獎勵
-  let refBound = false;
-  if (ref_code) {
-    const referrerId = Number(
-      refOwner?.referrer_user_id ||
-      (
-        await db
-          .prepare(
-            `SELECT rc.user_id AS referrer_user_id
-             FROM referral_codes rc
-             WHERE rc.code=?
-             LIMIT 1`
-          )
-          .bind(ref_code)
-          .first()
-      )?.referrer_user_id || 0
-    );
-
-    if (referrerId > 0 && referrerId !== newUserId) {
-      const already = await db
-        .prepare("SELECT id FROM referrals WHERE referred_user_id=? LIMIT 1")
-        .bind(newUserId)
-        .first();
-
-      if (!already) {
-        await db
-          .prepare(
-            "INSERT INTO referrals (referrer_user_id, referred_user_id, code, created_at) VALUES (?,?,?,datetime('now'))"
-          )
-          .bind(referrerId, newUserId, ref_code)
-          .run();
-        refBound = true;
-      }
-    }
-  }
-
-  return json({
-    success: true,
-    user: { id: newUserId, username, created_by_admin_id: inheritedAdminId },
-    referral: { applied: !!ref_code, bound: refBound, rewarded: false },
-  });
+  return forbid("請使用 LINE 註冊", 410);
 }
 
-// =========================
-// AUTH: user login
-// =========================
 if (url.pathname === "/auth/user/login" && request.method === "POST") {
   const body = await safeJson(request);
   const username = String(body.username || "").trim();
@@ -3291,7 +3071,7 @@ if (url.pathname === "/auth/user/login" && request.method === "POST") {
     .bind(username)
     .first();
 
-  if (!user || String(user.password || "") !== password) {
+  if (!await checkPassword(db, "users", user, password)) {
     return json({ success: false, error: "帳號或密碼錯誤" }, { status: 401 });
   }
   if (Number(user.enabled || 0) !== 1) {
@@ -3360,7 +3140,6 @@ if (url.pathname === "/user/profile" && request.method === "PATCH") {
   if (!sess) return forbid("Unauthorized", 401);
 
   const body = await safeJson(request);
-  console.log("PATCH /user/profile body =", body);
 
   const patch = {
     line_id: String(body.line_id || "").trim(),
@@ -3371,7 +3150,6 @@ if (url.pathname === "/user/profile" && request.method === "PATCH") {
     bank_account: String(body.bank_account || "").trim(),
   };
 
-  console.log("PATCH /user/profile patch =", patch);
 
   const u = await fetchUserRow(sess.user_id);
   if (!u) return forbid("User not found", 404);
@@ -3412,7 +3190,6 @@ if (url.pathname === "/user/profile" && request.method === "PATCH") {
     return json({ success: false, error: "更新失敗" }, { status: 500 });
   }
 
-  console.log("PATCH /user/profile updates =", updates, binds);
 
   if (!updates.length) {
     return json({ success: true, message: "沒有可更新的欄位（已鎖定或空值）" });
@@ -3478,57 +3255,35 @@ if (url.pathname === "/shop/redeem" && request.method === "POST") {
   const cost = Number(prod.cost_s || 0);
   if (cost <= 0) return json({ success: false, error: "商品成本異常" }, { status: 400 });
 
-  const u = await fetchUserRow(sess.user_id);
-  if (!u) return forbid("User not found", 404);
+  const order = await db.prepare(
+    `INSERT INTO shop_orders (created_at, user_id, username, product_id, product_name, cost_s, status, note)
+     SELECT datetime('now'), u.id, u.username, p.id, p.name, p.cost_s, 'settling', ''
+     FROM users u JOIN shop_products p ON p.id=?
+     WHERE u.id=? AND u.enabled=1 AND COALESCE(u.locked,0)=0
+       AND p.enabled=1 AND p.deleted=0 AND p.cost_s>0 AND u.s_balance>=p.cost_s
+     RETURNING product_id, product_name, cost_s`
+  ).bind(productId, sess.user_id).first();
 
-  // 扣 S 幣
-const r = await applyWalletDelta({
-  userId: Number(u.id),
-  delta_s: -cost,
-  delta_welfare: Number(prod.reward_welfare || 0),
-  delta_discount: Number(prod.reward_discount || 0),
-  category: "shop",
-  action: "redeem",
-  note: `兌換：${prod.name}`,
-  result: `扣除 S幣 ${cost}，獲得折抵金 ${prod.reward_discount || 0} 福利金 ${prod.reward_welfare || 0}`,
-});
-
-  const ok = !!r.ok;
-  await db
-    .prepare(
-      `INSERT INTO shop_orders (created_at, user_id, username, product_id, product_name, cost_s, status, note)
-       VALUES (datetime('now'),?,?,?,?,?,?,?)`
-    )
-    .bind(
-      Number(u.id),
-      String(u.username),
-      String(prod.id),
-      String(prod.name),
-      cost,
-      ok ? "success" : "fail",
-      ok ? "" : String(r.error || "redeem failed")
-    )
-    .run();
-
-  if (!ok) {
-    // 失敗也寫一筆 wallet log（若 applyWalletDelta 因不足提前 return，log 不會寫）
-    await insertWalletLog({
-      user_id: u.id,
-      username: u.username,
-      category: "shop",
-      action: "redeem",
-      status: "fail",
-      delta_s: 0,
-      delta_welfare: 0,
-      delta_discount: 0,
-      result: "兌換失敗",
-      note: `兌換：${prod.name}（${String(r.error || "fail")}）`,
-    });
-
-    return json({ success: false, error: r.error || "兌換失敗" }, { status: 400 });
+  if (!order) {
+    const error = "S 幣不足或商品已變更";
+    await db.batch([
+      db.prepare(
+        `INSERT INTO shop_orders (created_at, user_id, username, product_id, product_name, cost_s, status, note)
+         VALUES (datetime('now'),?,?,?,?,?,'fail',?)`
+      ).bind(sess.user_id, sess.username, prod.id, prod.name, cost, error),
+      db.prepare(
+        `INSERT INTO wallet_logs (created_at, user_id, account, category, action, status, result, note)
+         VALUES (datetime('now'),?,?,'shop','redeem','fail','兌換失敗',?)`
+      ).bind(sess.user_id, sess.username, `兌換：${prod.name}（${error}）`),
+    ]);
+    return forbid(error, 400);
   }
-
-  return json({ success: true, order: { product_id: prod.id, name: prod.name, cost_s: cost }, me: r.user });
+  return json({
+    success: true,
+    order: { product_id: order.product_id, name: order.product_name, cost_s: order.cost_s },
+    me: await db.prepare("SELECT id, username, password, display_name, s_balance, welfare_balance, discount_balance FROM users WHERE id=?")
+      .bind(sess.user_id).first(),
+  });
 }
 
 // ===== Shop orders (user) =====
@@ -3607,10 +3362,11 @@ if (url.pathname === "/admin/shop/orders" && request.method === "GET") {
               status, note, reviewed
        FROM shop_orders
        WHERE created_at >= datetime('now', ?)
+         AND (?=1 OR EXISTS (SELECT 1 FROM users WHERE id=shop_orders.user_id AND created_by_admin_id=?))
        ORDER BY id DESC
        LIMIT 500`
     )
-    .bind(`-${days} day`)
+    .bind(`-${days} day`, Number(isSuperAdmin(admin)), Number(admin.admin_id))
     .all();
 
   return json({
@@ -3634,27 +3390,16 @@ if (
     return json({ success: false, error: "bad order id" }, { status: 400 });
   }
 
-  const row = await db
-    .prepare("SELECT id, reviewed FROM shop_orders WHERE id=? LIMIT 1")
-    .bind(id)
-    .first();
-
+  const row = await db.prepare(
+    `UPDATE shop_orders SET reviewed=CASE WHEN reviewed=1 THEN 0 ELSE 1 END
+     WHERE id=? AND (?=1 OR EXISTS (SELECT 1 FROM users WHERE id=shop_orders.user_id AND created_by_admin_id=?))
+     RETURNING reviewed`
+  ).bind(id, Number(isSuperAdmin(admin)), Number(admin.admin_id)).first();
   if (!row) {
-    return json({ success: false, error: "order not found" }, { status: 404 });
+    const exists = await db.prepare("SELECT 1 FROM shop_orders WHERE id=?").bind(id).first();
+    return exists ? forbid("Forbidden", 403) : forbid("order not found", 404);
   }
-
-  const nextReviewed = Number(row.reviewed || 0) === 1 ? 0 : 1;
-
-  await db
-    .prepare("UPDATE shop_orders SET reviewed=? WHERE id=?")
-    .bind(nextReviewed, id)
-    .run();
-
-  return json({
-    success: true,
-    id,
-    reviewed: nextReviewed,
-  });
+  return json({ success: true, id, reviewed: row.reviewed });
 }
 
 // =========================
@@ -4302,7 +4047,7 @@ return json({
     id: Number(r.id || 0),
     title: String(r.title || ""),
     cover_image_url: String(r.cover_image_url || ""),
-    content_html: String(r.content_html || ""),
+    content_html: sanitizePromotionHtml(r.content_html),
     placement: String(r.placement || "coupon"), // ✅ 加這個
     enabled: Number(r.enabled || 0),
     sort: Number(r.sort || 0),
@@ -4320,7 +4065,7 @@ if (url.pathname === "/admin/promotions" && request.method === "POST") {
 
   const title = String(body.title || "").trim();
   const cover = String(body.cover_image_url || "");
-  const content = String(body.content_html || "");
+  const content = sanitizePromotionHtml(body.content_html);
 
   // ✅ 新增：放置位置
 const placement = String(body.placement || "coupon").trim().toLowerCase();
@@ -4365,7 +4110,7 @@ if (url.pathname.startsWith("/admin/promotions/") && request.method === "PATCH")
 
   if (body.title !== undefined) setIf("title", String(body.title));
   if (body.cover_image_url !== undefined) setIf("cover_image_url", String(body.cover_image_url));
-  if (body.content_html !== undefined) setIf("content_html", String(body.content_html));
+  if (body.content_html !== undefined) setIf("content_html", sanitizePromotionHtml(body.content_html));
   if (body.enabled !== undefined) setIf("enabled", Number(body.enabled) ? 1 : 0);
   if (body.sort !== undefined) setIf("sort", Number(body.sort));
 
@@ -4437,17 +4182,16 @@ if (url.pathname.startsWith("/admin/promotions/") && request.method === "DELETE"
           .bind(Number(admin.admin_id))
           .first();
 
-        if (!acc || String(acc.password) !== old_password) {
+        if (!await checkPassword(db, "admin_accounts", acc, old_password)) {
           return json({ success: false, error: "舊密碼錯誤" }, { status: 400 });
         }
 
         await db
           .prepare("UPDATE admin_accounts SET password=? WHERE id=?")
-          .bind(new_password, Number(admin.admin_id))
+          .bind(await hashPassword(new_password), Number(admin.admin_id))
           .run();
 
         await db.prepare("DELETE FROM admin_sessions WHERE username=?").bind(admin.username).run();
-        hotCacheDel("cfg:wheel_prizes");
         return json({ success: true });
       }
 
@@ -4479,69 +4223,35 @@ if (url.pathname.startsWith("/admin/promotions/") && request.method === "DELETE"
         return json({ success: true, items });
       }
 
-      // admin: update activity (PUT)
-      if (url.pathname === "/admin/activities" && request.method === "PUT") {
+      if ((url.pathname === "/admin/activities" && request.method === "PUT") ||
+          (url.pathname.startsWith("/admin/activities/") && request.method === "PATCH")) {
         if (!admin) return forbid("Unauthorized", 401);
         const body = await safeJson(request);
-        const activity_key = String(body.activity_key ?? body.key ?? "").trim();
-        if (!activity_key) return json({ success: false, error: "activity_key required" }, { status: 400 });
+        const key = request.method === "PATCH" ? decodeURIComponent(url.pathname.split("/").pop() || "")
+          : String(body.activity_key ?? body.key ?? "").trim();
+        if (!key) return forbid("activity_key required", 400);
+        const current = await db.prepare("SELECT * FROM activities WHERE activity_key=?").bind(key).first();
+        if (!current) return forbid("activity not found", 404);
+        const get = (column, alias = column) =>
+          Object.hasOwn(body, column) ? body[column] : Object.hasOwn(body, alias) ? body[alias] : current[column];
 
-        const enabled = Number(body.enabled || 0) ? 1 : 0;
-        const default_times = Number(body.default_times ?? body.defaultTimes ?? 0);
-        const start_at = (body.start_at ?? body.startAt) ? String(body.start_at ?? body.startAt) : null;
-        const end_at = (body.end_at ?? body.endAt) ? String(body.end_at ?? body.endAt) : null;
-
-        await db
-          .prepare(
-            `UPDATE activities
-             SET enabled=?, default_times=?, start_at=?, end_at=?, updated_at=?
-             WHERE activity_key=?`
-          )
-          .bind(enabled, default_times, start_at, end_at, nowIso(), activity_key)
-          .run();
-
-        hotCacheDel(`activity:${activity_key}`);
-        return json({ success: true });
-      }
-
-      // admin: patch single activity
-      if (url.pathname.startsWith("/admin/activities/") && request.method === "PATCH") {
-        if (!admin) return forbid("Unauthorized", 401);
-        const key = decodeURIComponent(url.pathname.split("/").pop() || "");
-        if (!key) return json({ success: false, error: "activity_key required" }, { status: 400 });
-
-        const body = await safeJson(request);
-
-        const enabled =
-          body.enabled === undefined ? undefined : (Number(body.enabled) ? 1 : 0);
-        const default_times =
-          body.default_times === undefined ? undefined : Number(body.default_times || 0);
-        const start_at =
-          body.start_at === undefined ? undefined : (body.start_at ? String(body.start_at) : null);
-        const end_at =
-          body.end_at === undefined ? undefined : (body.end_at ? String(body.end_at) : null);
-
-        const cur = await db
-          .prepare("SELECT * FROM activities WHERE activity_key=? LIMIT 1")
-          .bind(key)
-          .first();
-        if (!cur) return json({ success: false, error: "activity not found" }, { status: 404 });
-
-        await db
-          .prepare(
-            `UPDATE activities
-             SET enabled=?, default_times=?, start_at=?, end_at=?, updated_at=?
-             WHERE activity_key=?`
-          )
-          .bind(
-            enabled === undefined ? Number(cur.enabled || 0) : enabled,
-            default_times === undefined ? Number(cur.default_times || 0) : default_times,
-            start_at === undefined ? cur.start_at : start_at,
-            end_at === undefined ? cur.end_at : end_at,
-            nowIso(),
-            key
-          )
-          .run();
+        const name = String(get("activity_name", "name") ?? "").trim();
+        const sort = Number(get("sort"));
+        const defaultTimes = Number(get("default_times", "defaultTimes"));
+        const start = String(get("start_at", "startAt") ?? "").trim() || null;
+        const end = String(get("end_at", "endAt") ?? "").trim() || null;
+        const startMs = start ? parseTaipeiDateTimeToUtcMs(start) : -Infinity;
+        const endMs = end ? parseTaipeiDateTimeToUtcMs(end) : Infinity;
+        if (!name || !Number.isSafeInteger(sort) || !Number.isSafeInteger(defaultTimes) || defaultTimes < 0 ||
+            Number.isNaN(startMs) || Number.isNaN(endMs) || startMs > endMs) {
+          return forbid("活動名稱、次數、排序或日期無效", 400);
+        }
+        const flag = (column, alias) => Number(Boolean(Number(get(column, alias))));
+        await db.prepare(
+          `UPDATE activities SET activity_name=?, enabled=?, sort=?, default_times=?, start_at=?, end_at=?,
+           allow_override_times=?, daily_reset=?, require_authorized=?, updated_at=? WHERE activity_key=?`
+        ).bind(name, flag("enabled"), sort, defaultTimes, start, end, flag("allow_override_times", "allowOverrideTimes"),
+          flag("daily_reset", "dailyReset"), flag("require_authorized", "requireAuthorized"), nowIso(), key).run();
 
         hotCacheDel(`activity:${key}`);
         return json({ success: true });
@@ -4583,7 +4293,7 @@ if (url.pathname.startsWith("/admin/promotions/") && request.method === "DELETE"
 
       // public: wheel prizes
       if (url.pathname === "/wheel/prizes" && request.method === "GET") {
-        const rows = { results: await getCachedWheelPrizes() };
+        const rows = { results: await getWheelPrizes() };
 
         const prizes = (rows?.results || []).map((r) => ({
           id: r.id,
@@ -4629,35 +4339,26 @@ if (url.pathname.startsWith("/admin/promotions/") && request.method === "DELETE"
       if (url.pathname === "/admin/wheel/prizes" && request.method === "PUT") {
         if (!admin) return forbid("Unauthorized", 401);
         const body = await safeJson(request);
-        const items = Array.isArray(body.items)
-          ? body.items
-          : Array.isArray(body.prizes)
-          ? body.prizes
-          : [];
+        const items = body.items ?? body.prizes;
+        if (!Array.isArray(items) || items.length > 99) return forbid("獎項格式無效", 400);
 
-        await db.prepare("DELETE FROM wheel_prizes").run();
-        hotCacheDel("cfg:wheel_prizes");
-
+        const statements = [db.prepare("DELETE FROM wheel_prizes")];
         for (const p of items) {
-          const title = String(p.name ?? p.title ?? "");
-          const prize_type = String(p.prize_type || "money");
-          const prize_text = String(p.prize_text || "");
-          const image_url = String(p.image_url || "");
+          if (!p || typeof p !== "object") return forbid("獎項格式無效", 400);
+          const title = String(p.name ?? p.title ?? "").trim();
           const amount = Number(p.prize_value ?? p.amount ?? 0);
-          const weight = Math.max(0, Number(p.probability ?? p.weight ?? 0));
-          const enabled = Number(p.enabled ?? 1) ? 1 : 0;
+          const weight = Number(p.probability ?? p.weight ?? 0);
           const sort = Number(p.sort ?? 0);
+          if (!title || !Number.isSafeInteger(amount) || amount < 0 || !Number.isFinite(weight) || weight < 0 ||
+              !Number.isSafeInteger(sort)) return forbid("獎項金額、權重或排序無效", 400);
 
-          await db
-            .prepare(
-              `INSERT INTO wheel_prizes
-                (title, amount, weight, enabled, prize_type, prize_text, image_url, sort, updated_at, created_at)
-               VALUES (?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))`
-            )
-            .bind(title, amount, weight, enabled, prize_type, prize_text, image_url, sort)
-            .run();
+          statements.push(db.prepare(
+            `INSERT INTO wheel_prizes (title, amount, weight, enabled, prize_type, prize_text, image_url, sort)
+             VALUES (?,?,?,?,?,?,?,?)`
+          ).bind(title, amount, weight, Number(Boolean(Number(p.enabled ?? 1))),
+            String(p.prize_type || "money"), String(p.prize_text || ""), String(p.image_url || ""), sort));
         }
-        hotCacheDel("cfg:wheel_prizes");
+        await db.batch(statements);
         return json({ success: true });
       }
 
@@ -4830,7 +4531,7 @@ await db
   )
   .bind(
     username,
-    password,
+    await hashPassword(password),
     display_name,
     welfare_balance,
     discount_balance,
@@ -4899,7 +4600,7 @@ await db
   )
   .bind(
     username,
-    password,
+    await hashPassword(password),
     display_name,
     welfare_balance,
     discount_balance,
@@ -5025,7 +4726,7 @@ if (
   const days = Math.max(1, Math.min(365, Number(url.searchParams.get("days") || 90)));
   const rows = await db
     .prepare(
-      `SELECT id, created_at, category, action, status, delta_s, delta_welfare, delta_discount, result, note, admin_account
+      `SELECT id, created_at, account, category, action, status, delta_s, delta_sc, delta_welfare, delta_discount, result, note, admin_account
        FROM wallet_logs
        WHERE user_id=? AND created_at >= datetime('now', ?)
        ORDER BY id DESC
@@ -5143,7 +4844,7 @@ if (!Number.isFinite(amount)) {
 const safeAmount = Math.max(0, Math.floor(amount));
 
 const act = await db
-  .prepare("SELECT activity_key FROM activities WHERE activity_key=? LIMIT 1")
+  .prepare("SELECT activity_key, allow_override_times FROM activities WHERE activity_key=? LIMIT 1")
   .bind(activity_key)
   .first();
 
@@ -5151,6 +4852,7 @@ if (!act) {
   return json({ success: false, error: "activity not found" }, { status: 404 });
 }
 
+if (!Number(act.allow_override_times)) return forbid("此活動不允許調整次數", 403);
 await ensureUsageRow(userId, activity_key);
 
 const cur = await db
@@ -5308,15 +5010,15 @@ if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
         if (body.username !== undefined) setIf("username", String(body.username || "").trim());
         if (body.password !== undefined) {
           const nextPassword = String(body.password ?? "").trim();
-          if (nextPassword) setIf("password", nextPassword);
+          if (nextPassword) setIf("password", await hashPassword(nextPassword));
         }
         if (body.new_password !== undefined) {
           const nextPassword = String(body.new_password ?? "").trim();
-          if (nextPassword) setIf("password", nextPassword);
+          if (nextPassword) setIf("password", await hashPassword(nextPassword));
         }
         if (body.newPassword !== undefined) {
           const nextPassword = String(body.newPassword ?? "").trim();
-          if (nextPassword) setIf("password", nextPassword);
+          if (nextPassword) setIf("password", await hashPassword(nextPassword));
         }
         if (body.display_name !== undefined) setIf("display_name", String(body.display_name || ""));
         if (body.name !== undefined) setIf("display_name", String(body.name || ""));
@@ -5422,7 +5124,7 @@ await db
   .prepare(
     "INSERT INTO admin_accounts (username, password, role, status, official_line_url, created_at) VALUES (?,?,?,?,?,datetime('now'))"
   )
-  .bind(username, password, role, status, official_line_url || null)
+  .bind(username, await hashPassword(password), role, status, official_line_url || null)
   .run();
 
         return json({ success: true });
@@ -5443,7 +5145,7 @@ await db
         };
 
 if (body.username !== undefined) setIf("username", String(body.username || "").trim());
-if (body.password !== undefined) setIf("password", String(body.password || "").trim());
+if (String(body.password || "").trim()) setIf("password", await hashPassword(String(body.password).trim()));
 if (body.role !== undefined) setIf("role", String(body.role || "admin").trim() || "admin");
 if (body.status !== undefined)
   setIf("status", String(body.status || "active").trim() || "active");
@@ -5587,7 +5289,7 @@ if (url.pathname === "/football/config" && request.method === "GET") {
   return json({
     success: true,
     activity: {
-      enabled: activityEnabledNow(act) ? 1 : 0,
+      enabled: activityEnabledNow(act) && (!Number(act.require_authorized) || Number(sess.num_authorized)) ? 1 : 0,
       activity_key: "football",
       activity_name: act?.activity_name || "足球射門",
     },
@@ -5619,6 +5321,7 @@ if (["/football/start", "/football/start-shoot"].includes(url.pathname) && reque
   if (!sess) return forbid("Unauthorized", 401);
   const act = await getFootballActivityDirect();
   if (!activityEnabledNow(act)) return forbid("活動未開放", 403);
+  if (Number(act.require_authorized) && !Number(sess.num_authorized)) return forbid("此活動需先取得授權", 403);
 
   const body = await safeJson(request);
   const bet = body?.bet_amount === undefined ? FOOTBALL_BASE_BET : Number(body.bet_amount);
@@ -5673,6 +5376,7 @@ if (url.pathname === "/football/shoot" && request.method === "POST") {
   if (!sess) return forbid("Unauthorized", 401);
   const act = await getFootballActivityDirect();
   if (!activityEnabledNow(act)) return forbid("活動未開放", 403);
+  if (Number(act.require_authorized) && !Number(sess.num_authorized)) return forbid("此活動需先取得授權", 403);
 
   const body = await safeJson(request);
   const gameId = Number(body?.game_id || 0);
@@ -5735,194 +5439,98 @@ if (url.pathname === "/football/claim" && request.method === "POST") {
 
         const act = await getCachedActivity("wheel");
         if (!activityEnabledNow(act)) return forbid("活動未開放", 403);
+        if (Number(act.require_authorized) && !Number(sess.num_authorized)) return forbid("此活動需先取得授權", 403);
 
-        const dec = await decUsageIfPossible(Number(sess.user_id), "wheel");
-        if (!dec.ok) return forbid("抽獎次數不足", 403);
+        const usage = await ensureUsageRow(sess.user_id, "wheel");
+        if (!usage?.times_left) return forbid("抽獎次數不足", 403);
 
-        const prizes = await getCachedWheelPrizes();
-        if (prizes.length === 0) {
-          return json({ success: false, error: "尚無獎項" }, { status: 400 });
-        }
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const prizes = await getWheelPrizes();
+          const eligible = prizes.filter(p => Number.isFinite(Number(p.weight)) && Number(p.weight)>0);
+          if (!eligible.length) return forbid("尚無獎項", 400);
+          const order_ids = prizes.map(p => Number(p.id));
+          const user = await db.prepare("SELECT created_by_admin_id, first_wheel_forced_done FROM users WHERE id=?")
+            .bind(sess.user_id).first();
+          if (!user) return forbid("Unauthorized", 401);
+          const forced = !Number(user.created_by_admin_id) && Number(user.first_wheel_forced_done) !== 1;
 
-        // 本次抽獎使用的獎項順序（前端輪盤對齊用）
-        const order_ids = prizes.map((p) => Number(p.id));
+          let pick;
+          if (forced) {
+            pick = eligible.find(p => Number(p.amount) === 5000 &&
+              (String(p.prize_type).toLowerCase() === "discount" || String(p.title).includes("折抵"))) ||
+              { id: -5000, title: "5000折抵金", amount: 5000, weight: 0, prize_type: "discount" };
+          } else {
+            let roll = Math.random() * eligible.reduce((sum, p) => sum + Number(p.weight), 0);
+            pick = eligible.find(p => (roll -= Number(p.weight)) < 0) || eligible.at(-1);
+          }
+          const result_index = Math.max(0, order_ids.indexOf(Number(pick.id)));
 
-        let pick = null;
+          const rawTitle = String(pick.title || "").trim();
+          const rawPrizeType = String(pick.prize_type || "").trim().toLowerCase();
+          const rawPrizeText = String(pick.prize_text || "");
+          const rawImageUrl = String(pick.image_url || "");
+          const rawWeight = Number(pick.weight || 0);
 
-        const userRow = await db
-          .prepare("SELECT id, created_by_admin_id, first_wheel_forced_done FROM users WHERE id=? LIMIT 1")
-          .bind(Number(sess.user_id))
-          .first();
+          let amount = Number(pick.amount || 0);
 
-        const isSelfRegisteredUser = Number(userRow?.created_by_admin_id || 0) === 0;
-        const needForcedFirstWheel = isSelfRegisteredUser && Number(userRow?.first_wheel_forced_done || 0) !== 1;
+          // 如果 amount 沒填，就從標題抓數字，例如：S幣888 / 現金666 / 折抵金1000
+          if (!Number.isFinite(amount) || amount <= 0) {
+            const m = rawTitle.replace(/,/g, "").match(/\d+/);
+            amount = m ? Number(m[0]) : 0;
+          }
 
-        if (needForcedFirstWheel) {
-          pick = prizes.find((p) => {
-            const title = String(p?.title || "");
-            const type = String(p?.prize_type || "").toLowerCase();
-            const amount = Number(p?.amount || 0);
-            return (type === "discount" || title.includes("折抵")) && amount === 5000;
-          }) || {
-            id: -5000,
-            title: "5000折抵金",
-            amount: 5000,
-            weight: 0,
-            prize_type: "discount",
-            prize_text: "",
-            image_url: "",
+          // S幣 / 折抵金 / 福利金 分流
+          const isScoin =
+            rawPrizeType === "scoin" ||
+            rawPrizeType === "scoins" ||
+            rawPrizeType === "s_coin" ||
+            rawPrizeType === "s-coins" ||
+            rawPrizeType === "coin" ||
+            rawPrizeType.includes("scoin") ||
+            /s\s*幣/i.test(rawTitle) ||
+            rawTitle.includes("S幣") ||
+            rawTitle.includes("S币");
+
+          const isDiscount =
+            rawPrizeType === "discount" ||
+            rawPrizeType === "discount_balance" ||
+            rawTitle.includes("折抵") ||
+            rawTitle.includes("折抵金");
+
+          const isCash =
+            rawPrizeType === "money" ||
+            rawPrizeType === "cash" ||
+            rawTitle.includes("現金");
+
+          // 真正回前端的格式
+          const result = {
+            id: Number(pick.id),
+            name: rawTitle,
+            prize_type: isScoin ? "scoin" : isDiscount ? "discount" : isCash ? "money" : (rawPrizeType || "none"),
+            prize_value: Number(amount || 0),
+            prize_text: rawPrizeText,
+            image_url: rawImageUrl,
+            probability: rawWeight,
           };
 
-          await db
-            .prepare("UPDATE users SET first_wheel_forced_done=1 WHERE id=?")
-            .bind(Number(sess.user_id))
-            .run();
+          const settled = await db.prepare(
+            `INSERT INTO wheel_spin_settlements (user_id, username, prize_id, title, amount, currency, forced)
+             SELECT u.id, u.username, ?, ?, ?, ?, ?
+             FROM users u JOIN user_activity_usage a ON a.user_id=u.id AND a.activity_key='wheel'
+             WHERE u.id=? AND u.enabled=1 AND COALESCE(u.locked,0)=0 AND a.times_left>0
+               AND (CASE WHEN COALESCE(u.created_by_admin_id,0)=0 AND COALESCE(u.first_wheel_forced_done,0)<>1 THEN 1 ELSE 0 END)=?
+               AND (?=1 OR EXISTS(SELECT 1 FROM wheel_prizes WHERE id=? AND enabled=1 AND weight>0))
+               AND EXISTS(SELECT 1 FROM wheel_prizes WHERE enabled=1 AND weight>0)
+             RETURNING id`
+          ).bind(pick.id, rawTitle || "輪盤", amount, isScoin ? "scoin" : isDiscount ? "discount" : "welfare",
+            Number(forced), sess.user_id, Number(forced), Number(forced), pick.id).first();
+          const current = await db.prepare("SELECT times_left FROM user_activity_usage WHERE user_id=? AND activity_key='wheel'")
+            .bind(sess.user_id).first();
+          const left = Number(current?.times_left || 0);
+          if (settled) return json({ success: true, result, result_index, order_ids, left, balances: null });
+          if (!left) return forbid("抽獎次數不足", 403);
         }
-
-        if (!pick) {
-          // 權重抽獎
-          let total = 0;
-          for (const p of prizes) total += Math.max(1, Number(p.weight || 1));
-
-          let r = Math.random() * total;
-          pick = prizes[0];
-          for (const p of prizes) {
-            r -= Math.max(1, Number(p.weight || 1));
-            if (r <= 0) {
-              pick = p;
-              break;
-            }
-          }
-        }
-
-        const result_index = Math.max(
-          0,
-          order_ids.findIndex((id) => String(id) === String(pick.id))
-        );
-
-        const rawTitle = String(pick.title || "").trim();
-        const rawPrizeType = String(pick.prize_type || "").trim().toLowerCase();
-        const rawPrizeText = String(pick.prize_text || "");
-        const rawImageUrl = String(pick.image_url || "");
-        const rawWeight = Number(pick.weight || 0);
-
-        let amount = Number(pick.amount || 0);
-
-        // 如果 amount 沒填，就從標題抓數字，例如：S幣888 / 現金666 / 折抵金1000
-        if (!Number.isFinite(amount) || amount <= 0) {
-          const m = rawTitle.replace(/,/g, "").match(/\d+/);
-          amount = m ? Number(m[0]) : 0;
-        }
-
-        // S幣 / 折抵金 / 福利金 分流
-        const isScoin =
-          rawPrizeType === "scoin" ||
-          rawPrizeType === "scoins" ||
-          rawPrizeType === "s_coin" ||
-          rawPrizeType === "s-coins" ||
-          rawPrizeType === "coin" ||
-          rawPrizeType.includes("scoin") ||
-          /s\s*幣/i.test(rawTitle) ||
-          rawTitle.includes("S幣") ||
-          rawTitle.includes("S币");
-
-        const isDiscount =
-          rawPrizeType === "discount" ||
-          rawPrizeType === "discount_balance" ||
-          rawTitle.includes("折抵") ||
-          rawTitle.includes("折抵金");
-
-        const isCash =
-          rawPrizeType === "money" ||
-          rawPrizeType === "cash" ||
-          rawTitle.includes("現金");
-
-        // 真正回前端的格式
-        const result = {
-          id: Number(pick.id),
-          name: rawTitle,
-          prize_type: isScoin ? "scoin" : isDiscount ? "discount" : isCash ? "money" : (rawPrizeType || "none"),
-          prize_value: Number(amount || 0),
-          prize_text: rawPrizeText,
-          image_url: rawImageUrl,
-          probability: rawWeight,
-        };
-
-        // 入帳
-        if (Number(amount) > 0) {
-          if (isScoin) {
-            await db
-              .prepare("UPDATE users SET s_balance = COALESCE(s_balance,0) + ? WHERE id=?")
-              .bind(Number(amount), Number(sess.user_id))
-              .run();
-          } else if (isDiscount) {
-            await db
-              .prepare("UPDATE users SET discount_balance = COALESCE(discount_balance,0) + ? WHERE id=?")
-              .bind(Number(amount), Number(sess.user_id))
-              .run();
-          } else {
-            await db
-              .prepare("UPDATE users SET welfare_balance = COALESCE(welfare_balance,0) + ? WHERE id=?")
-              .bind(Number(amount), Number(sess.user_id))
-              .run();
-          }
-        }
-
-        // 餘額後續會由前端 onRefreshMe 重新同步，這裡避免多一次查詢拖慢抽獎開始時間
-
-        await insertWalletLog({
-          user_id: Number(sess.user_id),
-          username: String(sess.username),
-          category: "raffle",
-          action: "wheel_spin",
-          status: "success",
-          delta_welfare: isScoin || isDiscount ? 0 : Number(amount),
-          delta_s: isScoin ? Number(amount) : 0,
-          delta_discount: isDiscount ? Number(amount) : 0,
-          result:
-            Number(amount) > 0
-              ? isScoin
-                ? `中獎 S幣 ${Number(amount)}`
-                : isDiscount
-                ? `中獎 折抵金 ${Number(amount)}`
-                : `中獎 福利金 ${Number(amount)}`
-              : "未中獎",
-          note: `輪盤抽獎：${String(rawTitle || "")}`,
-        });
-
-        await addDrawRecord({
-          activity_key: "wheel",
-          user_id: Number(sess.user_id),
-          username: String(sess.username),
-          status: Number(amount) > 0 ? "win" : "lose",
-          prize_title: String(rawTitle || "輪盤"),
-          prize_amount: Number(amount),
-          note: "",
-          meta: { prize_id: pick.id, left: dec.left },
-        });
-
-        await db
-          .prepare(
-            "INSERT INTO winners (activity_key, user_id, username, prize_title, prize_amount, meta_json, created_at) VALUES (?,?,?,?,?,?,datetime('now'))"
-          )
-          .bind(
-            "wheel",
-            Number(sess.user_id),
-            String(sess.username),
-            String(rawTitle || "輪盤"),
-            Number(amount),
-            JSON.stringify({ prize_id: pick.id, left: dec.left })
-          )
-          .run();
-
-        return json({
-          success: true,
-          result,
-          result_index,
-          order_ids,
-          left: dec.left,
-          balances: null,
-        });
+        return forbid("輪盤設定已變更，請重試", 409);
       }
 
             // =========================
@@ -5946,29 +5554,24 @@ if (url.pathname === "/football/claim" && request.method === "POST") {
         const q = String(qp.get("q") || qp.get("keyword") || "").trim();
 
         const limitRaw = Number(qp.get("limit") || 200);
-        const limit = Math.max(1, Math.min(500, Number.isFinite(limitRaw) ? limitRaw : 200));
+        const limit = Math.max(1, Math.min(500, Number.isFinite(limitRaw) ? Math.trunc(limitRaw) : 200));
 
         // ✅ 使用者只能查自己
         const userId = Number(sess.user_id);
 
-// ---- 日期處理：若沒給，就預設今天；最多 30 天
-const toDate = to ? new Date(`${to}T23:59:59.999`) : new Date();
-const fromDate = from ? new Date(`${from}T00:00:00.000`) : new Date(toDate.getTime());
+        const parseDay = (value) => {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
+          const date = new Date(value + "T00:00:00Z");
+          return Number.isFinite(+date) && date.toISOString().slice(0, 10) === value ? +date : NaN;
+        };
+        const endDay = to || formatInTaipei(new Date()).slice(0, 10);
+        const endMs = parseDay(endDay);
+        const startMs = parseDay(from || endDay);
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs > endMs) return forbid("日期區間無效", 400);
 
-// 若未給 from，就同一天
-if (!from) {
-  fromDate.setHours(0, 0, 0, 0);
-}
-
-// 最多 30 天（含當天）
-const maxRangeMs = 30 * 24 * 60 * 60 * 1000;
-if (toDate.getTime() - fromDate.getTime() > maxRangeMs) {
-  fromDate.setTime(toDate.getTime() - maxRangeMs);
-}
-
-// ✅ 改成 SQLite 同格式：YYYY-MM-DD HH:MM:SS
-const fromDT = from ? taipeiYmdToUtcSql(from, "start") : taipeiYmdToUtcSql(to || formatInTaipei(new Date()).slice(0, 10), "start");
-const toDT = to ? taipeiYmdToUtcSql(to, "end") : toSqliteDT(new Date());
+        const startDay = new Date(Math.max(startMs, endMs - 29 * 86400000)).toISOString().slice(0, 10);
+        const fromDT = taipeiYmdToUtcSql(startDay, "start");
+        const toDT = to ? taipeiYmdToUtcSql(endDay, "end") : toSqliteDT(new Date());
 
 let sql = `
   SELECT id, activity_key, user_id, username, status,
@@ -5986,7 +5589,7 @@ const binds = [userId, fromDT, toDT];
           binds.push(status);
         }
 
-        if (type !== "all" && ["redpacket", "wheel", "number"].includes(type)) {
+        if (type !== "all") {
           sql += ` AND activity_key = ?`;
           binds.push(type);
         }

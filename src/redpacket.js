@@ -141,7 +141,7 @@ export async function handleRedpacket({ request, url, db, requireUser, safeJson,
     db.prepare("SELECT * FROM activities WHERE activity_key='redpacket'").first(),
     db.prepare("SELECT mode,fixed_amount,pool_json,count,allow_repeat,lock_when_all_opened FROM redpacket_config WHERE id=1").first(),
   ]);
-  const enabled = activityEnabledNow(act);
+  const enabled = activityEnabledNow(act) && (!Number(act?.require_authorized) || Number(sess.num_authorized));
   const rules = parseRedpacketConfig({ ...config, count: Number(config?.count || 30) });
   if (enabled) await ensureUsageRow(userId, "redpacket");
   const loadBoard = () => getRedpacketBoard(db, userId, rules, enabled);

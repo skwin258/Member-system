@@ -9,7 +9,7 @@ export const GAME_RULES = {
   reaction: { ...activity, minWait: [500, 10000, 1500], waitRange: [0, 10000, 3000], refundEarly: [0, 1, 1], ...tiers([100, 150, 200], [500, 300, 200]) },
   claw: {
     ...activity,
-    grip: [1, 10, 3, 0.1], damping: [0.05, 1, 0.15, 0.01],
+    grip: [1, 10, 6, 0.1], damping: [0.05, 1, 0.15, 0.01],
     carryFactor: [0.3, 1, 0.75, 0.01], jolt: [0, 0.03, 0.012, 0.001],
     fingerFriction: [0.5, 4, 2, 0.05], toyFriction: [0.5, 4, 2, 0.05],
     moveSpeed: [0.2, 1.2, 0.5, 0.01], dropSpeed: [0.2, 1.2, 0.55, 0.01], liftSpeed: [0.2, 1.2, 0.5, 0.01],

@@ -81,6 +81,7 @@ function activityLabel(k) {
   if (k === "redpacket") return "紅包抽獎";
   if (k === "wheel") return "輪盤抽獎";
   if (k === "number") return "數字抽獎";
+  if (k === "football") return "足球射門";
   return k || "-";
 }
 function statusLabel(s) {
@@ -249,7 +250,7 @@ export default function MobileRecordsPage({ me, initialView = "raffle" }) {
       <select value={activity} onChange={(e) => setActivity(e.target.value)}>
         <option value="redpacket">紅包抽獎</option>
         <option value="wheel">輪盤抽獎</option>
-        <option value="number">數字抽獎</option>
+        <option value="number">數字抽獎</option>        <option value="football">足球射門</option>
       </select>
     </label>
 

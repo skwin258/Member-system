@@ -1,3 +1,4 @@
+import { sanitizePromotionHtml } from "../lib/promotionHtml.js";
 import { API_BASE } from '../config';
 import React, { useEffect, useMemo, useState } from "react";
 import { LOGIN_PLACEMENT } from "../lib/loginPromotions";
@@ -177,7 +178,7 @@ export default function MobilePromoPage() {
                   {item.isHtml ? (
                     <div
                       className="mPromoContent"
-                      dangerouslySetInnerHTML={{ __html: item.rawContent }}
+                      dangerouslySetInnerHTML={{ __html: sanitizePromotionHtml(item.rawContent) }}
                     />
                   ) : item.paragraphs.length ? (
                     <div className="mPromoContent">

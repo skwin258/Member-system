@@ -1,3 +1,4 @@
+import { sanitizePromotionHtml } from "../../lib/promotionHtml.js";
 import { API_BASE } from '../../config';
 import React, { useEffect, useMemo, useState } from "react";
 import { getAdminToken } from "../../api";
@@ -644,7 +645,7 @@ export default function AdminPromotions() {
                   {form.content_html ? (
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: form.content_html,
+                        __html: sanitizePromotionHtml(form.content_html),
                       }}
                     />
                   ) : (
