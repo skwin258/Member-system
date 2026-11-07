@@ -6,7 +6,7 @@ import "./dailyTasks.css";
 const socialMessages = { share_post: "轉發", like_post: "點讚", share_story: "限動" };
 const verification = { instagram: "Instagram", threads: "Threads" };
 
-export default function DailyTasks({ onClose, lineUrl, onWalletChange }) {
+export default function DailyTasks({ onClose, lineUrl }) {
   const dialog = useRef(null);
   const loadVersion = useRef(0);
   const running = useRef(false);
@@ -83,10 +83,9 @@ export default function DailyTasks({ onClose, lineUrl, onWalletChange }) {
     }
     if (task === "checkin") {
       return run(async () => {
-        const result = await api.claimDailySc();
-        if (!result?.success && result?.status !== 409) throw new Error(result?.error || "簽到失敗");
-        await load();
-        void onWalletChange?.({ silent: true, force: true });
+        const result = await api.checkInDailyTasks();
+        if (!result?.success) throw new Error(result?.error || "簽到失敗");
+        setData(result);
       });
     }
     openStep(task);

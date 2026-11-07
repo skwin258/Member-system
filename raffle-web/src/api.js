@@ -200,6 +200,7 @@ async function adminRequest(path, { method = "GET", body, headers } = {}) {
 
 export const api = {
   dailyTasks: () => request("/daily-tasks", { auth: "user" }),
+  checkInDailyTasks: () => request("/daily-tasks/checkin", { auth: "user", method: "POST" }),
   claimDailyTask: task => request(`/daily-tasks/claim/${task}`, { auth: "user", method: "POST" }),
   uploadDailyTaskProof(task, file) {
     const body = new FormData();

@@ -147,7 +147,20 @@ test('daily task proofs stay private, approval unlocks one reward, and nicknames
     assert.equal((await call('/admin/daily-tasks/users/1/instagram', 'owner', 'PATCH', { approved:false, proofId:notice.id })).status, 200);
     assert.equal((await call('/admin/daily-tasks/users/1/share_post', 'owner', 'PATCH', { approved:true })).status, 200);
     assert.equal((await call('/daily-tasks/claim/share_post', 'member', 'POST')).status, 200);
+    // Signup already credits SC, but it does not complete the task check-in.
+    assert.equal((await call('/daily-tasks/claim/checkin', 'member', 'POST')).status, 409);
+    sqlite.exec("UPDATE users SET sc_claim_day=date('now','+8 hours','-1 day') WHERE id=1");
+    const scWallet = () => sqlite.prepare("SELECT sc_balance, sc_claim_day FROM users WHERE id=1").get();
+    const beforeCheckin = scWallet();
+    const checkins = await Promise.all([1, 2].map(() => call('/daily-tasks/checkin', 'member', 'POST')));
+    assert.ok(checkins.every(result => result.status === 200));
+    assert.equal((await checkins[0].json()).tasks.checkin, 'approved');
+    assert.deepEqual(scWallet(), beforeCheckin);
     assert.equal((await call('/daily-tasks/claim/checkin', 'member', 'POST')).status, 200);
+    assert.deepEqual(scWallet(), beforeCheckin);
+    assert.equal(usage(), 3);
+    assert.equal((await call('/wallet/sc/claim', 'member', 'POST')).status, 200);
+    assert.equal(scWallet().sc_balance, beforeCheckin.sc_balance + 3000);
     assert.equal(usage(), 3);
     sqlite.exec(`UPDATE daily_task_claims SET claim_day=date(claim_day,'-1 day') WHERE task='instagram';
       INSERT INTO daily_task_proofs(id,user_id,task,task_day,status)

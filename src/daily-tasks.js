@@ -27,8 +27,7 @@ const taipeiDay = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0
 const imageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const taskDay = (task, today) => verification.includes(task) ? "" : today;
 
-async function statuses(db, user, today) {
-  const id = user.id;
+async function statuses(db, id, today) {
   const [{ results: proofs }, { results: claims }] = await Promise.all([
     db.prepare("SELECT task,status FROM daily_task_proofs WHERE user_id=? AND task_day IN ('',?)").bind(id, today).all(),
     db.prepare("SELECT task,claim_day FROM daily_task_claims WHERE user_id=? AND task_day IN ('',?)").bind(id, today).all(),
@@ -38,7 +37,6 @@ async function statuses(db, user, today) {
     tasks: Object.fromEntries(allTasks.map(task => [
       task,
       claims.some(row => row.task === task) ? "claimed" :
-        task === "checkin" ? (user.sc_claim_day === today ? "approved" : "available") :
         proofs.find(row => row.task === task)?.status || "available",
     ])),
     hiddenTasks: claims.filter(row => verification.includes(row.task) && row.claim_day < today).map(row => row.task),
@@ -62,9 +60,16 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
   if (!path.startsWith("/admin/")) {
     const session = await requireUser();
     if (!session) return forbid("請先登入會員", 401);
-    const user = await db.prepare("SELECT id, sc_claim_day FROM users WHERE id=? AND enabled=1 AND locked=0").bind(session.user_id).first();
+    const user = await db.prepare("SELECT id FROM users WHERE id=? AND enabled=1 AND locked=0").bind(session.user_id).first();
     if (!user) return forbid("會員帳號暫時無法使用", 403);
-    if (path === "/daily-tasks" && request.method === "GET") return json({ success: true, ...await statuses(db, user, today) });
+    if (path === "/daily-tasks" && request.method === "GET") return json({ success: true, ...await statuses(db, user.id, today) });
+
+    if (path === "/daily-tasks/checkin" && request.method === "POST") {
+      await db.prepare(`INSERT INTO daily_task_proofs(id,user_id,task,task_day,status)
+        VALUES (?,?,'checkin',?,'approved') ON CONFLICT(user_id,task,task_day) DO NOTHING`)
+        .bind(crypto.randomUUID(), user.id, today).run();
+      return json({ success: true, ...await statuses(db, user.id, today) });
+    }
 
     const proofTask = path.match(/^\/daily-tasks\/proof\/(instagram|threads)$/)?.[1];
     if (proofTask && request.method === "POST") {
@@ -93,24 +98,19 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
         return forbid("已送出驗證資料", 409);
       }
       if (old?.image_key) await bucket.delete(old.image_key).catch(() => {});
-      return json({ success: true, ...await statuses(db, user, today) });
+      return json({ success: true, ...await statuses(db, user.id, today) });
     }
 
     const task = path.match(/^\/daily-tasks\/claim\/([a-z_]+)$/)?.[1];
     if (task && allTasks.includes(task) && request.method === "POST") {
       const day = taskDay(task, today);
-      const condition = task === "checkin"
-        ? "EXISTS (SELECT 1 FROM users WHERE id=? AND sc_claim_day=?)"
-        : "EXISTS (SELECT 1 FROM daily_task_proofs WHERE user_id=? AND task_day=? AND task=? AND status='approved')";
-      const args = task === "checkin" ? [user.id, today] : [user.id, day, task];
-      const result = await db.prepare(`INSERT OR IGNORE INTO daily_task_claims(user_id,task,task_day,claim_day)
-        SELECT ?,?,?,? WHERE ${condition}`).bind(user.id, task, day, today, ...args).run();
-      if (!result.meta?.changes) {
-        const state = await statuses(db, user, today);
-        if (state.tasks[task] !== "claimed") return forbid("尚未完成這個任務", 409);
-        return json({ success: true, ...state });
-      }
-      return json({ success: true, ...await statuses(db, user, today) });
+      await db.prepare(`INSERT OR IGNORE INTO daily_task_claims(user_id,task,task_day,claim_day)
+        SELECT ?,?,?,? WHERE EXISTS (
+          SELECT 1 FROM daily_task_proofs WHERE user_id=? AND task_day=? AND task=? AND status='approved'
+        )`).bind(user.id, task, day, today, user.id, day, task).run();
+      const state = await statuses(db, user.id, today);
+      if (state.tasks[task] !== "claimed") return forbid("尚未完成這個任務", 409);
+      return json({ success: true, ...state });
     }
     return forbid("找不到任務", 404);
   }

@@ -547,7 +547,7 @@ const electronicBadgeNumber = (() => {
       <img src="/daily-tasks/icon.png" alt="" />每日任務
     </button>
     {!isGuest && showDailyTasks && <DailyTasks lineUrl={me?.user?.support_line_url}
-      onClose={() => setShowDailyTasks(false)} onWalletChange={onRefreshMe || onRefresh} />}
+      onClose={() => setShowDailyTasks(false)} />}
     {renderBottomNav()}{authModal}
   </>;
 }

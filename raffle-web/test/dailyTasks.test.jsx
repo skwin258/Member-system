@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import DailyTasks from "../src/mobile/DailyTasks.jsx";
 
 const mocks = vi.hoisted(() => ({
-  dailyTasks: vi.fn(), uploadDailyTaskProof: vi.fn(), claimDailyTask: vi.fn(), claimDailySc: vi.fn(),
+  dailyTasks: vi.fn(), uploadDailyTaskProof: vi.fn(), claimDailyTask: vi.fn(), checkInDailyTasks: vi.fn(), claimDailySc: vi.fn(),
 }));
 vi.mock("../src/api", () => ({ api: mocks }));
 
@@ -18,9 +18,10 @@ it("shows the six tasks, opens official LINE instructions, and submits Instagram
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true, value() { this.open = true; },
   });
-  const tasks = { instagram:"available", threads:"available", checkin:"approved", share_post:"available", like_post:"available", share_story:"available" };
+  const tasks = { instagram:"available", threads:"available", checkin:"available", share_post:"available", like_post:"available", share_story:"available" };
   mocks.dailyTasks.mockResolvedValue({ success:true, tasks, progress:0 });
   mocks.uploadDailyTaskProof.mockResolvedValue({ success:true, tasks:{ ...tasks, instagram:"pending" }, progress:0 });
+  mocks.checkInDailyTasks.mockResolvedValue({ success:true, tasks:{ ...tasks, instagram:"pending", checkin:"approved" }, progress:0 });
   mocks.claimDailyTask.mockResolvedValue({ success:true, tasks:{ ...tasks, instagram:"pending", checkin:"claimed" }, progress:1 });
   try {
     render(<DailyTasks onClose={() => {}} lineUrl="https://lin.ee/example" />);
@@ -41,6 +42,10 @@ it("shows the six tasks, opens official LINE instructions, and submits Instagram
     await screen.findByText("已送出，請等候審核");
     expect(mocks.uploadDailyTaskProof).toHaveBeenCalledWith("instagram", file);
     expect(action("驗證 Instagram", "審核中").disabled).toBe(true);
+    fireEvent.click(action("每日簽到", "簽到"));
+    await waitFor(() => expect(action("每日簽到", "領取")).toBeTruthy());
+    expect(mocks.checkInDailyTasks).toHaveBeenCalledTimes(1);
+    expect(mocks.claimDailySc).not.toHaveBeenCalled();
     fireEvent.click(action("每日簽到", "領取"));
     await screen.findByText("1/4");
     expect(mocks.claimDailyTask).toHaveBeenCalledWith("checkin");
