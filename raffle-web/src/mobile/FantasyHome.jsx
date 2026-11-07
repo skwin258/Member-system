@@ -17,7 +17,7 @@ const titles=[...root.querySelectorAll('.fh-title')];
 const slides=[...root.querySelectorAll('.fh-slide')];
 const shadows=[...root.querySelectorAll('.fh-shadow')];
 const scene=root.querySelector('.fh-scene');
-let current=0,start=null,busy=false,offset=0,suppressClickUntil=0,entering=false;
+let current=0,start=null,busy=false,offset=0,suppressClickUntil=0;
 const wrap=n=>(n+slides.length)%slides.length;
 const duration=()=>matchMedia('(prefers-reduced-motion: reduce)').matches?0:700;
 function setTitle(index){titles.forEach((title,i)=>{title.classList.toggle('fh-active',i===index);title.setAttribute('aria-hidden',String(i!==index))})}
@@ -161,11 +161,11 @@ api.homeBanners({ signal: controller.signal }).then(result => {
 
 const routes=['treasure','shop','invite','records','ai'];
 function enterPage(index){
- if(entering||busy||performance.now()<suppressClickUntil)return;
- entering=true;busy=true;scene.classList.add("fh-entering");
+ if(busy||performance.now()<suppressClickUntil)return;
  const image=slides[index].querySelector('img');
- const animation=image.animate([{transform:'scale(1)',opacity:1},{transform:'scale(1.65)',opacity:0}],{duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:360,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'});
- animation.finished.then(()=>{if(disposed)return;animation.cancel();busy=false;entering=false;scene.classList.remove("fh-entering");callbacks.current.onNavigate(routes[index])}).catch(()=>{});
+ if(callbacks.current.onNavigate(routes[index],image)){
+  busy=true;image.style.visibility='hidden';
+ }
 }
 slides.forEach((slide,index)=>{
  const image=slide.querySelector('img');image.tabIndex=index===current?0:-1;image.setAttribute('role','link');image.setAttribute('aria-label','進入'+image.alt);
@@ -177,7 +177,7 @@ authButtons[0].onclick=()=>callbacks.current.isGuest?callbacks.current.onAuth('l
 authButtons[1].onclick=()=>callbacks.current.isGuest?callbacks.current.onAuth('register'):callbacks.current.onLogout();
 
  const buttons=root.querySelectorAll('.fh-auth button');buttons[0].textContent=callbacks.current.isGuest?'登入':'我的';buttons[1].textContent=callbacks.current.isGuest?'註冊':'登出';
- return ()=>{disposed=true;controller.abort();root.querySelectorAll('img').forEach(img=>img.getAnimations().forEach(a=>a.cancel()));root.innerHTML=''};
+ return ()=>{disposed=true;controller.abort();root.innerHTML=''};
  },[]);
  return <div className="fantasy-home" ref={rootRef}/>;
 }

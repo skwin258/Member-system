@@ -269,6 +269,7 @@ export default function MobileShell({
   refCode = null,
 }) {
   const [activeKey, setActiveKey] = useState("home");
+  const [homeTransition, setHomeTransition] = useState(null);
   const arcadeFrame = useRef(null);
   const [recordsView, setRecordsView] = useState("raffle");
 
@@ -386,7 +387,8 @@ function needLogin() {
   setShowGuestAuth(true);
 }
 
-  function handleGo(key) {
+  function handleGo(key, artwork) {
+    if (homeTransition) return false;
     const target = menu.find((m) => m.key === key);
     if (!target) {
       setActiveKey("home");
@@ -398,6 +400,13 @@ function needLogin() {
       return;
     }
 
+    if (activeKey === "home" && artwork && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const { top, left, width, height } = artwork.getBoundingClientRect();
+      if (width && height) {
+        setHomeTransition({ key, src: artwork.currentSrc || artwork.src, bounds: { top, left, width, height } });
+        return true;
+      }
+    }
     setActiveKey(key);
   }
 
@@ -527,27 +536,30 @@ const electronicBadgeNumber = (() => {
   return String(Math.max(0, Number(electronicStatus.uses_left || 0)));
 })();
 
-  if (activeKey !== "home") {
-    return (
-      <>
+  return <>
+    {activeKey !== "home" ? (
         <div className={`mbHome mbHome--inner fh-inner${activeKey === "treasure" ? " fh-inner--arcade" : ""}`}>
           {renderContent()}
-
           {renderBottomNav()}
         </div>
-        {authModal}
-      </>
-    );
-  }
-
-  return <>
-    <FantasyHome isGuest={isGuest} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>
-    <button className="daily-task-launch" type="button" aria-haspopup="dialog"
-      onClick={() => { if (isGuest) needLogin(); else setShowDailyTasks(true); }}>
-      <img src="/daily-tasks/icon.png" alt="" />每日任務
-    </button>
-    {!isGuest && showDailyTasks && <DailyTasks lineUrl={me?.user?.support_line_url}
-      onClose={() => setShowDailyTasks(false)} />}
-    {renderBottomNav()}{authModal}
+    ) : <>
+      <FantasyHome isGuest={isGuest} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>
+      <button className="daily-task-launch" type="button" aria-haspopup="dialog"
+        onClick={() => { if (isGuest) needLogin(); else setShowDailyTasks(true); }}>
+        <img src="/daily-tasks/icon.png" alt="" />每日任務
+      </button>
+      {!isGuest && showDailyTasks && <DailyTasks lineUrl={me?.user?.support_line_url}
+        onClose={() => setShowDailyTasks(false)} />}
+      {renderBottomNav()}
+    </>}
+    {authModal}
+    {homeTransition && <div className="fh-route-transition" aria-hidden="true">
+      <img src={homeTransition.src} alt="" style={homeTransition.bounds}
+        className={activeKey === "home" ? "fh-route-zoom" : "fh-route-fade"}
+        onAnimationEnd={() => {
+          if (activeKey === "home") setActiveKey(homeTransition.key);
+          else setHomeTransition(null);
+        }} />
+    </div>}
   </>;
 }
