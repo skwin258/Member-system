@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import { pbkdf2Sync } from 'node:crypto';
 import { arcadeChallengePage, verifyArcadePreparation } from '../src/arcade-verification.js';
 
 let instance = 0;
@@ -652,10 +653,15 @@ test('shop redemption, owner scope, session revocation and referral awards are e
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM users WHERE username='legacy-new'").get().n,0);
     assert.equal((await call('/auth/admin/login',null,'POST',{username:'owner',password:'owner-pass'})).status,200);
     assert.match(sqlite.prepare("SELECT password FROM admin_accounts WHERE id=1").get().password,/^pbkdf2-sha256\$/);
+    const salt = Buffer.alloc(16, 42);
+    const digest = pbkdf2Sync('buyer-pass', salt, 600_000, 32, 'sha256');
+    const existingHash = ['pbkdf2-sha256', 600_000, salt.toString('hex'), digest.toString('hex')].join('$');
+    sqlite.prepare("UPDATE users SET password=? WHERE id=10").run(existingHash);
+    assert.equal((await call('/auth/user/login',null,'POST',{username:'buyer',password:'incorrect'})).status,401);
     const login = await call('/auth/user/login',null,'POST',{username:'buyer',password:'buyer-pass'});
     assert.equal(login.status,200);
     const { token } = await login.json();
-    assert.match(sqlite.prepare("SELECT password FROM users WHERE id=10").get().password,/^pbkdf2-sha256\$/);
+    assert.equal(sqlite.prepare("SELECT password FROM users WHERE id=10").get().password,existingHash);
     sqlite.exec("UPDATE users SET locked=1 WHERE id=10");
     assert.equal((await call('/wallet/logs',token)).status,401);
     sqlite.exec("UPDATE users SET locked=0 WHERE id=10; UPDATE admin_accounts SET status='disabled' WHERE id=1");
