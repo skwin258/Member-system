@@ -5,9 +5,13 @@ const defaultBanners = [1, 2, 3, 4].map(slot => ({
 }));
 
 export function homeBannersWithDefaults(items = []) {
-  return defaultBanners.map(banner => ({
-    ...banner, ...items.find(item => item.slot === banner.slot),
-  }));
+  const merged = new Map(defaultBanners.map(banner => [banner.slot, banner]));
+  for (const item of items) {
+    merged.set(item.slot, { link_url: "", ...merged.get(item.slot), ...item });
+  }
+  return [...merged.values()]
+    .filter(item => !item.deleted && item.image_url)
+    .sort((a, b) => (a.sort ?? a.slot) - (b.sort ?? b.slot));
 }
 
 export function bannerImage(url) {

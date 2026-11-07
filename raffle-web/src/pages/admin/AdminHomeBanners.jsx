@@ -4,9 +4,9 @@ import { bannerImage, homeBannersWithDefaults } from "../../lib/homeBanners";
 
 const photoTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-function BannerEditor({ banner }) {
-  const [current, setCurrent] = useState(banner);
-  const [link, setLink] = useState(banner.link_url);
+function BannerEditor({ banner, onSave, onDelete, onCancel }) {
+  const isNew = !banner;
+  const [link, setLink] = useState(banner?.link_url || "");
   const [file, setFile] = useState(null);
   const [uploadedUrl, setUploadedUrl] = useState("");
   const [fileVersion, setFileVersion] = useState(0);
@@ -15,7 +15,7 @@ function BannerEditor({ banner }) {
 
   async function save(event) {
     event.preventDefault();
-    if (saving || (current.deleted && !file && !uploadedUrl)) return;
+    if (saving || (isNew && !file && !uploadedUrl)) return;
     setSaving(true);
     setStatus("");
     try {
@@ -33,9 +33,9 @@ function BannerEditor({ banner }) {
         setFileVersion(version => version + 1);
       }
       if (imageUrl) patch.image_url = imageUrl;
-      const result = await api.adminSaveBanner(current.slot, patch);
+      const result = isNew ? await api.adminCreateBanner(patch) : await api.adminSaveBanner(banner.slot, patch);
       if (!result?.success) throw new Error(result?.error || "儲存失敗");
-      setCurrent(previous => ({ ...previous, ...result.item }));
+      onSave({ ...banner, ...result.item }, isNew);
       setLink(result.item.link_url);
       setUploadedUrl("");
       setStatus("已儲存");
@@ -47,18 +47,13 @@ function BannerEditor({ banner }) {
   }
 
   async function remove() {
-    if (saving || !window.confirm(`確定刪除 Banner ${current.slot}？`)) return;
+    if (saving || !window.confirm(`確定刪除 Banner ${banner.slot}？`)) return;
     setSaving(true);
     setStatus("");
     try {
-      const result = await api.adminDeleteBanner(current.slot);
+      const result = await api.adminDeleteBanner(banner.slot);
       if (!result?.success) throw new Error(result?.error || "刪除失敗");
-      setCurrent(result.item);
-      setLink("");
-      setFile(null);
-      setUploadedUrl("");
-      setFileVersion(version => version + 1);
-      setStatus("已刪除");
+      onDelete(banner.slot);
     } catch (error) {
       setStatus(error.message || "刪除失敗");
     } finally {
@@ -67,11 +62,11 @@ function BannerEditor({ banner }) {
   }
 
   return <form className="adminCard home-banner-editor" onSubmit={save}>
-    <h3>Banner {current.slot}</h3>
-    {current.deleted ? <p>這個位置目前沒有圖片。</p> : (
-      <img src={bannerImage(current.image_url)} alt={`目前的 Banner ${current.slot}`} loading="lazy" />
+    <h3>{isNew ? "新增 Banner" : `Banner ${banner.slot}`}</h3>
+    {!isNew && (
+      <img src={bannerImage(banner.image_url)} alt={`目前的 Banner ${banner.slot}`} loading="lazy" />
     )}
-    <label>{current.deleted ? "上傳圖片" : "更換圖片"}
+    <label>{isNew ? "上傳圖片" : "更換圖片"}
       <input key={fileVersion} type="file" accept={photoTypes.join(",")} disabled={saving}
         onChange={event => {
           setFile(event.target.files[0] || null);
@@ -84,10 +79,12 @@ function BannerEditor({ banner }) {
         maxLength={2048} placeholder="https://example.com 或 /站內路徑" />
     </label>
     <div className="home-banner-actions">
-      <button type="submit" className="btn" disabled={saving || (current.deleted && !file && !uploadedUrl)}>
+      <button type="submit" className="btn" disabled={saving || (isNew && !file && !uploadedUrl)}>
         {saving ? "處理中…" : "儲存 Banner"}
       </button>
-      {!current.deleted && <button type="button" className="btn" disabled={saving} onClick={remove}>刪除 Banner</button>}
+      {isNew
+        ? <button type="button" className="btn" disabled={saving} onClick={onCancel}>取消</button>
+        : <button type="button" className="btn" disabled={saving} onClick={remove}>刪除 Banner</button>}
     </div>
     {status && <span role="status">{status}</span>}
   </form>;
@@ -97,6 +94,8 @@ export default function AdminHomeBanners() {
   const [banners, setBanners] = useState(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -109,15 +108,42 @@ export default function AdminHomeBanners() {
     return () => controller.abort();
   }, [attempt]);
 
+  function saveBanner(item, isNew) {
+    setBanners(previous => previous.some(banner => banner.slot === item.slot)
+      ? previous.map(banner => banner.slot === item.slot ? item : banner)
+      : [...previous, item]);
+    if (isNew) {
+      setAdding(false);
+      setMessage("已新增");
+    }
+  }
+
+  function deleteBanner(slot) {
+    setBanners(previous => previous.filter(banner => banner.slot !== slot));
+    setMessage("已刪除");
+  }
+
   return <div>
-    <p>首頁四個輪播位置都可更換或刪除。連結留空時，點擊圖片不會跳轉。</p>
+    <p>首頁最多顯示 9 張 Banner。連結留空時，點擊圖片不會跳轉。</p>
     {error ? <>
       <p role="alert">{error}</p>
       <button type="button" className="btn" onClick={() => { setError(""); setAttempt(count => count + 1); }}>重新讀取</button>
     </> : banners ? (
-      <div className="home-banner-grid">
-        {banners.map(banner => <BannerEditor key={banner.slot} banner={banner} />)}
-      </div>
+      <>
+        <div className="home-banner-actions">
+          <button type="button" className="btn" disabled={adding || banners.length >= 9}
+            onClick={() => { setMessage(""); setAdding(true); }}>新增 Banner</button>
+          <span>{banners.length} / 9 張</span>
+        </div>
+        {message && <p role="status">{message}</p>}
+        <div className="home-banner-grid">
+          {banners.map(banner => (
+            <BannerEditor key={banner.slot} banner={banner}
+              onSave={saveBanner} onDelete={deleteBanner} />
+          ))}
+          {adding && <BannerEditor key="new" onSave={saveBanner} onCancel={() => setAdding(false)} />}
+        </div>
+      </>
     ) : <p role="status">讀取 Banner 設定中…</p>}
   </div>;
 }

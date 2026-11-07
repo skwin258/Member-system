@@ -154,7 +154,7 @@ listen(banner,'keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.prev
 listen(window,'resize',()=>showBanner(bannerIndex,false));renderBanners();
 api.homeBanners({ signal: controller.signal }).then(result => {
  if(disposed || !result?.success)return;
- banners=homeBannersWithDefaults(result.items).filter(item => !item.deleted);
+ banners=homeBannersWithDefaults(result.items);
  renderBanners();
 }).catch(()=>{ /* Keep the homepage usable without the banner list. */ });
 

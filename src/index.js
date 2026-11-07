@@ -2538,7 +2538,7 @@ if (url.pathname === "/shop/config" && request.method === "GET") {
 
 if (url.pathname === "/home/banners" && request.method === "GET") {
   const { results } = await db.prepare(
-    "SELECT key, value FROM shop_config WHERE key IN ('home_banner_1','home_banner_2','home_banner_3','home_banner_4')"
+    "SELECT key, value FROM shop_config WHERE key GLOB 'home_banner_[1-9]' ORDER BY key"
   ).all();
   const items = (results || []).map(row => ({ ...JSON.parse(row.value), slot: Number(row.key.at(-1)) }));
   return json({ success: true, items });
@@ -3514,7 +3514,7 @@ if (["/admin/shop/upload", "/admin/home/banners/upload"].includes(url.pathname) 
   return json({ success: true, key, url: `/r2/${key}` });
 }
 
-const bannerSlot = url.pathname.match(/^\/admin\/home\/banners\/([1-4])$/)?.[1];
+const bannerSlot = url.pathname.match(/^\/admin\/home\/banners\/([1-9])$/)?.[1];
 if (bannerSlot && request.method === "DELETE") {
   if (!admin) return forbid("Unauthorized", 401);
   const item = { deleted: true, link_url: "" };
@@ -3525,7 +3525,8 @@ if (bannerSlot && request.method === "DELETE") {
   return json({ success: true, item: { ...item, slot: Number(bannerSlot) } });
 }
 
-if (bannerSlot && request.method === "PATCH") {
+const createBanner = url.pathname === "/admin/home/banners" && request.method === "POST";
+if (createBanner || (bannerSlot && request.method === "PATCH")) {
   if (!admin) return forbid("Unauthorized", 401);
   const body = await safeJson(request);
   const patch = {};
@@ -3546,6 +3547,35 @@ if (bannerSlot && request.method === "PATCH") {
     patch.link_url = link;
   }
   if (!Object.keys(patch).length) return forbid("請提供圖片或連結", 400);
+
+  if (createBanner) {
+    if (!patch.image_url) return forbid("請先上傳 Banner 圖片", 400);
+    const row = await db.prepare(
+      `WITH slots(slot) AS (VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9)),
+        available AS (
+          SELECT 'home_banner_' || slot AS key
+          FROM slots LEFT JOIN shop_config c ON c.key='home_banner_' || slot
+          WHERE json_extract(c.value,'$.deleted')=1 OR (slot>4 AND c.key IS NULL)
+          ORDER BY slot LIMIT 1
+        )
+       INSERT INTO shop_config (key, value, updated_at)
+       SELECT key, json_set(?, '$.sort',
+         MAX(9, COALESCE((SELECT MAX(json_extract(value,'$.sort')) FROM shop_config
+                         WHERE key GLOB 'home_banner_[1-9]'), 0)) + 1), datetime('now')
+       FROM available WHERE 1
+       ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+       RETURNING key, value`
+    ).bind(JSON.stringify({ link_url: "", ...patch })).first();
+    if (!row) return forbid("首頁 Banner 最多可新增 9 張", 409);
+    return json({ success: true, item: { ...JSON.parse(row.value), slot: Number(row.key.at(-1)) } }, { status: 201 });
+  }
+
+  if (!patch.image_url) {
+    const current = await db.prepare("SELECT value FROM shop_config WHERE key=?")
+      .bind(`home_banner_${bannerSlot}`).first();
+    const banner = current ? JSON.parse(current.value) : null;
+    if (banner?.deleted || (Number(bannerSlot)>4 && !banner?.image_url)) return forbid("此 Banner 已刪除或不存在", 404);
+  }
 
   const row = await db.prepare(
     `INSERT INTO shop_config (key, value, updated_at) VALUES (?, ?, datetime('now'))

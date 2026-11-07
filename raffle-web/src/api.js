@@ -220,6 +220,9 @@ export const api = {
     return response.blob();
   },
   homeBanners: ({ signal } = {}) => request("/home/banners", { signal }),
+  adminCreateBanner: banner => request("/admin/home/banners", {
+    method: "POST", auth: "admin", body: JSON.stringify(banner),
+  }),
   adminSaveBanner: (slot, patch) => request(`/admin/home/banners/${slot}`, {
     method: "PATCH", auth: "admin", body: JSON.stringify(patch),
   }),

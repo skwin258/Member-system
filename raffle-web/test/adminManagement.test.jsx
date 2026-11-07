@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   adminDailyTasks: vi.fn(async () => ({ success: true, items: [] })),
   homeBanners: vi.fn(),
   adminUploadBanner: vi.fn(),
+  adminCreateBanner: vi.fn(),
   adminSaveBanner: vi.fn(),
   adminDeleteBanner: vi.fn(),
 }));
@@ -50,11 +51,30 @@ it("removes a default banner through the admin editor", async () => {
   await screen.findByText("已刪除");
   expect(mocks.adminDeleteBanner).toHaveBeenCalledWith(1);
   expect(screen.queryByAltText("目前的 Banner 1")).toBeNull();
-  expect(screen.getByLabelText("上傳圖片")).toBeTruthy();
+  expect(screen.getByText("3 / 9 張")).toBeTruthy();
+});
+
+it("adds a ninth banner with an optional link and disables further additions", async () => {
+  mocks.homeBanners.mockResolvedValue({
+    success: true, items: [5, 6, 7, 8].map(slot => ({ slot, image_url: "/r2/banner/existing.png" })),
+  });
+  mocks.adminUploadBanner.mockResolvedValue({ success: true, url: "/r2/banner/new.png" });
+  mocks.adminCreateBanner.mockResolvedValue({
+    success: true, item: { slot: 9, sort: 14, image_url: "/r2/banner/new.png", link_url: "" },
+  });
+  render(<AdminHomeBanners />);
+  const add = await screen.findByRole("button", { name: "新增 Banner" });
+  fireEvent.click(add);
+  const file = new File(["banner"], "new.png", { type: "image/png" });
+  fireEvent.change(screen.getByLabelText("上傳圖片"), { target: { files: [file] } });
+  fireEvent.click(screen.getAllByRole("button", { name: "儲存 Banner" }).at(-1));
+  await screen.findByText("9 / 9 張");
+  expect(mocks.adminCreateBanner).toHaveBeenCalledWith({ image_url: "/r2/banner/new.png", link_url: "" });
+  expect(add.disabled).toBe(true);
 });
 
 it("omits deleted default banners and suppresses navigation after swiping a linked banner", async () => {
-  mocks.homeBanners.mockResolvedValue({ success: true, items: [{ slot: 1, link_url: "/welcome" }, { slot: 3, deleted: true }] });
+  mocks.homeBanners.mockResolvedValue({ success: true, items: [{ slot: 1, link_url: "/welcome" }, { slot: 3, deleted: true }, { slot: 9, sort: 14, image_url: "/r2/banner/extra.png" }] });
   vi.stubGlobal("matchMedia", () => ({ matches: true }));
   const animations = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "getAnimations");
   Object.defineProperty(HTMLImageElement.prototype, "getAnimations", { configurable: true, value: () => [] });
@@ -64,6 +84,7 @@ it("omits deleted default banners and suppresses navigation after swiping a link
     expect(link.getAttribute("href")).toBe("/welcome");
     expect(screen.getByAltText("活動 Banner 2").closest("a")).toBeNull();
     expect(screen.queryByAltText("活動 Banner 3")).toBeNull();
+    expect(view.container.querySelector(".fh-banner-track").lastElementChild.alt).toBe("活動 Banner 9");
     const viewport = view.container.querySelector(".fh-banner-window");
     viewport.setPointerCapture = vi.fn();
     function pointer(target, type, x) {
@@ -136,7 +157,7 @@ it("shows member details while wallet and order history are still loading", asyn
   expect(mocks.adminListUsers).toHaveBeenLastCalledWith("", { limit: 50, before: 2 });
   fireEvent.click(screen.getByRole("button", { name: /second/ }));
   await screen.findByText("基本資料");
-  expect(screen.getAllByText("讀取中…")).toHaveLength(2);
+  expect(screen.getAllByRole("cell", { name: "讀取中…" })).toHaveLength(2);
   await act(async () => finishLogs({ success: true, items: [] }));
-  await waitFor(() => expect(screen.getAllByText("讀取中…")).toHaveLength(1));
+  await waitFor(() => expect(screen.getAllByRole("cell", { name: "讀取中…" })).toHaveLength(1));
 });

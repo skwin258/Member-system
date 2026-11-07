@@ -239,6 +239,23 @@ test('home banner overrides are public, while changes and image uploads require 
     ]);
     const restored = await call('/admin/home/banners/1', 'PATCH', { image_url:url }, true);
     assert.deepEqual((await restored.json()).item, { slot:1, deleted:false, link_url:'', image_url:url });
+    const create = '/admin/home/banners';
+    const banner = { image_url:url, link_url:'/welcome' };
+    assert.equal((await call(create,'POST',banner)).status,401);
+    assert.equal((await call(create,'POST',{ link_url:'/welcome' },true)).status,400);
+    const added = await Promise.all(Array.from({length:7}, () => call(create,'POST',banner,true)));
+    assert.equal(added.filter(r=>r.status===201).length,6);
+    assert.equal(added.filter(r=>r.status===409).length,1);
+    const items = (await (await call('/home/banners')).json()).items;
+    assert.equal(items.filter(item=>!item.deleted).length,7); // Slots 3 and 4 are still built-in.
+    assert.equal(new Set(items.filter(item=>item.sort).map(item=>item.sort)).size,6);
+    assert.equal((await call('/admin/home/banners/3','DELETE',undefined,true)).status,200);
+    const replacement = await (await call(create,'POST',banner,true)).json();
+    assert.equal(replacement.item.slot,3);
+    assert.ok(replacement.item.sort > Math.max(...items.map(item=>item.sort || 0)));
+    assert.equal((await call('/admin/home/banners/9','PATCH',{ link_url:'' },true)).status,200);
+    assert.equal((await call('/admin/home/banners/9','DELETE',undefined,true)).status,200);
+    assert.equal((await call('/admin/home/banners/9','PATCH',{ link_url:'/welcome' },true)).status,404);
   } finally { sqlite.close(); }
 });
 
