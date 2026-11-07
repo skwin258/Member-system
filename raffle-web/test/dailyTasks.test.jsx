@@ -43,6 +43,13 @@ it("shows the six tasks, opens official LINE instructions, and submits Instagram
     fireEvent.click(action("每日簽到", "領取"));
     await screen.findByText("1/4");
     expect(mocks.claimDailyTask).toHaveBeenCalledWith("checkin");
+    mocks.dailyTasks.mockResolvedValue({ success:true, tasks:{ ...tasks, instagram:"claimed", threads:"claimed" },
+      hiddenTasks:["instagram", "threads"], progress:0 });
+    fireEvent.focus(window);
+    await waitFor(() => expect(screen.queryByText("驗證 Instagram")).toBeNull());
+    expect(screen.queryByText("驗證 Threads")).toBeNull();
+    expect(screen.getAllByRole("img", { name:"紅包" })).toHaveLength(4);
+    expect(screen.getByText("0/4")).toBeTruthy();
   } finally {
     cleanup();
     if (show) Object.defineProperty(HTMLDialogElement.prototype, "showModal", show);

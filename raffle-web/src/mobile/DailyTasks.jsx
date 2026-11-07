@@ -38,6 +38,17 @@ export default function DailyTasks({ onClose, lineUrl, onWalletChange }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!data?.day) return;
+    const midnight = Date.parse(data.day + "T00:00:00+08:00") + 86400000;
+    const timer = window.setInterval(() => {
+      if (Date.now() >= midnight && !running.current) {
+        void run(load);
+      }
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [data?.day]);
+
   function openStep(task) {
     setFile(null);
     setError("");
@@ -127,7 +138,7 @@ export default function DailyTasks({ onClose, lineUrl, onWalletChange }) {
         <div className="daily-task-progress"><strong>今日進度</strong><span>{progress}/4</span></div>
         <progress max={4} value={progress} aria-label="今日任務進度" />
         <div className="daily-task-list">
-          {Object.entries(dailyTaskNames).map(([task, name]) => {
+          {Object.entries(dailyTaskNames).filter(([task]) => !data?.hiddenTasks?.includes(task)).map(([task, name]) => {
             const status = data?.tasks?.[task];
             const label = status === "claimed" ? "已領取" : status === "pending" ? "審核中"
               : status === "approved" ? "領取" : task === "checkin" ? "簽到" : "前往";

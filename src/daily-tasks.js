@@ -20,7 +20,8 @@ export const DAILY_TASK_SCHEMA = [
 
 const verification = ["instagram", "threads"];
 const social = ["share_post", "like_post", "share_story"];
-const allTasks = [...verification, "checkin", ...social];
+const daily = ["checkin", ...social];
+const allTasks = [...verification, ...daily];
 export const DAILY_TASK_PROOF_PREFIX = "daily-task-proofs/";
 const taipeiDay = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
 const imageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
@@ -33,13 +34,15 @@ async function statuses(db, user, today) {
     db.prepare("SELECT task,claim_day FROM daily_task_claims WHERE user_id=? AND task_day IN ('',?)").bind(id, today).all(),
   ]);
   return {
+    day: today,
     tasks: Object.fromEntries(allTasks.map(task => [
       task,
       claims.some(row => row.task === task) ? "claimed" :
         task === "checkin" ? (user.sc_claim_day === today ? "approved" : "available") :
         proofs.find(row => row.task === task)?.status || "available",
     ])),
-    progress: Math.min(4, claims.filter(row => row.claim_day === today).length),
+    hiddenTasks: claims.filter(row => verification.includes(row.task) && row.claim_day < today).map(row => row.task),
+    progress: claims.filter(row => daily.includes(row.task) && row.claim_day === today).length,
   };
 }
 
