@@ -1,5 +1,6 @@
 import { API_BASE } from '../config';
 import React, { useEffect, useMemo, useState } from "react";
+import { LOGIN_PLACEMENT } from "../lib/loginPromotions";
 import "./mobilePromo.css";
 
 
@@ -38,8 +39,7 @@ function splitPlainParagraphs(s) {
   return formatPlainText(s)
     .split(/\n\s*\n/)
     .map((x) => x.trim())
-    .filter(Boolean)
-        .filter(x=>x.placement!=="login_popup");
+    .filter(Boolean);
 }
 
 export default function MobilePromoPage() {
@@ -67,6 +67,7 @@ export default function MobilePromoPage() {
 
       const normalized = list
         .filter(Boolean)
+        .filter(x => x.placement !== LOGIN_PLACEMENT)
         .filter((x) => Number(x?.enabled ?? 1) !== 0)
         .map((x, idx) => {
           const rawContent = getRawContent(x);

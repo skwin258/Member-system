@@ -1,19 +1,18 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { webcrypto } from 'node:crypto';
-import { LOGIN_PLACEMENT, loginSessionKey, orderedLoginPromotions, validatePng } from '../src/lib/loginPromotions';
+import { LOGIN_PLACEMENT, orderedLoginPromotions, validatePng } from '../src/lib/loginPromotions';
 import LoginPromotions, { PromotionSequence } from '../src/components/LoginPromotions';
 import AdminLoginPromotions from '../src/pages/admin/AdminLoginPromotions';
+import MobilePromoPage from '../src/mobile/MobilePromoPage';
+import LoginBox from '../src/LoginBox';
 
-const mocks=vi.hoisted(()=>({token:'test-session',adminPromotions:vi.fn(),upload:vi.fn(),create:vi.fn(),update:vi.fn(),remove:vi.fn()}));
-vi.mock('../src/api',()=>({getToken:()=>mocks.token,getAdminToken:()=> 'test-admin',api:{adminPromotions:mocks.adminPromotions,adminUploadPromotionImage:mocks.upload,adminCreatePromotion:mocks.create,adminUpdatePromotion:mocks.update,adminDeletePromotion:mocks.remove}}));
+const mocks=vi.hoisted(()=>({login:vi.fn(),adminPromotions:vi.fn(),upload:vi.fn(),create:vi.fn(),update:vi.fn(),remove:vi.fn()}));
+vi.mock('../src/api',()=>({setToken:vi.fn(),setAdminToken:vi.fn(),getAdminToken:()=> 'test-admin',api:{userLogin:mocks.login,adminPromotions:mocks.adminPromotions,adminUploadPromotionImage:mocks.upload,adminCreatePromotion:mocks.create,adminUpdatePromotion:mocks.update,adminDeletePromotion:mocks.remove}}));
 const base='https://example.com';
 const items=[{id:2,title:'第二張',placement:LOGIN_PLACEMENT,enabled:1,sort:20,cover_image_url:'/second.png',imageUrl:base+'/second.png'},{id:1,title:'第一張',placement:LOGIN_PLACEMENT,enabled:1,sort:10,cover_image_url:'/first.png',imageUrl:base+'/first.png'}];
 beforeEach(()=>{
   vi.stubGlobal('matchMedia',()=>({matches:false}));
-  vi.stubGlobal('crypto',webcrypto);
-  sessionStorage.clear();mocks.token='test-session';
 });
 afterEach(()=>{cleanup();vi.useRealTimers();vi.unstubAllGlobals();vi.clearAllMocks()});
 
@@ -50,21 +49,38 @@ describe('sequential dismissal',()=>{
   });
 });
 
-describe('authenticated gate',()=>{
-  it('never fetches or opens promotions for a guest',()=>{
-    const fetch=vi.fn();vi.stubGlobal('fetch',fetch);render(<LoginPromotions authenticated={false}/>);expect(fetch).not.toHaveBeenCalled();expect(screen.queryByRole('dialog')).toBeNull();
-  });
-  it('loads ordered images for a login and remembers dismissed images for that session',async()=>{
-    vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({success:true,items})})));
+describe('promotion display',()=>{
+  it('shows the ordered images on open and repeats them once after successful member login',async()=>{
+    const fetch = vi.fn(async()=>({ok:true,json:async()=>({success:true,items})}));
+    vi.stubGlobal('fetch',fetch);
     vi.stubGlobal('Image',class{set src(value){queueMicrotask(()=>this.onload?.())}});
-    render(<LoginPromotions authenticated userId={1}/>);
+    vi.stubGlobal('matchMedia',()=>({matches:true}));
+    mocks.login.mockResolvedValue({success:true,token:'test-session'});
+    render(<><LoginPromotions /><LoginBox /></>);
     await waitFor(()=>expect(screen.getByRole('img').alt).toBe('第一張'));
-    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByRole('button',{name:'關閉這張活動圖'}));
     await waitFor(()=>expect(screen.getByRole('img').alt).toBe('第二張'));
-    const key=await loginSessionKey(mocks.token);expect(JSON.parse(sessionStorage.getItem(key))).toEqual(['1']);
-    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByRole('button',{name:'關閉這張活動圖'}));
     await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
-    expect(JSON.parse(sessionStorage.getItem(key))).toEqual(['1','2']);
+
+    fireEvent.change(screen.getByPlaceholderText('帳號'),{target:{value:'test-user'}});
+    fireEvent.change(screen.getByPlaceholderText('密碼'),{target:{value:'test-password'}});
+    fireEvent.click(screen.getByRole('button',{name:'登入'}));
+    await waitFor(()=>expect(screen.getByRole('img').alt).toBe('第一張'));
+    fireEvent.click(screen.getByRole('button',{name:'關閉這張活動圖'}));
+    await waitFor(()=>expect(screen.getByRole('img').alt).toBe('第二張'));
+    fireEvent.click(screen.getByRole('button',{name:'關閉這張活動圖'}));
+    await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('excludes login artwork from the mobile activity list',async()=>{
+    const normal = {...items[0],id:3,title:'一般活動',placement:'coupon'};
+    vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({success:true,items:[...items,normal]})})));
+    render(<MobilePromoPage />);
+    expect(await screen.findByAltText('一般活動')).toBeTruthy();
+    expect(screen.queryByAltText('第一張')).toBeNull();
+    expect(screen.queryByAltText('第二張')).toBeNull();
   });
 });
 

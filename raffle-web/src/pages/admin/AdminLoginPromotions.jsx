@@ -74,7 +74,7 @@ export default function AdminLoginPromotions(){
   function edit(item){fileVersion.current++;setFile(null);setForm({...item,enabled:Boolean(Number(item.enabled))});if(fileInput.current)fileInput.current.value='';formRef.current?.scrollIntoView?.({behavior:'smooth',block:'start'})}
   const image=previewURL||resolvePromotionImage(form.cover_image_url,API_BASE);
   return <div className="alp-page">
-    <div className="alp-heading"><div><h2>登入活動圖</h2><p>登入後逐張顯示，點擊畫面或 × 會放大淡出，再顯示下一張。</p></div><button className="ra-btn" onClick={()=>setPreview(enabled)} disabled={!enabled.length||busy}>預覽 {enabled.length} 張</button></div>
+    <div className="alp-heading"><div><h2>登入活動圖</h2><p>開啟網站和登入成功後都會逐張顯示。點擊畫面或 × 可繼續下一張。</p></div><button className="ra-btn" onClick={()=>setPreview(enabled)} disabled={!enabled.length||busy}>預覽 {enabled.length} 張</button></div>
     <div className="alp-stats"><span><b>{items.length}</b> 張活動圖</span><span><b>{enabled.length}</b> 張啟用中</span><span>順序數字越小，越先顯示</span></div>
     {error&&<div className="alp-message is-error" role="alert">{error}</div>}{message&&<div className="alp-message" role="status">{message}</div>}
     <div className="alp-columns">

@@ -6,6 +6,7 @@ import "./App.css";
 import App from "./App.jsx";
 import MobileApp from "./MobileApp.jsx";
 import LineAuthCallback from "./components/LineAuthCallback.jsx";
+import LoginPromotions from "./components/LoginPromotions.jsx";
 import "./pages/admin/adminTemple.css";
 
 function isAdminPath() {
@@ -40,7 +41,10 @@ const RootApp = pickRootApp();
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <LineAuthCallback><RootApp /></LineAuthCallback>
+      <LineAuthCallback>
+        <RootApp />
+        {!adminRoute && <LoginPromotions />}
+      </LineAuthCallback>
     </BrowserRouter>
   </StrictMode>
 );

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, setToken, setAdminToken } from "./api";
 import { startLineAuth } from "./lib/lineAuth";
+import { MEMBER_LOGIN_EVENT } from "./lib/loginPromotions";
 
 /**
  * mode:
@@ -58,6 +59,7 @@ useEffect(() => {
     else setToken(data.token);
 
     onLoggedIn?.(data);
+    if (!isAdmin) window.dispatchEvent(new Event(MEMBER_LOGIN_EVENT));
   };
 
   const handleLogin = async () => {

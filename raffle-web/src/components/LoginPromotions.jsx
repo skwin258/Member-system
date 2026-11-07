@@ -1,8 +1,7 @@
 import { API_BASE } from '../config';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getToken } from '../api';
-import { LOGIN_PLACEMENT, loginSessionKey, orderedLoginPromotions } from '../lib/loginPromotions';
+import { LOGIN_PLACEMENT, MEMBER_LOGIN_EVENT, orderedLoginPromotions } from '../lib/loginPromotions';
 import './loginPromotions.css';
 
 
@@ -48,38 +47,41 @@ export function PromotionSequence({ items, onComplete, onAdvance }) {
   );
 }
 
-export default function LoginPromotions({ authenticated, userId }) {
-  const [queue,setQueue]=useState([]);
-  const storageKey=useRef('');
-  useEffect(()=>{
-    setQueue([]);
-    if(!authenticated || !getToken())return;
-    const controller=new AbortController();
-    let active=true;
-    async function load(){
-      try{
-        const key=await loginSessionKey(getToken());
-        let seen=[];
-        try{const stored=JSON.parse(sessionStorage.getItem(key)||'[]');seen=Array.isArray(stored)?stored:[]}catch{/* storage may be unavailable */}
-        const res=await fetch(`${API_BASE}/promotions?placement=${LOGIN_PLACEMENT}`,{signal:controller.signal});
-        const data=await res.json();
-        if(!res.ok||!data.success)return;
-        const ordered=orderedLoginPromotions(data.items,API_BASE).filter(item=>!seen.includes(String(item.id)));
-        // Decode first so the user never sees an empty backdrop while an image loads.
-        const decoded=await Promise.all(ordered.map(item=>new Promise(resolve=>{
-          const image=new Image();
-          const timeout=setTimeout(()=>resolve(null),10000);
-          image.onload=()=>{clearTimeout(timeout);resolve(item)};
-          image.onerror=()=>{clearTimeout(timeout);resolve(null)};
-          image.src=item.imageUrl;
-        })));
-        if(active){storageKey.current=key;setQueue(decoded.filter(Boolean))}
-      }catch{/* Optional promotion failures must never block login. */}
+export default function LoginPromotions() {
+  const [items, setItems] = useState([]);
+  const [requested, setRequested] = useState(1);
+  const [completed, setCompleted] = useState(0);
+
+  useEffect(() => {
+    function queueLoginSequence() {
+      setRequested(count => count + 1);
     }
-    load();return()=>{active=false;controller.abort()};
-  },[authenticated,userId]);
-  if(!queue.length)return null;
-  return <PromotionSequence items={queue} onComplete={()=>setQueue([])} onAdvance={item=>{
-    try{const stored=JSON.parse(sessionStorage.getItem(storageKey.current)||'[]');const seen=Array.isArray(stored)?stored:[];sessionStorage.setItem(storageKey.current,JSON.stringify([...new Set([...seen,String(item.id)])]))}catch{/* Still allow dismissal when storage is blocked. */}
-  }}/>;
+    window.addEventListener(MEMBER_LOGIN_EVENT, queueLoginSequence);
+    return () => window.removeEventListener(MEMBER_LOGIN_EVENT, queueLoginSequence);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      try {
+        const res = await fetch(`${API_BASE}/promotions?placement=${LOGIN_PLACEMENT}`, { signal: controller.signal });
+        const data = await res.json();
+        if (!res.ok || !data.success || controller.signal.aborted) return;
+        const ordered = orderedLoginPromotions(data.items, API_BASE);
+        const loaded = await Promise.all(ordered.map(item => new Promise(resolve => {
+          const image = new Image();
+          const timeout = setTimeout(() => resolve(null), 10000);
+          image.onload = () => { clearTimeout(timeout); resolve(item); };
+          image.onerror = () => { clearTimeout(timeout); resolve(null); };
+          image.src = item.imageUrl;
+        })));
+        if (!controller.signal.aborted) setItems(loaded.filter(Boolean));
+      } catch { /* A promotion failure should leave the site usable. */ }
+    }
+    void load();
+    return () => controller.abort();
+  }, []);
+
+  if (!items.length || completed >= requested) return null;
+  return <PromotionSequence key={completed} items={items} onComplete={() => setCompleted(count => count + 1)} />;
 }

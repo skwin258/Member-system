@@ -1,4 +1,5 @@
 export const LOGIN_PLACEMENT = 'login_popup';
+export const MEMBER_LOGIN_EVENT = 'skclub:member-login';
 export const MAX_PNG_BYTES = 8 * 1024 * 1024;
 const PNG_SIGNATURE = [137,80,78,71,13,10,26,10];
 
@@ -22,9 +23,4 @@ export function orderedLoginPromotions(items, base, enabledOnly = true) {
     .map(item => ({...item, imageUrl: resolvePromotionImage(item.cover_image_url, base)}))
     .filter(item => item.imageUrl)
     .sort((a,b) => (Number(a.sort || 0)-Number(b.sort || 0)) || Number(a.id)-Number(b.id));
-}
-
-export async function loginSessionKey(token) {
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-  return 'sk-login-promotions:' + Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,24);
 }
