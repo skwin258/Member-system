@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   homeBanners: vi.fn(),
   adminUploadBanner: vi.fn(),
   adminSaveBanner: vi.fn(),
+  adminDeleteBanner: vi.fn(),
 }));
 vi.mock("../src/api", () => ({ api: mocks, getAdminToken: () => "test-admin", clearAdminToken: vi.fn() }));
 
@@ -39,8 +40,20 @@ it("changes a banner image and clears its link independently", async () => {
   expect(screen.getByAltText("目前的 Banner 2").src).toMatch(/\/r2\/banner\/new\.png$/);
 });
 
-it("keeps unlinked banners inert and suppresses navigation after swiping a linked banner", async () => {
-  mocks.homeBanners.mockResolvedValue({ success: true, items: [{ slot: 1, link_url: "/welcome" }] });
+it("removes a default banner through the admin editor", async () => {
+  mocks.homeBanners.mockResolvedValue({ success: true, items: [] });
+  mocks.adminDeleteBanner.mockResolvedValue({ success: true, item: { slot: 1, deleted: true, link_url: "" } });
+  vi.stubGlobal("confirm", () => true);
+  render(<AdminHomeBanners />);
+  fireEvent.click((await screen.findAllByRole("button", { name: "刪除 Banner" }))[0]);
+  await screen.findByText("已刪除");
+  expect(mocks.adminDeleteBanner).toHaveBeenCalledWith(1);
+  expect(screen.queryByAltText("目前的 Banner 1")).toBeNull();
+  expect(screen.getByLabelText("上傳圖片")).toBeTruthy();
+});
+
+it("omits deleted default banners and suppresses navigation after swiping a linked banner", async () => {
+  mocks.homeBanners.mockResolvedValue({ success: true, items: [{ slot: 1, link_url: "/welcome" }, { slot: 3, deleted: true }] });
   vi.stubGlobal("matchMedia", () => ({ matches: true }));
   const animations = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, "getAnimations");
   Object.defineProperty(HTMLImageElement.prototype, "getAnimations", { configurable: true, value: () => [] });
@@ -49,6 +62,7 @@ it("keeps unlinked banners inert and suppresses navigation after swiping a linke
     const link = await screen.findByRole("link", { name: "活動 Banner 1" });
     expect(link.getAttribute("href")).toBe("/welcome");
     expect(screen.getByAltText("活動 Banner 2").closest("a")).toBeNull();
+    expect(screen.queryByAltText("活動 Banner 3")).toBeNull();
     const viewport = view.container.querySelector(".fh-banner-window");
     viewport.setPointerCapture = vi.fn();
     function pointer(target, type, x) {

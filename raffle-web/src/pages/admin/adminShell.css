@@ -590,6 +590,8 @@ html, body{
   gap: 8px;
 }
 
+.home-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
 .home-banner-editor img {
   width: 100%;
   aspect-ratio: 2.64;

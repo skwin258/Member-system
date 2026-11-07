@@ -32,6 +32,7 @@
 @media(prefers-reduced-motion:reduce){.fh-slide{transition:none}}
 
 .fh-banner{display:block;border:0;background:none;box-shadow:none;height:auto;letter-spacing:normal}
+.fh-banner[hidden]{display:none}
 .fh-banner-window{width:100%;aspect-ratio:2.64;overflow:hidden;border-radius:18px;box-shadow:0 3px 15px #0006;touch-action:pan-y}
 .fh-banner-track{display:flex;width:100%;height:100%;will-change:transform}
 .fh-banner-slide{flex:0 0 100%;width:100%;height:100%;object-fit:cover;-webkit-user-drag:none}

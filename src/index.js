@@ -3762,6 +3762,16 @@ if (["/admin/shop/upload", "/admin/home/banners/upload"].includes(url.pathname) 
 }
 
 const bannerSlot = url.pathname.match(/^\/admin\/home\/banners\/([1-4])$/)?.[1];
+if (bannerSlot && request.method === "DELETE") {
+  if (!admin) return forbid("Unauthorized", 401);
+  const item = { deleted: true, link_url: "" };
+  await db.prepare(
+    `INSERT INTO shop_config (key, value, updated_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at`
+  ).bind(`home_banner_${bannerSlot}`, JSON.stringify(item)).run();
+  return json({ success: true, item: { ...item, slot: Number(bannerSlot) } });
+}
+
 if (bannerSlot && request.method === "PATCH") {
   if (!admin) return forbid("Unauthorized", 401);
   const body = await safeJson(request);
@@ -3771,6 +3781,7 @@ if (bannerSlot && request.method === "PATCH") {
       return forbid("請先上傳 Banner 圖片", 400);
     }
     patch.image_url = body.image_url;
+    patch.deleted = false;
   }
   if (body?.link_url !== undefined) {
     const link = typeof body.link_url === "string" ? body.link_url.trim() : null;

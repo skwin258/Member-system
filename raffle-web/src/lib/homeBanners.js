@@ -1,6 +1,6 @@
 import { API_BASE } from "../config";
 
-export const defaultBanners = [1, 2, 3, 4].map(slot => ({
+const defaultBanners = [1, 2, 3, 4].map(slot => ({
   slot, image_url: `/img/BANNER${slot}.png`, link_url: "",
 }));
 

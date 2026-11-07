@@ -203,6 +203,7 @@ export const api = {
   adminSaveBanner: (slot, patch) => request(`/admin/home/banners/${slot}`, {
     method: "PATCH", auth: "admin", body: JSON.stringify(patch),
   }),
+  adminDeleteBanner: slot => request(`/admin/home/banners/${slot}`, { method: "DELETE", auth: "admin" }),
   adminUploadBanner(file) {
     const body = new FormData();
     body.append("file", file);

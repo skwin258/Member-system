@@ -15,7 +15,7 @@ function BannerEditor({ banner }) {
 
   async function save(event) {
     event.preventDefault();
-    if (saving) return;
+    if (saving || (current.deleted && !file && !uploadedUrl)) return;
     setSaving(true);
     setStatus("");
     try {
@@ -46,10 +46,32 @@ function BannerEditor({ banner }) {
     }
   }
 
+  async function remove() {
+    if (saving || !window.confirm(`確定刪除 Banner ${current.slot}？`)) return;
+    setSaving(true);
+    setStatus("");
+    try {
+      const result = await api.adminDeleteBanner(current.slot);
+      if (!result?.success) throw new Error(result?.error || "刪除失敗");
+      setCurrent(result.item);
+      setLink("");
+      setFile(null);
+      setUploadedUrl("");
+      setFileVersion(version => version + 1);
+      setStatus("已刪除");
+    } catch (error) {
+      setStatus(error.message || "刪除失敗");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return <form className="adminCard home-banner-editor" onSubmit={save}>
     <h3>Banner {current.slot}</h3>
-    <img src={bannerImage(current.image_url)} alt={`目前的 Banner ${current.slot}`} loading="lazy" />
-    <label>更換圖片
+    {current.deleted ? <p>這個位置目前沒有圖片。</p> : (
+      <img src={bannerImage(current.image_url)} alt={`目前的 Banner ${current.slot}`} loading="lazy" />
+    )}
+    <label>{current.deleted ? "上傳圖片" : "更換圖片"}
       <input key={fileVersion} type="file" accept={photoTypes.join(",")} disabled={saving}
         onChange={event => {
           setFile(event.target.files[0] || null);
@@ -61,9 +83,12 @@ function BannerEditor({ banner }) {
       <input className="input" value={link} onChange={event => setLink(event.target.value)} disabled={saving}
         maxLength={2048} placeholder="https://example.com 或 /站內路徑" />
     </label>
-    <button type="submit" className="btn" disabled={saving}>
-      {saving ? "儲存中…" : "儲存 Banner"}
-    </button>
+    <div className="home-banner-actions">
+      <button type="submit" className="btn" disabled={saving || (current.deleted && !file && !uploadedUrl)}>
+        {saving ? "處理中…" : "儲存 Banner"}
+      </button>
+      {!current.deleted && <button type="button" className="btn" disabled={saving} onClick={remove}>刪除 Banner</button>}
+    </div>
     {status && <span role="status">{status}</span>}
   </form>;
 }
@@ -85,7 +110,7 @@ export default function AdminHomeBanners() {
   }, [attempt]);
 
   return <div>
-    <p>可分別更換首頁 4 張輪播圖片。連結留空時，點擊圖片不會跳轉。</p>
+    <p>首頁四個輪播位置都可更換或刪除。連結留空時，點擊圖片不會跳轉。</p>
     {error ? <>
       <p role="alert">{error}</p>
       <button type="button" className="btn" onClick={() => { setError(""); setAttempt(count => count + 1); }}>重新讀取</button>

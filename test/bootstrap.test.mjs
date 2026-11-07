@@ -53,9 +53,20 @@ test('home banner overrides are public, while changes and image uploads require 
     const { url } = await (await call('/admin/home/banners/upload', 'POST', form, true)).json();
     assert.match(url, /^\/r2\/banner\//);
     const saved = await (await call(path, 'PATCH', { image_url:url, link_url:'https://example.com/activity' }, true)).json();
-    assert.deepEqual(saved.item, { slot:2, image_url:url, link_url:'https://example.com/activity' });
+    assert.deepEqual(saved.item, { slot:2, image_url:url, link_url:'https://example.com/activity', deleted:false });
     assert.equal((await call(path, 'PATCH', { link_url:'  ' }, true)).status, 200);
-    assert.deepEqual((await (await call('/home/banners')).json()).items, [{ slot:2, image_url:url, link_url:'' }]);
+    assert.deepEqual((await (await call('/home/banners')).json()).items, [{ slot:2, image_url:url, link_url:'', deleted:false }]);
+    assert.equal((await call('/admin/home/banners/1', 'DELETE')).status, 401);
+    for (const slot of [1, 2]) {
+      const removed = await call('/admin/home/banners/' + slot, 'DELETE', undefined, true);
+      assert.deepEqual((await removed.json()).item, { slot, deleted:true, link_url:'' });
+    }
+    const deleted = (await (await call('/home/banners')).json()).items;
+    assert.deepEqual(deleted.sort((a,b) => a.slot-b.slot), [
+      { slot:1, deleted:true, link_url:'' }, { slot:2, deleted:true, link_url:'' },
+    ]);
+    const restored = await call('/admin/home/banners/1', 'PATCH', { image_url:url }, true);
+    assert.deepEqual((await restored.json()).item, { slot:1, deleted:false, link_url:'', image_url:url });
   } finally { sqlite.close(); }
 });
 
