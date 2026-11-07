@@ -176,7 +176,7 @@ export default function AdminPrizeSettings() {
 
     const payload = {
       config: {
-        count: Number(rpCount || 30),
+        count: Number(rpCount),
         mode: rpMode,
         fixed_amount: Number(rpFixedAmount || 0),
         allow_repeat: Number(rpAllowRepeat || 0),
@@ -188,17 +188,18 @@ export default function AdminPrizeSettings() {
           prob: Number(x.prob || 0),
           enabled: Number(x.enabled || 0),
           sort: Number(x.sort ?? idx),
-        }))
-        .filter((x) => x.amount >= 0),
+        })),
     };
 
-    const r = await api.adminRedpacketSaveConfig(payload);
-    setSaving(false);
-    if (!r.success) {
-      setErr(r.error || "儲存失敗");
-      return;
+    try {
+      const r = await api.adminRedpacketSaveConfig(payload);
+      if (!r?.success) throw new Error(r?.error || "儲存失敗");
+      await loadRedpacket();
+    } catch (error) {
+      setErr(error.message || "儲存失敗");
+    } finally {
+      setSaving(false);
     }
-    await loadRedpacket();
   };
 
   const saveWheel = async () => {
@@ -544,7 +545,7 @@ export default function AdminPrizeSettings() {
 
           <div className="formRow">
             <label>紅包總數</label>
-            <input className="input" type="number" value={rpCount} onChange={(e) => setRpCount(Number(e.target.value))} />
+            <input className="input" type="number" min={1} max={100} step={1} value={rpCount} onChange={(e) => setRpCount(Number(e.target.value))} />
           </div>
 
           <div className="formRow">
@@ -561,15 +562,15 @@ export default function AdminPrizeSettings() {
           </div>
 
           <div className="formRow">
-            <label>允許重複抽到同金額</label>
-            <select className="input" value={rpAllowRepeat} onChange={(e) => setRpAllowRepeat(Number(e.target.value))}>
+            <label>同一盤可抽到重複金額（機率池）</label>
+            <select className="input" disabled={rpMode !== "pool"} value={rpAllowRepeat} onChange={(e) => setRpAllowRepeat(Number(e.target.value))}>
               <option value={1}>是</option>
               <option value={0}>否</option>
             </select>
           </div>
 
           <div className="formRow">
-            <label>全部打開後鎖定</label>
+            <label>全部打開後鎖定至隔日</label>
             <select className="input" value={rpLockWhenAllOpened} onChange={(e) => setRpLockWhenAllOpened(Number(e.target.value))}>
               <option value={1}>是</option>
               <option value={0}>否</option>
@@ -590,10 +591,7 @@ export default function AdminPrizeSettings() {
                 </tr>
               </thead>
               <tbody>
-                {rpPool
-                  .slice()
-                  .sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0))
-                  .map((row, idx) => (
+                {rpPool.map((row, idx) => (
                     <tr key={idx}>
                       <td>
                         <input

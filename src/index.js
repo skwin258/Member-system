@@ -4,6 +4,7 @@ import { GAME_RULES, defaultGameRules, parseGamePatch } from "./game-settings.js
 import { ARCADE_ROUND_SCHEMA, handleArcadeRound, handleClawRound } from "./arcade-rounds.js";
 import { arcadeChallengePage, verifyArcadePreparation } from "./arcade-verification.js";
 import { DAILY_TASK_SCHEMA, DAILY_TASK_PROOF_PREFIX, handleDailyTasks } from "./daily-tasks.js";
+import { REDPACKET_SCHEMA, parseRedpacketConfig, redpacketConfigError, handleRedpacket } from "./redpacket.js";
 
 // ✅ PERF FIX (2026-03-02):
 // 以前每一個 request 都會跑一次「建表/欄位檢查/seed」，會導致讀 D1 需要 2~30 秒。
@@ -13,7 +14,7 @@ import { DAILY_TASK_SCHEMA, DAILY_TASK_PROOF_PREFIX, handleDailyTasks } from "./
 const __BOOTSTRAP_STATE__ = { promise: null };
 // Bump when changing the schema/bootstrap below. Persisted in D1 so a new
 // Worker isolate does not repeat hundreds of schema/seed queries on first load.
-const SCHEMA_VERSION = '2026-11-07.daily-tasks-v6';
+const SCHEMA_VERSION = '2026-11-07.redpacket-v7';
 
 const __HOT_CACHE__ = new Map();
 
@@ -92,9 +93,13 @@ async function ensureBootstrapped(db) {
       }
       for (const sql of DAILY_TASK_SCHEMA) await db.prepare(sql).run();
     };
-    if (["2026-11-07.arcade-v4", "2026-11-07.admin-shop-v5"].includes(previousVersion)) {
+    const ensureRedpacketSchema = async () => {
+      for (const sql of REDPACKET_SCHEMA) await db.prepare(sql).run();
+    };
+    if (["2026-11-07.arcade-v4", "2026-11-07.admin-shop-v5", "2026-11-07.daily-tasks-v6"].includes(previousVersion)) {
       if (previousVersion === '2026-11-07.arcade-v4') await ensureShopAdminSchema();
-      await ensureDailyTasks();
+      if (previousVersion !== '2026-11-07.daily-tasks-v6') await ensureDailyTasks();
+      await ensureRedpacketSchema();
       await updateSchemaVersion();
       return;
     }
@@ -897,6 +902,7 @@ for (const a of seedActivities) {
   await db.prepare('CREATE TABLE IF NOT EXISTS app_schema_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)').run();
   await ensureShopAdminSchema();
   await ensureDailyTasks();
+  await ensureRedpacketSchema();
   await updateSchemaVersion();
 
   })().catch((err) => {
@@ -1366,18 +1372,6 @@ const applyWalletDelta = async ({
         return row || null;
       };
 
-      const getCachedRedpacketConfig = async () => {
-        const cacheKey = "cfg:redpacket";
-        const cached = hotCacheGet(cacheKey);
-        if (cached) return cached;
-
-        const row = await db
-          .prepare("SELECT mode, fixed_amount, pool_json, count, allow_repeat, lock_when_all_opened FROM redpacket_config WHERE id=1 LIMIT 1")
-          .first();
-
-        return hotCacheSet(cacheKey, row || {}, 2500);
-      };
-
 const getCachedFootballPrizes = async () => {
   const cacheKey = "cfg:football_prizes";
   const cached = hotCacheGet(cacheKey);
@@ -1768,11 +1762,6 @@ if (Number(user.created_by_admin_id || 0) > 0) {
     used[key] = Math.max(0, limit - left);
   }
 
-  const redpacketClaim = await db.prepare(
-    `SELECT 1 FROM draw_records WHERE user_id=? AND activity_key='redpacket'
-     AND note='daily_claim' AND date(created_at, '+8 hours')=date('now', '+8 hours') LIMIT 1`
-  ).bind(userId).first();
-
 return json({
   success: true,
   user: {
@@ -1802,7 +1791,7 @@ return json({
   },
   limits,
   used,
-  daily: { redpacket_claimed: Boolean(redpacketClaim) },
+  daily: { redpacket_claimed: true },
 });
 };
 
@@ -1812,6 +1801,8 @@ return json({
 if (url.pathname === "/" && request.method === "GET") return text("OK");
 const dailyTaskResponse = await handleDailyTasks({ request, url, db, env, requireUser, requireAdmin, isSuperAdmin, json, forbid });
 if (dailyTaskResponse) return dailyTaskResponse;
+const redpacketResponse = await handleRedpacket({ request, url, db, requireUser, safeJson, activityEnabledNow, ensureUsageRow, json, forbid });
+if (redpacketResponse) return redpacketResponse;
 if (url.pathname === "/arcade/challenge" && request.method === "GET") return arcadeChallengePage(url, env);
 
 if (url.pathname === "/arcade/settings" && request.method === "GET") {
@@ -4575,37 +4566,18 @@ if (url.pathname.startsWith("/admin/promotions/") && request.method === "DELETE"
         if (!admin) return forbid("Unauthorized", 401);
         const body = await safeJson(request);
 
-        // ✅ 兼容你前端 payload: { config: {...}, pool: [...] }
-        const cfg = body.config || body || {};
-        const pool = body.pool || cfg.pool || [];
-
-        const mode = String(cfg.mode || "pool");
-        const fixed_amount = Number(cfg.fixed_amount || 0);
-        const count = Number(cfg.count || 0);
-        const allow_repeat = Number(cfg.allow_repeat ?? 1) ? 1 : 0;
-        const lock_when_all_opened = Number(cfg.lock_when_all_opened ?? 0) ? 1 : 0;
-
-        const pool_json = typeof cfg.pool_json === "string"
-          ? cfg.pool_json
-          : JSON.stringify(
-              Array.isArray(pool)
-                ? pool.map((x, i) => ({
-                    amount: Number(x.amount || 0),
-                    prob: Number(x.prob || 0),
-                    enabled: Number(x.enabled ?? 1) ? 1 : 0,
-                    sort: Number(x.sort ?? i),
-                  }))
-                : []
-            );
+        const cfg = body?.config || body;
+        const rules = parseRedpacketConfig(cfg, cfg?.pool_json ?? body?.pool ?? cfg?.pool);
+        const invalid = redpacketConfigError(rules);
+        if (invalid) return forbid(invalid, 400);
 
         await db
           .prepare(
             "UPDATE redpacket_config SET mode=?, fixed_amount=?, pool_json=?, count=?, allow_repeat=?, lock_when_all_opened=?, updated_at=? WHERE id=1"
           )
-          .bind(mode, fixed_amount, pool_json, count, allow_repeat, lock_when_all_opened, nowIso())
+          .bind(rules.mode, rules.fixed, JSON.stringify(rules.pool), rules.count, Number(rules.allowRepeat), Number(rules.lock), nowIso())
           .run();
 
-        hotCacheDel("cfg:redpacket");
         return json({ success: true });
       }
 
@@ -5507,192 +5479,6 @@ if (body.official_line_url !== undefined)
       }
 
       // =========================
-// redpacket claim
-// POST /redpacket/claim
-// 每日可領取一次：紅包次數 +1
-// =========================
-if (url.pathname === "/redpacket/claim" && request.method === "POST") {
-  const sess = await requireUser();
-  if (!sess) return forbid("Unauthorized", 401);
-
-  const userId = Number(sess.user_id || 0);
-  if (!userId) return forbid("Unauthorized", 401);
-
-  const act = await db
-    .prepare("SELECT * FROM activities WHERE activity_key='redpacket' LIMIT 1")
-    .first();
-
-  if (!activityEnabledNow(act)) {
-    return forbid("活動未開放", 403);
-  }
-
-  // ✅ 今天是否已領取過
-  const todayClaim = await db
-    .prepare(
-      `
-      SELECT id
-      FROM draw_records
-      WHERE user_id = ?
-        AND activity_key = 'redpacket'
-        AND note = 'daily_claim'
-        AND date(datetime(created_at, '+8 hours')) = date(datetime('now', '+8 hours'))
-      LIMIT 1
-      `
-    )
-    .bind(userId)
-    .first();
-
-  if (todayClaim) {
-    return json(
-      { success: false, error: "今日已領取過" },
-      { status: 400 }
-    );
-  }
-
-  // ✅ 確保 usage row 存在
-  await ensureUsageRow(userId, "redpacket");
-
-  // ✅ 次數 +1
-  await db
-    .prepare(
-      `
-      UPDATE user_activity_usage
-      SET times_left = times_left + 1,
-          updated_at = ?
-      WHERE user_id = ?
-        AND activity_key = 'redpacket'
-      `
-    )
-    .bind(nowIso(), userId)
-    .run();
-
-  const usage = await db
-    .prepare(
-      `
-      SELECT times_left
-      FROM user_activity_usage
-      WHERE user_id = ?
-        AND activity_key = 'redpacket'
-      LIMIT 1
-      `
-    )
-    .bind(userId)
-    .first();
-
-  // ✅ 寫一筆紀錄，當作今天已領取標記
-  await addDrawRecord({
-    activity_key: "redpacket",
-    user_id: userId,
-    username: String(sess.username || ""),
-    status: "win",
-    prize_title: "每日領取次數+1",
-    prize_amount: 0,
-    note: "daily_claim",
-    meta: {
-      claim_times: 1,
-      times_left: Number(usage?.times_left || 0),
-    },
-  });
-
-  return json({
-    success: true,
-    message: "今日領取成功",
-    left: Number(usage?.times_left || 0),
-  });
-}
-
-      /* =========================
-       * USER APIs: redpacket / wheel
-       * ========================= */
-      if (url.pathname === "/redpacket/draw" && request.method === "POST") {
-        const sess = await requireUser();
-        if (!sess) return forbid("Unauthorized", 401);
-
-        const act = await getCachedActivity("redpacket");
-        if (!activityEnabledNow(act)) return forbid("活動未開放", 403);
-
-        const dec = await decUsageIfPossible(Number(sess.user_id), "redpacket");
-        if (!dec.ok) return forbid("抽獎次數不足", 403);
-
-        const cfg = await getCachedRedpacketConfig();
-
-        let amount = 0;
-
-        if (cfg?.mode === "fixed") {
-          amount = Number(cfg.fixed_amount || 0);
-        } else {
-          let pool = [];
-          try {
-            pool = JSON.parse(cfg?.pool_json || "[]");
-          } catch {
-            pool = [];
-          }
-
-          // enabled=0 不參與（如果你要）
-          const enabledPool = pool.filter((x) => Number(x.enabled ?? 1) ? true : false);
-
-          let total = 0;
-          for (const it of enabledPool) total += Math.max(0, Number(it.prob || it.weight || 0));
-          if (total <= 0) amount = 0;
-          else {
-            let r = Math.random() * total;
-            for (const it of enabledPool) {
-              r -= Math.max(0, Number(it.prob || it.weight || 0));
-              if (r <= 0) {
-                amount = Number(it.amount || 0);
-                break;
-              }
-            }
-          }
-        }
-
-        await db
-          .prepare("UPDATE users SET welfare_balance = welfare_balance + ? WHERE id=?")
-          .bind(Number(amount), Number(sess.user_id))
-          .run();
-
-        await insertWalletLog({
-          user_id: Number(sess.user_id),
-          username: String(sess.username),
-          category: "raffle",
-          action: "redpacket_draw",
-          status: "success",
-          delta_welfare: Number(amount),
-          delta_s: 0,
-          delta_discount: 0,
-          result: Number(amount) > 0 ? `中獎 福利金 ${Number(amount)}` : "未中獎",
-          note: "紅包抽獎",
-        });
-        
-        await addDrawRecord({
-  activity_key: "redpacket",
-  user_id: Number(sess.user_id),
-  username: String(sess.username),
-  status: Number(amount) > 0 ? "win" : "lose",
-  prize_title: "紅包",
-  prize_amount: Number(amount),
-  note: "",
-  meta: { left: dec.left, mode: cfg?.mode || "pool" },
-});  
-
-        await db
-          .prepare(
-            "INSERT INTO winners (activity_key, user_id, username, prize_title, prize_amount, meta_json, created_at) VALUES (?,?,?,?,?,?,datetime('now'))"
-          )
-          .bind(
-            "redpacket",
-            Number(sess.user_id),
-            String(sess.username),
-            "紅包",
-            Number(amount),
-            JSON.stringify({ left: dec.left })
-          )
-          .run();
-
-        return json({ success: true, amount, left: dec.left });
-      }
-
-// =========================
 // redpacket history
 // GET /redpacket/history
 // =========================
@@ -5711,6 +5497,7 @@ if (url.pathname === "/redpacket/history" && request.method === "GET") {
           ON d.user_id = u.id
         WHERE d.activity_key = 'redpacket'
           AND d.status = 'win'
+          AND d.prize_amount > 0
         ORDER BY d.id DESC
         LIMIT 12
       `)

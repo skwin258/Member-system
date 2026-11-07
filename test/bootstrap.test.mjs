@@ -25,6 +25,69 @@ function database() {
 }
 const request = () => new Request('https://api.skclub.vip/activities');
 
+test('redpacket uses the configured board, prevents duplicate draws and settles atomically', async () => {
+  const { db, sqlite } = database();
+  const worker = await isolate();
+  const env = { raffle_db: db };
+  try {
+    await worker.fetch(request(), env);
+    sqlite.exec(`INSERT INTO users(id,username,password) VALUES(1,'test-member','test');
+      INSERT INTO user_sessions(token,user_id,username) VALUES ('member',1,'test-member');
+      INSERT INTO user_activity_usage(user_id,activity_key,times_left) VALUES (1,'redpacket',5);
+      INSERT INTO admin_sessions(token,admin_id,role,username) VALUES ('owner',1,'superadmin','owner');
+      UPDATE activities SET enabled=1 WHERE activity_key='redpacket';`);
+    async function call(path, method = 'GET', body, token = 'member') {
+      const response = await worker.fetch(new Request('https://api.skclub.vip' + path, {
+        method, headers: { Authorization: 'Bearer ' + token, 'Content-Type':'application/json' },
+        body: JSON.stringify(body),
+      }), env);
+      return { status: response.status, ...await response.json() };
+    }
+    const configure = (config, pool) => call('/admin/redpacket/config', 'POST', { config, pool }, 'owner');
+    const draw = payload => call('/redpacket/draw', 'POST', payload);
+    const rules = { count: 2, mode: 'pool', allow_repeat: 0, lock_when_all_opened: 1 };
+    assert.equal((await configure(rules, [{ amount:10, prob:1 }])).status, 400);
+    assert.equal((await configure(rules, [{ amount:10, prob:1 }, { amount:20, prob:1 }, { amount:99, prob:0 }])).status, 200);
+    assert.equal((await call('/redpacket/claim', 'POST')).status, 410);
+    const board = await call('/redpacket/config');
+    assert.equal(board.count, 2);
+    assert.equal(board.left, 5);
+    const payload = { board: board.board, slot: 0, request_id: crypto.randomUUID() };
+    const same = await Promise.all([draw(payload), draw(payload)]);
+    assert.ok(same.every(result => result.success && result.amount === same[0].amount));
+    assert.equal((await draw({ ...payload, request_id: crypto.randomUUID() })).status, 409);
+    const next = { board: board.board, slot: 1, request_id: crypto.randomUUID() };
+
+    sqlite.exec("CREATE TRIGGER reject_redpacket_log BEFORE INSERT ON wallet_logs WHEN NEW.action='redpacket_draw' BEGIN SELECT RAISE(ABORT, 'test log failure'); END");
+    assert.equal((await draw(next)).status, 500);
+    const afterFailure = await call('/redpacket/config');
+    assert.equal(afterFailure.left, 4);
+    assert.deepEqual(afterFailure.opened, [0]);
+    assert.equal(sqlite.prepare('SELECT welfare_balance FROM users WHERE id=1').get().welfare_balance, same[0].amount);
+    sqlite.exec('DROP TRIGGER reject_redpacket_log');
+
+    const second = await draw(next);
+    assert.ok(second.success);
+    assert.equal(second.amount + same[0].amount, 30);
+    assert.equal(second.left, 3);
+    assert.equal(second.used, 2);
+    assert.equal(second.locked, true);
+    assert.equal((await draw({ ...next, request_id: crypto.randomUUID() })).status, 409);
+    assert.equal((await draw(next)).amount, second.amount);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM wallet_logs WHERE action='redpacket_draw'").get().n, 2);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM draw_records WHERE note='redpacket_draw'").get().n, 2);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM winners WHERE activity_key='redpacket'").get().n, 2);
+
+    assert.equal((await configure({ count:1, mode:'fixed', fixed_amount:0, lock_when_all_opened:0 }, [])).status, 200);
+    const fresh = await call('/redpacket/config');
+    const zero = await draw({ board:fresh.board, slot:0, request_id:crypto.randomUUID() });
+    assert.equal(zero.amount, 0);
+    assert.notEqual(zero.board, fresh.board);
+    assert.deepEqual(zero.opened, []);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM winners WHERE activity_key='redpacket'").get().n, 2);
+  } finally { sqlite.close(); }
+});
+
 test('daily task proofs stay private, approval unlocks one reward, and nicknames stay internal', async () => {
   const { db, sqlite } = database();
   const files = new Map();
@@ -221,7 +284,7 @@ test('a schema version change reruns initialization, then marks the completed ve
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
     assert.ok(data.queries.length > 100);
-    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-07.daily-tasks-v6');
+    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-07.redpacket-v7');
   } finally { data.sqlite.close(); }
 });
 

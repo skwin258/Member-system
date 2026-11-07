@@ -33,7 +33,8 @@ const actions = {
     return { success: true, sc_balance: result.user.sc_balance };
   },
   redpacketClaim: () => api.redpacketClaim(),
-  redpacketDraw: () => api.redpacketDraw(),
+  redpacketConfig: () => api.redpacketConfig(),
+  redpacketDraw: payload => api.redpacketDraw(payload),
   redpacketHistory: () => api.redpacketHistory({ force: true }),
   wheelPrizes: () => api.wheelPrizes(),
   wheelSpin: () => api.wheelSpin(),

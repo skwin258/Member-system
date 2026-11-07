@@ -491,11 +491,12 @@ async createElectronicRoomTicket() {
   /* -----------------
    * Redpacket
   ----------------- */
-  async redpacketDraw() {
+  redpacketConfig: () => request("/redpacket/config", { auth: "user" }),
+  async redpacketDraw(payload = {}) {
     const res = await request("/redpacket/draw", {
       method: "POST",
       auth: "user",
-      body: JSON.stringify({}),
+      body: JSON.stringify(payload),
     });
     clearMemo([
       memoKey("/auth/me", "user"),
