@@ -102,3 +102,5 @@
 .member-notifications li{border-top:1px solid #b4935d55;padding:9px 0;overflow-wrap:anywhere}
 .member-notifications li p{margin:0 0 5px;white-space:pre-wrap}
 .member-notifications time{font-size:12px;color:#c4b08e}
+.member-notifications-pages{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;font-size:13px}
+.member-notifications-pages button:disabled{opacity:.45;cursor:default}

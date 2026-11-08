@@ -1,24 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 
+const initialState = { items: [], unread: 0, page: 1, totalPages: 1, error: "" };
+
 export function useMemberNotifications(enabled, memberId) {
-  const [state, setState] = useState({ items: [], unread: 0, error: "" });
+  const [state, setState] = useState(initialState);
   const requestId = useRef(0);
-  const refresh = useCallback(async ({ markRead = false, signal } = {}) => {
+  const currentPage = useRef(1);
+  const refresh = useCallback(async ({ markRead = false, signal, page = currentPage.current } = {}) => {
     if (!enabled) return;
+    currentPage.current = page;
     const id = ++requestId.current;
+    const update = ({ items, unread, page, totalPages }) => {
+      currentPage.current = page;
+      setState({ items, unread, page, totalPages, error: "" });
+    };
     try {
-      const result = await api.memberNotifications(signal);
+      const result = await api.memberNotifications(signal, page);
       if (id !== requestId.current || signal?.aborted) return;
       if (!result?.success) throw new Error(result?.error);
-      setState({ items: result.items, unread: result.unread, error: "" });
+      update(result);
       if (markRead && result.unread && result.items.length) {
         const read = await api.readMemberNotifications(result.items[0].id);
         if (!read?.success) throw new Error(read?.error);
-        const latest = await api.memberNotifications(signal);
+        const latest = await api.memberNotifications(signal, page);
         if (!latest?.success) throw new Error(latest?.error);
         if (id === requestId.current && !signal?.aborted) {
-          setState({ items: latest.items, unread: latest.unread, error: "" });
+          update(latest);
         }
       }
     } catch (error) {
@@ -29,7 +37,8 @@ export function useMemberNotifications(enabled, memberId) {
   }, [enabled, memberId]);
 
   useEffect(() => {
-    setState({ items: [], unread: 0, error: "" });
+    currentPage.current = 1;
+    setState(initialState);
     if (!enabled) return;
     const controller = new AbortController();
     const load = () => { if (!document.hidden) void refresh({ signal: controller.signal }); };
@@ -51,7 +60,7 @@ const dateFormat = new Intl.DateTimeFormat("zh-TW", {
   timeZone: "Asia/Taipei", dateStyle: "short", timeStyle: "short",
 });
 
-export default function MemberNotifications({ items, error, onClose, onRetry }) {
+export default function MemberNotifications({ items, error, page, totalPages, onPage, onClose, onRetry }) {
   const dialog = useRef(null);
   useEffect(() => { dialog.current.showModal(); }, []);
   return <dialog ref={dialog} className="member-notifications" aria-labelledby="member-notifications-title"
@@ -66,6 +75,11 @@ export default function MemberNotifications({ items, error, onClose, onRetry }) 
         <p>{item.message}</p>
         <time>{dateFormat.format(new Date(item.created_at.replace(" ", "T") + "Z"))}</time>
       </li>)}</ul>
+      {totalPages > 1 && <nav className="member-notifications-pages" aria-label="通知分頁">
+        <button type="button" disabled={page === 1} onClick={() => onPage(page - 1)}>上一頁</button>
+        <span aria-live="polite">{page} / {totalPages}</span>
+        <button type="button" disabled={page === totalPages} onClick={() => onPage(page + 1)}>下一頁</button>
+      </nav>}
     </section>
   </dialog>;
 }

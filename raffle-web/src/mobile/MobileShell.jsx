@@ -280,7 +280,7 @@ const [showNotifications, setShowNotifications] = useState(false);
 const notifications = useMemberNotifications(!isGuest && activeKey === "home", me?.user?.id);
 function openNotifications() {
   setShowNotifications(true);
-  void notifications.refresh({ markRead: true });
+  void notifications.refresh({ markRead: true, page: 1 });
 }
 const [authDefaultView, setAuthDefaultView] = useState("login");
 
@@ -552,7 +552,10 @@ const electronicBadgeNumber = (() => {
     ) : <>
       <FantasyHome isGuest={isGuest} unreadNotifications={notifications.unread} onNotifications={openNotifications} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>
       {!isGuest && showNotifications && <MemberNotifications items={notifications.items} error={notifications.error}
-        onClose={() => setShowNotifications(false)} onRetry={() => notifications.refresh({ markRead: true })} />}
+        page={notifications.page} totalPages={notifications.totalPages}
+        onPage={page => notifications.refresh({ page })}
+        onClose={() => setShowNotifications(false)}
+        onRetry={() => notifications.refresh({ markRead: notifications.page === 1 })} />}
       <button className="daily-task-launch" type="button" aria-haspopup="dialog"
         onClick={() => { if (isGuest) needLogin(); else setShowDailyTasks(true); }}>
         <img src="/daily-tasks/icon.png" alt="" />每日任務

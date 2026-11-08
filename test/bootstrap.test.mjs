@@ -215,18 +215,33 @@ test('daily task proofs stay private, approval unlocks one reward, and nicknames
     assert.equal((await call('/admin/users/1/activity-times','owner','POST',{ activity_key:'wheel', amount:1, notify_member:true })).status,200);
     assert.equal((await call('/admin/users/1/activity-times','owner','POST',{ activity_key:'redpacket', amount:1, notify_member:false })).status,200);
     const messages = await (await call('/member/notifications','member')).json();
-    assert.equal(messages.unread,3);
+    assert.equal(messages.unread,4);
     assert.deepEqual(messages.items.map(x=>x.message),[
-      '您獲得了輪盤資格一次。','您獲得了 1,000 福利金。（活動系統贈送）','您的 Instagram 驗證失敗，請聯絡客服。',
+      '您獲得了輪盤資格一次。','您獲得了 1,000 福利金。（活動系統贈送）',
+      '您的 Instagram 已通過驗證，可前往每日任務領取獎勵。','您的 Instagram 驗證失敗，請聯絡客服。',
     ]);
     assert.doesNotMatch(JSON.stringify(messages),/internal-only|admin_account|admin_id|proofId/);
     sqlite.exec("INSERT INTO users(id,username,password) VALUES (2,'other-member','test'); INSERT INTO user_sessions(token,user_id,username) VALUES ('member2',2,'other-member')");
     assert.equal((await call('/member/notifications')).status,401);
     assert.equal((await call('/member/notifications/read','member2','POST',{ through: messages.items[0].id })).status,200);
     assert.deepEqual((await (await call('/member/notifications','member2')).json()).items,[]);
-    assert.equal((await (await call('/member/notifications','member')).json()).unread,3);
+    assert.equal((await (await call('/member/notifications','member')).json()).unread,4);
     await call('/member/notifications/read','member','POST',{ through: messages.items[0].id });
     assert.equal((await (await call('/member/notifications','member')).json()).unread,0);
+    sqlite.exec(`INSERT INTO member_notifications(user_id,message,created_at) VALUES
+      (1,'older than seven days',datetime('now','-8 days')),
+      (1,'still within seven days',datetime('now','-6 days')),
+      (1,'latest',datetime('now'));`);
+    const firstPage = await (await call('/member/notifications?page=1','member')).json();
+    const secondPage = await (await call('/member/notifications?page=2','member')).json();
+    assert.equal(firstPage.items.length,5);
+    assert.equal(firstPage.totalPages,2);
+    assert.equal(firstPage.unread,2);
+    assert.deepEqual(secondPage.items.map(item=>item.message),['您的 Instagram 驗證失敗，請聯絡客服。']);
+    assert.equal(secondPage.page,2);
+    assert.doesNotMatch(JSON.stringify([firstPage,secondPage]), /older than seven days/);
+    await worker.scheduled(null,env);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM member_notifications WHERE message='older than seven days'").get().n,0);
   } finally { sqlite.close(); }
 });
 

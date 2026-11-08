@@ -381,7 +381,7 @@ export default function AdminPromotions() {
     <div className="apPage apFixedPage">
       <div className="ap3Panel">
         <section className="apCard apLeftPanel">
-          <div className="apPanelScroll">
+          <div className="apPanelScroll" tabIndex={0} role="region" aria-label="編輯優惠">
             <div className="apCardHead">
             </div>
             <div className="apPositionManager">
@@ -608,7 +608,7 @@ export default function AdminPromotions() {
         </section>
 
         <section className="apCard apRightTop">
-          <div className="apPanelScroll">
+          <div className="apPanelScroll" tabIndex={0} role="region" aria-label="預覽優惠">
             <div className="apCardHead">
               <div>
                 <h3 className="apTitleSm">預覽效果</h3>
@@ -658,7 +658,7 @@ export default function AdminPromotions() {
         </section>
 
         <section className="apCard apRightBottom">
-          <div className="apPanelScroll">
+          <div className="apPanelScroll" tabIndex={0} role="region" aria-label="目前優惠">
             <div className="apCardHead">
               <div>
                 <h3 className="apTitleSm">目前優惠</h3>

@@ -176,7 +176,7 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
       const change = db.prepare(`UPDATE daily_task_proofs SET status=?, image_key=CASE WHEN ?=1 THEN NULL ELSE image_key END
         WHERE id=? AND user_id=? AND task=? AND task_day='' AND image_key=? AND status<>?`)
         .bind(status, Number(failed), body.proofId, userId, task, proof.image_key, status);
-      const result = await runMemberChange(db, change, memberNotification(db, userId, body, message, failed));
+      const result = await runMemberChange(db, change, memberNotification(db, userId, body, message, failed || body.approved));
       if (!result.meta?.changes) return forbid("驗證狀態已更新，請重新讀取", 409);
       if (failed) await purgeRejectedProofs(db, env.RAFFLE_R2, proof.image_key);
     } else {

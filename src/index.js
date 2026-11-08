@@ -1,4 +1,4 @@
-import { MEMBER_NOTIFICATION_SCHEMA, handleMemberNotifications, memberNotification, runMemberChange, purgeRejectedProofs } from "./member-notifications.js";
+import { MEMBER_NOTIFICATION_SCHEMA, handleMemberNotifications, memberNotification, runMemberChange, purgeRejectedProofs, purgeExpiredNotifications } from "./member-notifications.js";
 import { AUDIT_SCHEMA } from "./audit-schema.js";
 import { hashPassword, checkPassword } from "./passwords.js";
 import { sanitizePromotionHtml } from "./promotion-html.js";
@@ -944,7 +944,10 @@ for (const a of seedActivities) {
 export default {
   async scheduled(_event, env) {
     await ensureBootstrapped(env.raffle_db);
-    await purgeRejectedProofs(env.raffle_db, env.RAFFLE_R2);
+    await Promise.all([
+      purgeRejectedProofs(env.raffle_db, env.RAFFLE_R2),
+      purgeExpiredNotifications(env.raffle_db),
+    ]);
   },
   async fetch(request, env) {
     const url = new URL(request.url);

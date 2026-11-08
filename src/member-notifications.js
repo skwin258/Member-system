@@ -28,22 +28,38 @@ export async function runMemberChange(db, change, notification) {
   return result;
 }
 
+const pageSize = 5;
+const retentionCutoff = "datetime('now','-7 days')";
+
+export function purgeExpiredNotifications(db) {
+  return db.prepare(`DELETE FROM member_notifications WHERE created_at <= ${retentionCutoff}`).run();
+}
+
 export async function handleMemberNotifications({ request, url, db, requireUser, json, forbid }) {
   if (!["/member/notifications", "/member/notifications/read"].includes(url.pathname)) return null;
   const session = await requireUser();
   if (!session) return forbid("請先登入會員", 401);
   if (request.method === "GET" && url.pathname === "/member/notifications") {
     const userId = session.user_id;
-    const [items, unread] = await Promise.all([
-      db.prepare("SELECT id,message,created_at,read_at FROM member_notifications WHERE user_id=? ORDER BY id DESC LIMIT 100").bind(userId).all(),
-      db.prepare("SELECT COUNT(*) AS count FROM member_notifications WHERE user_id=? AND read_at IS NULL").bind(userId).first(),
-    ]);
-    return json({ success: true, items: items.results || [], unread: Number(unread.count) });
+    const requestedPage = Number(url.searchParams.get("page") ?? 1);
+    if (!Number.isSafeInteger(requestedPage) || requestedPage < 1) return forbid("通知頁碼無效", 400);
+    const count = await db.prepare(
+      `SELECT COUNT(*) AS total, COUNT(CASE WHEN read_at IS NULL THEN 1 END) AS unread
+       FROM member_notifications WHERE user_id=? AND created_at > ${retentionCutoff}`
+    ).bind(userId).first();
+    const totalPages = Math.max(1, Math.ceil(Number(count.total) / pageSize));
+    const page = Math.min(requestedPage, totalPages);
+    const { results } = await db.prepare(
+      `SELECT id,message,created_at,read_at FROM member_notifications
+       WHERE user_id=? AND created_at > ${retentionCutoff} ORDER BY id DESC LIMIT ? OFFSET ?`
+    ).bind(userId, pageSize, (page - 1) * pageSize).all();
+    return json({ success: true, items: results || [], unread: Number(count.unread), page, totalPages });
   }
   if (request.method === "POST" && url.pathname.endsWith("/read")) {
     const body = await request.json().catch(() => null);
     if (!Number.isSafeInteger(body?.through) || body.through < 1) return forbid("通知編號無效", 400);
-    await db.prepare("UPDATE member_notifications SET read_at=datetime('now') WHERE user_id=? AND id<=? AND read_at IS NULL")
+    await db.prepare(`UPDATE member_notifications SET read_at=datetime('now')
+      WHERE user_id=? AND id<=? AND read_at IS NULL AND created_at > ${retentionCutoff}`)
       .bind(session.user_id, body.through).run();
     return json({ success: true });
   }

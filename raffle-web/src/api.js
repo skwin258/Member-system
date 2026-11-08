@@ -199,7 +199,7 @@ async function adminRequest(path, { method = "GET", body, headers } = {}) {
 }
 
 export const api = {
-  memberNotifications: (signal) => request("/member/notifications", { auth: "user", signal }),
+  memberNotifications: (signal, page = 1) => request(`/member/notifications?page=${page}`, { auth: "user", signal }),
   readMemberNotifications: through => request("/member/notifications/read", {
     auth: "user", method: "POST", body: JSON.stringify({ through }),
   }),

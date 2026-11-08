@@ -456,7 +456,7 @@ const toggleReview = async (id) => {
     <div className="auPaneSub">點選一位使用者後，在右側查看詳細資料</div>
   </div>
 
-  <div className="auLeftList">
+  <div className="auLeftList" tabIndex={0} role="region" aria-label="使用者列表">
     {items.map((u) => {
       const active = String(selectedId) === String(u.id);
       return (
@@ -499,7 +499,7 @@ const toggleReview = async (id) => {
     <div className="auRightEmpty">讀取失敗</div>
   ) : (
     <>
-      <div className="auRightScroll">
+      <div className="auRightScroll" key={user.id} tabIndex={0} role="region" aria-label="使用者詳細資料">
         <div className="auSection">
           <div className="auSectionTitle">基本資料</div>
           <div className="auGrid">

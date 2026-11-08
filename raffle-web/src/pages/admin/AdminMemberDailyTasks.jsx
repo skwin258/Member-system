@@ -46,7 +46,9 @@ export default function AdminMemberDailyTasks({ userId }) {
     setBusy(task);
     setError("");
     try {
-      const notification = await askMemberNotification({ required: failed });
+      const requiredMessage = failed ? "這項操作會刪除截圖並通知會員驗證失敗。" :
+        approved && accountTasks.includes(task) ? "通過驗證後，系統會通知會員領取獎勵。" : "";
+      const notification = await askMemberNotification({ requiredMessage });
       if (!notification) return;
       const result = await api.adminReviewDailyTask(userId, task, approved, proofId, { ...notification, failed });
       if (!result?.success) throw new Error(result?.error || "更新狀態失敗");

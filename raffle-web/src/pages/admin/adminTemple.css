@@ -130,3 +130,40 @@ html.is-admin-route{color-scheme:dark;background:#0a140f}
   .ra-adminShell .ap3Panel{display:flex;flex-direction:column}
   .ra-adminShell .apPanelScroll{padding:14px}
 }
+
+.ra-adminShell :is(.auLeftList,.auRightScroll,.apPanelScroll){
+  overscroll-behavior-y:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#9b844b #0c1911;
+}
+@media (min-width:981px){
+  .ra-adminShell .ra-contentScroll:has(> .apFixedPage, > .auNoPageScroll .auMainGrid){
+    overflow:hidden!important;
+  }
+  .ra-adminShell .auNoPageScroll:has(.auMainGrid){
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+  }
+  .ra-adminShell .auNoPageScroll .auMainGrid{
+    height:auto;
+    min-height:0;
+    grid-template-rows:minmax(0,1fr);
+    overflow:hidden;
+  }
+  .ra-adminShell :is(.apFixedPage,.ap3Panel){
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+  }
+  .ra-adminShell .ap3Panel{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
+  .ra-adminShell :is(.apLeftPanel,.apRightTop,.apRightBottom){overflow:hidden}
+  .ra-adminShell .apPanelScroll{height:100%;overflow:auto}
+}
+@media (max-width:980px){
+  .ra-adminShell .auLeftPane{overflow:hidden}
+  .ra-adminShell .auRightScroll,.ra-adminShell .apRightBottom .apPanelScroll{
+    max-height:65dvh;
+    overflow:auto;
+  }
+}

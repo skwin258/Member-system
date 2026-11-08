@@ -1,4 +1,4 @@
-export function askMemberNotification({ required = false } = {}) {
+export function askMemberNotification({ requiredMessage = "" } = {}) {
   return new Promise(resolve => {
     const dialog = document.createElement("dialog");
     dialog.className = "member-notify-admin";
@@ -15,10 +15,8 @@ export function askMemberNotification({ required = false } = {}) {
         <button type="submit" value="notify">通知會員並繼續</button>
       </div>
     </form>`;
-    dialog.querySelector("p").textContent = required
-      ? "這項操作會刪除截圖並通知會員驗證失敗。"
-      : "備註會顯示在通知內，請只填寫要讓會員看到的內容。";
-    dialog.querySelector('[value="silent"]').hidden = required;
+    dialog.querySelector("p").textContent = requiredMessage || "備註會顯示在通知內，請只填寫要讓會員看到的內容。";
+    dialog.querySelector('[value="silent"]').hidden = Boolean(requiredMessage);
     dialog.addEventListener("close", () => {
       const choice = dialog.returnValue;
       const note = dialog.querySelector("textarea").value.trim();
