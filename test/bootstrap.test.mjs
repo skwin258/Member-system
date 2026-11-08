@@ -17,15 +17,15 @@ function database() {
     let values = [];
     return {
       bind(...args) { values = args; return this; },
-      async run() { const value = stmt().run(...values); return { success: true, meta: { changes: Number(value.changes), last_row_id: Number(value.lastInsertRowid) } }; },
+      execute() { const value = stmt().run(...values); return { success: true, meta: { changes: Number(value.changes), last_row_id: Number(value.lastInsertRowid) } }; },
+      async run() { return this.execute(); },
       async first() { return stmt().get(...values) || null; },
       async all() { return { results: stmt().all(...values) }; },
     };
   }, async batch(statements) {
     sqlite.exec('BEGIN');
     try {
-      const results = [];
-      for (const statement of statements) results.push(await statement.run());
+      const results = statements.map(statement => statement.execute());
       sqlite.exec('COMMIT');
       return results;
     } catch (error) {
@@ -112,10 +112,11 @@ test('redpacket uses the configured board, prevents duplicate draws and settles 
 test('daily task proofs stay private, approval unlocks one reward, and nicknames stay internal', async () => {
   const { db, sqlite } = database();
   const files = new Map();
+  let failDelete = false;
   const env = { raffle_db: db, RAFFLE_R2: {
     async put(key, stream, { httpMetadata }) { files.set(key, { body: await new Response(stream).arrayBuffer(), httpMetadata }); },
     async get(key) { return files.get(key); },
-    async delete(key) { files.delete(key); },
+    async delete(key) { if (failDelete) throw new Error("temporary R2 outage"); files.delete(key); },
   } };
   try {
     const worker = await isolate();
@@ -142,6 +143,18 @@ test('daily task proofs stay private, approval unlocks one reward, and nicknames
     const notice = (await (await call('/admin/daily-tasks/notifications', 'owner')).json()).items[0];
     assert.equal(notice.username, 'test-member');
     assert.deepEqual((await (await call('/admin/daily-tasks/notifications', 'other')).json()).items, []);
+    const failed = { failed:true, proofId:notice.id };
+    failDelete = true;
+    const rejected = await Promise.all([1,2].map(() => call('/admin/daily-tasks/users/1/instagram', 'owner', 'PATCH', failed)));
+    assert.deepEqual(rejected.map(r=>r.status).sort(), [200,409]);
+    assert.equal((await (await call('/daily-tasks','member')).json()).tasks.instagram, 'rejected');
+    assert.equal((await call('/admin/daily-tasks/proof/'+notice.id,'owner')).status,404);
+    assert.equal(files.size,1);
+    failDelete = false;
+    await worker.scheduled(null,env);
+    assert.equal(files.size,0);
+    assert.equal((await call('/daily-tasks/proof/instagram','member','POST',form)).status,200);
+    notice.id = (await (await call('/admin/daily-tasks/notifications','owner')).json()).items[0].id;
     const image = '/admin/daily-tasks/proof/' + notice.id;
     assert.equal((await call(image, 'other')).status, 404);
     assert.equal((await call(image, 'owner')).headers.get('cache-control'), 'private, no-store');
@@ -195,6 +208,25 @@ test('daily task proofs stay private, approval unlocks one reward, and nicknames
     assert.equal(list.items[0].admin_nickname, '內部暱稱');
     const me = await (await call('/auth/me', 'member')).json();
     assert.equal(me.user.admin_nickname, undefined);
+    const adjust = { delta_welfare:1000, note:'internal-only', notify_member:true, notification_note:'活動系統贈送' };
+    assert.equal((await call('/admin/users/1/wallet','other','POST',adjust)).status,403);
+    assert.equal((await call('/admin/users/1/wallet','owner','POST',adjust)).status,200);
+    assert.equal((await call('/admin/users/1/wallet','owner','POST',{ ...adjust, action:'扣除', delta_welfare:1001 })).status,400);
+    assert.equal((await call('/admin/users/1/activity-times','owner','POST',{ activity_key:'wheel', amount:1, notify_member:true })).status,200);
+    assert.equal((await call('/admin/users/1/activity-times','owner','POST',{ activity_key:'redpacket', amount:1, notify_member:false })).status,200);
+    const messages = await (await call('/member/notifications','member')).json();
+    assert.equal(messages.unread,3);
+    assert.deepEqual(messages.items.map(x=>x.message),[
+      '您獲得了輪盤資格一次。','您獲得了 1,000 福利金。（活動系統贈送）','您的 Instagram 驗證失敗，請聯絡客服。',
+    ]);
+    assert.doesNotMatch(JSON.stringify(messages),/internal-only|admin_account|admin_id|proofId/);
+    sqlite.exec("INSERT INTO users(id,username,password) VALUES (2,'other-member','test'); INSERT INTO user_sessions(token,user_id,username) VALUES ('member2',2,'other-member')");
+    assert.equal((await call('/member/notifications')).status,401);
+    assert.equal((await call('/member/notifications/read','member2','POST',{ through: messages.items[0].id })).status,200);
+    assert.deepEqual((await (await call('/member/notifications','member2')).json()).items,[]);
+    assert.equal((await (await call('/member/notifications','member')).json()).unread,3);
+    await call('/member/notifications/read','member','POST',{ through: messages.items[0].id });
+    assert.equal((await (await call('/member/notifications','member')).json()).unread,0);
   } finally { sqlite.close(); }
 });
 
@@ -354,7 +386,7 @@ test('a schema version change reruns initialization, then marks the completed ve
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
     assert.ok(data.queries.length > 100);
-    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-08.audit-v8');
+    assert.equal(data.sqlite.prepare("SELECT value FROM app_schema_state WHERE key='schema_version'").get().value, '2026-11-08.notifications-v9');
   } finally { data.sqlite.close(); }
 });
 
@@ -369,7 +401,7 @@ test('existing arcade databases only run the additive shop upgrade', async () =>
     data.queries.length = 0;
     const response = await (await isolate()).fetch(request(), { raffle_db: data.db });
     assert.equal(response.status, 200);
-    assert.ok(data.queries.length < 26);
+    assert.ok(data.queries.length < 32);
     const row = data.sqlite.prepare("SELECT reward_discount,reward_welfare FROM shop_products WHERE id='saved'").get();
     assert.deepEqual([row.reward_discount, row.reward_welfare], [0,25]);
   } finally { data.sqlite.close(); }

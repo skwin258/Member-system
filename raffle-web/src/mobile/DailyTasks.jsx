@@ -140,7 +140,7 @@ export default function DailyTasks({ onClose, lineUrl }) {
           {data && Object.entries(dailyTaskNames).filter(([task]) => !data.hiddenTasks?.includes(task)).map(([task, name]) => {
             const status = data.tasks?.[task];
             const label = status === "claimed" ? "已領取" : status === "pending" ? "審核中"
-              : status === "approved" ? "領取" : task === "checkin" ? "簽到" : "前往";
+              : status === "rejected" ? "重新送出" : status === "approved" ? "領取" : task === "checkin" ? "簽到" : "前往";
             return <div className="daily-task-row" key={task}>
               <span>{name}</span>
               <span className="daily-task-reward"><img alt="紅包" src="/arcade/treasure/fantasy/red-envelope-preview.png" />×1</span>

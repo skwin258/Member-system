@@ -1,3 +1,4 @@
+import { askMemberNotification } from "../../lib/askMemberNotification.js";
 // raffle-web/src/pages/admin/AdminCreateUser.jsx
 import React, { useState } from "react";
 import { api } from "../../api"; // ✅ 你 api.js export const api = {...}
@@ -24,7 +25,9 @@ export default function AdminCreateUser() {
       }
 
       // ✅ 依照你 api.js 的定義：adminCreateUser({ username, password, display_name })
-      const res = await api.adminCreateUser({ username, password, display_name });
+      const notification = await askMemberNotification();
+      if (!notification) return;
+      const res = await api.adminCreateUser({ username, password, display_name, ...notification });
 
       if (!res?.success) throw new Error(res?.error || "建立失敗");
 

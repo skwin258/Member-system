@@ -1,3 +1,4 @@
+import { askMemberNotification } from "../../lib/askMemberNotification.js";
 // raffle-web/src/pages/admin/AdminUsers.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { api, clearAdminToken } from "../../api";
@@ -175,7 +176,9 @@ async function saveUser() {
 
     if (pw.trim()) patch.password = pw.trim();
 
-    const res = await api.adminUpdateUser(user.id, patch);
+    const notification = await askMemberNotification();
+      if (!notification) return;
+      const res = await api.adminUpdateUser(user.id, { ...patch, ...notification });
     if (!res?.success) throw new Error(res?.error || "更新失敗");
 
     setUser((prev) =>
@@ -214,7 +217,10 @@ async function saveUser() {
     }
     setSaving(true);
     try {
+      const notification = await askMemberNotification();
+      if (!notification) return;
       const res = await api.adminAdjustWallet(user.id, {
+        ...notification,
         delta_s: Number(deltaS||0),
         delta_welfare: Number(deltaW||0),
         delta_discount: Number(deltaD||0),

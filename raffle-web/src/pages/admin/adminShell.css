@@ -604,3 +604,10 @@ html, body{
   object-fit: cover;
   border-radius: 8px;
 }
+.member-notify-admin{width:min(420px,calc(100vw - 32px));border:1px solid #ab884d;border-radius:14px;padding:22px;background:#15241e;color:#f4e3bc}
+.member-notify-admin::backdrop{background:#000a}
+.member-notify-admin h2{margin:0 0 10px;font-size:20px}
+.member-notify-admin textarea{display:block;box-sizing:border-box;width:100%;margin:6px 0 16px;background:#0a1612;color:inherit;border:1px solid #8a724a;border-radius:8px;padding:8px;font:inherit}
+.member-notify-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.member-notify-actions button{background:#24382d;border:1px solid #9b814e;color:inherit;border-radius:8px;padding:8px 12px;cursor:pointer}
+.member-notify-actions button[value=notify]{background:#d5ad62;color:#171006}

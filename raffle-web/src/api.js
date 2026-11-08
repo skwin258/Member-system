@@ -199,6 +199,10 @@ async function adminRequest(path, { method = "GET", body, headers } = {}) {
 }
 
 export const api = {
+  memberNotifications: (signal) => request("/member/notifications", { auth: "user", signal }),
+  readMemberNotifications: through => request("/member/notifications/read", {
+    auth: "user", method: "POST", body: JSON.stringify({ through }),
+  }),
   dailyTasks: () => request("/daily-tasks", { auth: "user" }),
   checkInDailyTasks: () => request("/daily-tasks/checkin", { auth: "user", method: "POST" }),
   claimDailyTask: task => request(`/daily-tasks/claim/${task}`, { auth: "user", method: "POST" }),
@@ -209,8 +213,8 @@ export const api = {
   },
   dailyTaskNotifications: () => request("/admin/daily-tasks/notifications", { auth: "admin" }),
   adminDailyTasks: id => request(`/admin/daily-tasks/users/${id}`, { auth: "admin" }),
-  adminReviewDailyTask: (id, task, approved, proofId) => request(`/admin/daily-tasks/users/${id}/${task}`, {
-    auth: "admin", method: "PATCH", body: JSON.stringify({ approved, proofId }),
+  adminReviewDailyTask: (id, task, approved, proofId, options) => request(`/admin/daily-tasks/users/${id}/${task}`, {
+    auth: "admin", method: "PATCH", body: JSON.stringify({ approved, proofId, ...options }),
   }),
   async adminDailyTaskImage(id, signal) {
     const response = await fetch(`${API_BASE}/admin/daily-tasks/proof/${id}`, {
@@ -919,10 +923,11 @@ async adminShopOrders(params = {}) {
   });
 },
 
-async adminToggleShopOrderReview(id) {
+async adminToggleShopOrderReview(id, notification) {
   return await request(`/admin/shop/orders/${id}/review`, {
     method: "POST",
     auth: "admin",
+    body: JSON.stringify(notification || {}),
   });
 },
 

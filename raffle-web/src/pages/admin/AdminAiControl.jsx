@@ -1,3 +1,4 @@
+import { askMemberNotification } from "../../lib/askMemberNotification.js";
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../../api";
 
@@ -128,7 +129,9 @@ export default function AdminAiControl({ adminMe }) {
         note: String(electronicForm.note || "").trim(),
       };
 
-      const res = await api.adminUpdateElectronicRoom(payload);
+      const notification = await askMemberNotification();
+      if (!notification) return;
+      const res = await api.adminUpdateElectronicRoom({ ...payload, ...notification });
 
       if (!res?.success) {
         setMsg(res?.error || "儲存失敗");

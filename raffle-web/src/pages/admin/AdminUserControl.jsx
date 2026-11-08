@@ -1,3 +1,4 @@
+import { askMemberNotification } from "../../lib/askMemberNotification.js";
 import React, { useEffect, useRef, useState } from "react";
 import { api, clearAdminToken } from "../../api";
 import "./adminUsers.css";
@@ -109,7 +110,9 @@ const [redeemRows, setRedeemRows] = useState([]);
 
 const toggleReview = async (id) => {
   try {
-    const r = await api.adminToggleShopOrderReview(id);
+    const notification = await askMemberNotification();
+    if (!notification) return;
+    const r = await api.adminToggleShopOrderReview(id, notification);
 
     if (!r?.success) {
       alert(r?.error || "更新審核狀態失敗");
@@ -244,7 +247,9 @@ const toggleReview = async (id) => {
         patch.password = String(pw).trim();
       }
 
-      const res = await api.adminUpdateUser(user.id, patch);
+      const notification = await askMemberNotification();
+      if (!notification) return;
+      const res = await api.adminUpdateUser(user.id, { ...patch, ...notification });
       if (!res?.success) throw new Error(res?.error || "更新失敗");
 
       const updatedUser = {
@@ -310,7 +315,10 @@ const toggleReview = async (id) => {
     setErr("");
 
     try {
+      const notification = await askMemberNotification();
+      if (!notification) return;
       const res = await api.adminAdjustWallet(user.id, {
+        ...notification,
         delta_s: Number(deltaS || 0),
         delta_welfare: Number(deltaW || 0),
         delta_discount: Number(deltaD || 0),

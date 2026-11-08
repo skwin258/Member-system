@@ -1,3 +1,4 @@
+import { MEMBER_NOTIFICATION_SCHEMA, handleMemberNotifications, memberNotification, runMemberChange, purgeRejectedProofs } from "./member-notifications.js";
 import { AUDIT_SCHEMA } from "./audit-schema.js";
 import { hashPassword, checkPassword } from "./passwords.js";
 import { sanitizePromotionHtml } from "./promotion-html.js";
@@ -17,7 +18,7 @@ import { REDPACKET_SCHEMA, parseRedpacketConfig, redpacketConfigError, handleRed
 const __BOOTSTRAP_STATE__ = { promise: null };
 // Bump when changing the schema/bootstrap below. Persisted in D1 so a new
 // Worker isolate does not repeat hundreds of schema/seed queries on first load.
-const SCHEMA_VERSION = '2026-11-08.audit-v8';
+const SCHEMA_VERSION = '2026-11-08.notifications-v9';
 
 const __HOT_CACHE__ = new Map();
 
@@ -106,8 +107,15 @@ async function ensureBootstrapped(db) {
         db.prepare(DAILY_TASK_GRANT_TRIGGER),
       ]);
     };
+    const ensureMemberNotifications = () => db.batch(MEMBER_NOTIFICATION_SCHEMA.map(sql => db.prepare(sql)));
+    if (previousVersion === "2026-11-08.audit-v8") {
+      await ensureMemberNotifications();
+      await updateSchemaVersion();
+      return;
+    }
     if (previousVersion === "2026-11-07.redpacket-v7") {
       await ensureAuditSchema();
+      await ensureMemberNotifications();
       await updateSchemaVersion();
       return;
     }
@@ -116,6 +124,7 @@ async function ensureBootstrapped(db) {
       if (previousVersion !== '2026-11-07.daily-tasks-v6') await ensureDailyTasks();
       await ensureRedpacketSchema();
       await ensureAuditSchema();
+      await ensureMemberNotifications();
       await updateSchemaVersion();
       return;
     }
@@ -920,6 +929,7 @@ for (const a of seedActivities) {
   await ensureDailyTasks();
   await ensureRedpacketSchema();
   await ensureAuditSchema();
+  await ensureMemberNotifications();
   await updateSchemaVersion();
 
   })().catch((err) => {
@@ -932,6 +942,10 @@ for (const a of seedActivities) {
 }
 
 export default {
+  async scheduled(_event, env) {
+    await ensureBootstrapped(env.raffle_db);
+    await purgeRejectedProofs(env.raffle_db, env.RAFFLE_R2);
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
 
@@ -1292,6 +1306,7 @@ const applyWalletDelta = async ({
   admin_account = "",
   status = "success",
   result = "",
+  notificationBody,
 }) => {
   const u = await fetchUserRow(userId);
   if (!u) return { ok: false, error: "User not found" };
@@ -1299,14 +1314,17 @@ const applyWalletDelta = async ({
   const ds = toInt(delta_s, 0);
   const dw = toInt(delta_welfare, 0);
   const dd = toInt(delta_discount, 0);
-  const next = await db.prepare(
+  const change = db.prepare(
     `UPDATE users SET s_balance=COALESCE(s_balance,0)+?,
       welfare_balance=COALESCE(welfare_balance,0)+?, discount_balance=COALESCE(discount_balance,0)+?
      WHERE id=? AND COALESCE(s_balance,0)+?>=0 AND COALESCE(welfare_balance,0)+?>=0
-       AND COALESCE(discount_balance,0)+?>=0
-     RETURNING s_balance, welfare_balance, discount_balance`
-  ).bind(ds, dw, dd, Number(userId), ds, dw, dd).first();
-  if (!next) {
+       AND COALESCE(discount_balance,0)+?>=0`
+  ).bind(ds, dw, dd, Number(userId), ds, dw, dd);
+  const message = [[ds, "S 幣"], [dw, "福利金"], [dd, "折抵金"]]
+    .filter(([amount]) => amount)
+    .map(([amount, name]) => `您${amount > 0 ? "獲得了" : "被扣除了"} ${Math.abs(amount).toLocaleString("zh-TW")} ${name}。`).join("");
+  const applied = await runMemberChange(db, change, memberNotification(db, userId, notificationBody, message));
+  if (!applied.meta?.changes) {
     const current = await fetchUserRow(userId);
     if (!current) return { ok: false, error: "User not found" };
     if (Number(current.s_balance || 0) + ds < 0) return { ok: false, error: "S幣不足" };
@@ -1315,6 +1333,7 @@ const applyWalletDelta = async ({
     return { ok: false, error: "餘額已變更，請重試" };
   }
 
+  const next = await db.prepare("SELECT s_balance,welfare_balance,discount_balance FROM users WHERE id=?").bind(userId).first();
   await insertWalletLog({
     user_id: userId,
     username: u.username,
@@ -1700,6 +1719,8 @@ return json({
  * Routes
  * ========================= */
 if (url.pathname === "/" && request.method === "GET") return text("OK");
+const memberNotifications = await handleMemberNotifications({ request, url, db, requireUser, json, forbid });
+if (memberNotifications) return memberNotifications;
 const dailyTaskResponse = await handleDailyTasks({ request, url, db, env, requireUser, requireAdmin, isSuperAdmin, json, forbid });
 if (dailyTaskResponse) return dailyTaskResponse;
 const redpacketResponse = await handleRedpacket({ request, url, db, requireUser, safeJson, activityEnabledNow, ensureUsageRow, json, forbid });
@@ -1840,7 +1861,7 @@ if (url.pathname === "/admin/module/electronic-room/update" && request.method ==
 
   const moduleKey = "electronic_room";
 
-  await db
+  const change = db
     .prepare(
       `INSERT INTO user_modules
        (user_id, module_key, enabled, uses_left, unlimited, expire_at, note, created_at, updated_at)
@@ -1862,8 +1883,8 @@ if (url.pathname === "/admin/module/electronic-room/update" && request.method ==
       unlimited,
       expireAt || null,
       note
-    )
-    .run();
+    );
+  await runMemberChange(db, change, memberNotification(db, userId, body, "您的電子選房權限已更新。"));
 
   const row = await db
     .prepare(
@@ -3390,16 +3411,17 @@ if (
     return json({ success: false, error: "bad order id" }, { status: 400 });
   }
 
-  const row = await db.prepare(
+  const body = await safeJson(request);
+  const row = await db.prepare("SELECT user_id FROM shop_orders WHERE id=?").bind(id).first();
+  if (!row) return forbid("order not found", 404);
+  const change = db.prepare(
     `UPDATE shop_orders SET reviewed=CASE WHEN reviewed=1 THEN 0 ELSE 1 END
-     WHERE id=? AND (?=1 OR EXISTS (SELECT 1 FROM users WHERE id=shop_orders.user_id AND created_by_admin_id=?))
-     RETURNING reviewed`
-  ).bind(id, Number(isSuperAdmin(admin)), Number(admin.admin_id)).first();
-  if (!row) {
-    const exists = await db.prepare("SELECT 1 FROM shop_orders WHERE id=?").bind(id).first();
-    return exists ? forbid("Forbidden", 403) : forbid("order not found", 404);
-  }
-  return json({ success: true, id, reviewed: row.reviewed });
+     WHERE id=? AND (?=1 OR EXISTS (SELECT 1 FROM users WHERE id=shop_orders.user_id AND created_by_admin_id=?))`
+  ).bind(id, Number(isSuperAdmin(admin)), Number(admin.admin_id));
+  const applied = await runMemberChange(db, change, memberNotification(db, row.user_id, body, "您的商城兌換紀錄已更新。"));
+  if (!applied.meta?.changes) return forbid("Forbidden", 403);
+  const current = await db.prepare("SELECT reviewed FROM shop_orders WHERE id=?").bind(id).first();
+  return json({ success: true, id, reviewed: current.reviewed });
 }
 
 // =========================
@@ -4653,8 +4675,13 @@ await db
   .run();
         }
 
-        if (line_verified === 1) {
-          await grantReferralVerificationRewardsIfEligible(id > 0 ? id : Number((await db.prepare("SELECT id FROM users WHERE username=? LIMIT 1").bind(username).first())?.id || 0));
+        if (line_verified === 1 || body.notify_member === true) {
+          const memberId = id > 0 ? id : Number((await db.prepare("SELECT id FROM users WHERE username=?").bind(username).first())?.id || 0);
+          if (line_verified === 1) await grantReferralVerificationRewardsIfEligible(memberId);
+          if (memberId && body.notify_member === true) {
+            const message = id > 0 ? "您的會員資料或帳號設定已更新。" : "您的會員帳號已建立。";
+            await memberNotification(db, memberId, body, message, false, false).run();
+          }
         }
 
         return json({ success: true });
@@ -4710,6 +4737,7 @@ const delta_discount = isSubtract ? -rawD : rawD;
     category: "admin",
     action,
     note,
+    notificationBody: body,
     admin_account: String(admin.username || ""),
     result: `後台調整：S幣${delta_s} 福利金${delta_welfare} 折抵金${delta_discount}`,
   });
@@ -4793,10 +4821,8 @@ if (
   const body = await safeJson(request);
   const v = Number(body.verified ?? 1) ? 1 : 0;
 
-  await db
-    .prepare("UPDATE users SET line_verified=? WHERE id=?")
-    .bind(v, userId)
-    .run();
+  const change = db.prepare("UPDATE users SET line_verified=? WHERE id=?").bind(v, userId);
+  await runMemberChange(db, change, memberNotification(db, userId, body, "您的 LINE 驗證狀態已更新。"));
 
   if (v === 1) {
     await grantReferralVerificationRewardsIfEligible(userId);
@@ -4885,31 +4911,17 @@ if (!act) {
 if (!Number(act.allow_override_times)) return forbid("此活動不允許調整次數", 403);
 await ensureUsageRow(userId, activity_key);
 
-const cur = await db
-  .prepare(
-    "SELECT user_id, activity_key, times_left FROM user_activity_usage WHERE user_id=? AND activity_key=? LIMIT 1"
-  )
-  .bind(userId, activity_key)
-  .first();
-
-const currentLeft = Number(cur?.times_left || 0);
-
-let nextLeft = currentLeft;
-
-if (mode === "set") {
-  nextLeft = safeAmount;
-} else if (mode === "subtract") {
-  nextLeft = Math.max(0, currentLeft - safeAmount);
-} else {
-  nextLeft = currentLeft + safeAmount;
-}
-
-await db
-  .prepare(
-    "UPDATE user_activity_usage SET times_left=?, updated_at=? WHERE user_id=? AND activity_key=?"
-  )
-  .bind(nextLeft, nowIso(), userId, activity_key)
-  .run();
+const quantity = safeAmount === 1 ? "一" : String(safeAmount);
+const label = activity_key === "redpacket" ? "紅包抽獎" : activity_key === "wheel" ? "輪盤抽獎" : "活動";
+const granted = activity_key === "redpacket" ? `紅包${quantity}包` :
+  activity_key === "wheel" ? `輪盤資格${quantity}次` : `活動資格${quantity}次`;
+const message = mode === "set" ? `您的${label}可用次數已更新為 ${safeAmount} 次。` :
+  mode === "subtract" ? `您的${label}可用次數已調減。` : safeAmount ? `您獲得了${granted}。` : "";
+const change = db.prepare(`UPDATE user_activity_usage SET
+  times_left=CASE WHEN ?='set' THEN ? WHEN ?='subtract' THEN MAX(0,times_left-?) ELSE times_left+? END,
+  updated_at=? WHERE user_id=? AND activity_key=?`)
+  .bind(mode, safeAmount, mode, safeAmount, safeAmount, nowIso(), userId, activity_key);
+await runMemberChange(db, change, memberNotification(db, userId, body, message));
 
 const row = await db
   .prepare(
@@ -5078,10 +5090,8 @@ if (url.pathname.startsWith("/admin/users/") && request.method === "PATCH") {
 
         binds.push(id);
 
-        await db
-          .prepare(`UPDATE users SET ${fields.join(", ")} WHERE id=?`)
-          .bind(...binds)
-          .run();
+        const change = db.prepare(`UPDATE users SET ${fields.join(", ")} WHERE id=?`).bind(...binds);
+        await runMemberChange(db, change, memberNotification(db, id, body, "您的會員資料或帳號設定已更新。"));
 
         if (body.line_verified !== undefined && Number(body.line_verified) === 1) {
           await grantReferralVerificationRewardsIfEligible(id);

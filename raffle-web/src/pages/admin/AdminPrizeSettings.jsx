@@ -1,3 +1,4 @@
+import { askMemberNotification } from "../../lib/askMemberNotification.js";
 import { API_BASE } from '../../config';
 // raffle-web/src/pages/admin/AdminPrizeSettings.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -461,7 +462,10 @@ export default function AdminPrizeSettings() {
     try {
       const mode = giveMode === "subtract" ? "subtract" : giveMode === "set" ? "set" : "add";
 
+      const notification = await askMemberNotification();
+      if (!notification) return;
       const r = await api.adminUserSetActivityTimes(uid, {
+        ...notification,
         activity_key: giveActivityKey,
         mode,
         amount,

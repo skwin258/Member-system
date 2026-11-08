@@ -89,3 +89,16 @@
 .fantasy-home{width:100%;height:100dvh;position:relative;overflow:hidden;background:#050b0d;line-height:normal}.fantasy-home button{box-sizing:border-box}.fh-bottom-nav{position:fixed}.fh-nav-item[aria-current="page"]{color:#ffe3a1}.fh-nav-item[aria-current="page"] svg{stroke:#ffe3a1;filter:drop-shadow(0 0 4px #b8994c88)}.fh-inner{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}.fh-inner .mbPageFrame{padding-bottom:80px}.fh-ai-grid{display:grid;gap:16px;padding:20px}.fh-ai-grid button{display:flex;align-items:center;gap:20px;padding:20px;border:1px solid #9c7b48;color:#ddc28a;background:#101d1b}.fh-ai-grid svg{width:65px;height:65px}
 
 .fh-nav-item .mbBottomSvg{color:inherit;stroke:currentColor}.fh-nav-item .mbBottomSvg.isActive{color:#ffe3a1}
+.fh-auth .fh-notification-bell{position:relative;display:grid;place-items:center;width:40px;min-height:40px;padding:0}
+.fh-notification-bell svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7}
+.fh-auth .fh-notification-count{position:absolute;top:0;right:0;min-width:16px;padding:1px 3px;border-radius:10px;background:#221313;color:#ff6767;font-size:11px;font-weight:800;text-align:center;opacity:1;letter-spacing:0}
+.member-notifications{width:min(360px,calc(100vw - 32px));max-height:75dvh;box-sizing:border-box;padding:0;border:1px solid #b4935d;border-radius:16px;background:#101b2a;color:#f5ddaa;box-shadow:0 16px 45px #000a}
+.member-notifications::backdrop{background:#0009}
+.member-notifications-content{padding:16px}
+.member-notifications header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.member-notifications h2{font-size:19px;margin:0}
+.member-notifications button{color:inherit;background:#182638;border:1px solid #866c44;border-radius:8px;padding:6px 10px;cursor:pointer}
+.member-notifications ul{list-style:none;padding:0;margin:10px 0 0}
+.member-notifications li{border-top:1px solid #b4935d55;padding:9px 0;overflow-wrap:anywhere}
+.member-notifications li p{margin:0 0 5px;white-space:pre-wrap}
+.member-notifications time{font-size:12px;color:#c4b08e}

@@ -3,9 +3,33 @@ import { api } from '../api';
 import { bannerImage, homeBannersWithDefaults } from '../lib/homeBanners';
 import './fantasyHome.css';
 const homepageMarkup="<main class=\"fh-scene\" aria-label=\"功能選單\">\n<header class=\"fh-header\"><img class=\"fh-logo fh-logo-image\" src=\"/fantasy/SKLOGO.png\" alt=\"SK LOGO\" draggable=\"false\"><nav class=\"fh-auth\" aria-label=\"會員\"><button type=\"button\">登入</button><span>/</span><button type=\"button\">註冊</button></nav></header><section class=\"fh-banner\" aria-label=\"活動 Banner\" aria-roledescription=\"輪播\" tabindex=\"0\"><div class=\"fh-banner-window\"><div class=\"fh-banner-track\"></div></div><div class=\"fh-banner-dots\" aria-label=\"選擇 Banner\"></div></section><aside class=\"fh-announcement\" aria-label=\"系統公告\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 9h4l6-5v16l-6-5H3zM17 8a7 7 0 0 1 0 8M20 5a11 11 0 0 1 0 14\"/></svg><div class=\"fh-marquee-window\"><div class=\"fh-marquee-text\">系統公告：歡迎來到奇幻世界，最新活動與消息將在此公告！</div></div></aside>\n<div class=\"fh-titles\" aria-live=\"polite\"><img class=\"fh-title fh-active\" src=\"/fantasy/金色奇幻奪寶專區-1.png\" alt=\"奪寶專區\" aria-hidden=\"false\" draggable=\"false\"><img class=\"fh-title\" src=\"/fantasy/積分商城金色字標-5.png\" alt=\"積分商城\" aria-hidden=\"true\" draggable=\"false\"><img class=\"fh-title\" src=\"/fantasy/金色奇幻好友邀請字標-3.png\" alt=\"好友邀請\" aria-hidden=\"true\" draggable=\"false\"><img class=\"fh-title\" src=\"/fantasy/金色抽獎紀錄字標-2.png\" alt=\"抽獎紀錄\" aria-hidden=\"true\" draggable=\"false\"><img class=\"fh-title\" src=\"/fantasy/AI專區金色奇幻標題-4.png\" alt=\"AI專區\" aria-hidden=\"true\" draggable=\"false\"></div>\n<div class=\"fh-ground-shadow\" aria-hidden=\"true\"><div class=\"fh-shadow\"></div><div class=\"fh-shadow\"></div><div class=\"fh-shadow\"></div><div class=\"fh-shadow\"></div><div class=\"fh-shadow\"></div></div><section class=\"fh-carousel\" aria-roledescription=\"輪播\" aria-label=\"功能\" tabindex=\"0\">\n<div class=\"fh-slide fh-active\" aria-hidden=\"false\"><img src=\"/fantasy/奪寶.png\" alt=\"奪寶\" draggable=\"false\"></div>\n<div class=\"fh-slide\" aria-hidden=\"true\"><img src=\"/fantasy/商城.png\" alt=\"商城\" draggable=\"false\"></div>\n<div class=\"fh-slide\" aria-hidden=\"true\"><img src=\"/fantasy/好友.png\" alt=\"好友\" draggable=\"false\"></div>\n<div class=\"fh-slide\" aria-hidden=\"true\"><img src=\"/fantasy/抽獎.png\" alt=\"抽獎\" draggable=\"false\"></div>\n<div class=\"fh-slide\" aria-hidden=\"true\"><img src=\"/fantasy/AI專區.png\" alt=\"AI專區\" draggable=\"false\"></div>\n<button class=\"fh-arrow fh-prev\" aria-label=\"上一個\"></button><button class=\"fh-arrow fh-next\" aria-label=\"下一個\"></button>\n</section>\n\n</main>";
+function renderAuth(root, props) {
+ const [first, second] = root.querySelectorAll('.fh-auth button');
+ if (!first) return;
+ first.classList.toggle('fh-notification-bell', !props.isGuest);
+ if (props.isGuest) {
+  first.textContent = '登入';
+  first.removeAttribute('aria-label');
+  first.removeAttribute('aria-haspopup');
+ } else {
+  const unread = Number(props.unreadNotifications || 0);
+  first.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>';
+  first.setAttribute('aria-label', unread ? `通知，${unread} 則未讀` : '通知');
+  first.setAttribute('aria-haspopup', 'dialog');
+  if (unread) {
+   const count = document.createElement('span');
+   count.className = 'fh-notification-count';
+   count.textContent = unread > 99 ? '99+' : String(unread);
+   count.setAttribute('aria-hidden','true');
+   first.append(count);
+  }
+ }
+ second.textContent = props.isGuest ? '註冊' : '登出';
+}
+
 export default function FantasyHome(props){
  const rootRef=useRef(null),callbacks=useRef(props);
- useEffect(()=>{callbacks.current=props;const buttons=rootRef.current.querySelectorAll('.fh-auth button');if(buttons.length){buttons[0].textContent=props.isGuest?'登入':'我的';buttons[1].textContent=props.isGuest?'註冊':'登出'}},[props]);
+ useEffect(()=>{callbacks.current=props;renderAuth(rootRef.current, props)},[props]);
  useEffect(()=>{
  const root=rootRef.current;root.innerHTML=homepageMarkup;
  let disposed=false;
@@ -173,10 +197,10 @@ slides.forEach((slide,index)=>{
  listen(image,'keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();enterPage(index)}});
 });
 const authButtons=root.querySelectorAll('.fh-auth button');
-authButtons[0].onclick=()=>callbacks.current.isGuest?callbacks.current.onAuth('login'):callbacks.current.onNavigate('my');
+authButtons[0].onclick=()=>callbacks.current.isGuest?callbacks.current.onAuth('login'):callbacks.current.onNotifications?.();
 authButtons[1].onclick=()=>callbacks.current.isGuest?callbacks.current.onAuth('register'):callbacks.current.onLogout();
 
- const buttons=root.querySelectorAll('.fh-auth button');buttons[0].textContent=callbacks.current.isGuest?'登入':'我的';buttons[1].textContent=callbacks.current.isGuest?'註冊':'登出';
+ renderAuth(root, callbacks.current);
  return ()=>{disposed=true;controller.abort();root.innerHTML=''};
  },[]);
  return <div className="fantasy-home" ref={rootRef}/>;

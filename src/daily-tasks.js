@@ -1,3 +1,5 @@
+import { memberNotification, runMemberChange, purgeRejectedProofs } from "./member-notifications.js";
+
 export const DAILY_TASK_GRANT_TRIGGER = `CREATE TRIGGER IF NOT EXISTS daily_task_redpacket_grant AFTER INSERT ON daily_task_claims
     BEGIN
       INSERT INTO user_activity_usage (user_id, activity_key, times_left, updated_at)
@@ -82,7 +84,7 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
       const bucket = env.RAFFLE_R2;
       if (!bucket) return forbid("圖片上傳服務暫時無法使用", 503);
       const old = await db.prepare("SELECT status,image_key FROM daily_task_proofs WHERE user_id=? AND task=? AND task_day=''").bind(user.id, proofTask).first();
-      if (old && old.status !== "revoked") return forbid("已送出驗證資料", 409);
+      if (old && !["revoked", "rejected"].includes(old.status)) return forbid("已送出驗證資料", 409);
       const form = await request.formData().catch(() => null);
       const file = form?.get("file");
       if (!await validImage(file)) return forbid("請選擇 6 MB 以內的 PNG、JPG 或 WebP 截圖", 400);
@@ -94,7 +96,7 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
         saved = await db.prepare(`INSERT INTO daily_task_proofs(id,user_id,task,task_day,image_key,status)
           VALUES (?,?,?,'',?,'pending') ON CONFLICT(user_id,task,task_day) DO UPDATE
           SET id=excluded.id,image_key=excluded.image_key,status='pending',submitted_at=datetime('now')
-          WHERE daily_task_proofs.status='revoked'`).bind(id, user.id, proofTask, key).run();
+          WHERE daily_task_proofs.status IN ('revoked','rejected')`).bind(id, user.id, proofTask, key).run();
       } catch (error) {
         await bucket.delete(key).catch(() => {});
         throw error;
@@ -160,17 +162,28 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
   const task = match[2];
   if (request.method === "PATCH" && [...verification, ...social].includes(task)) {
     const body = await request.json().catch(() => null);
-    if (typeof body?.approved !== "boolean") return forbid("驗證狀態錯誤", 400);
-    const status = body.approved ? "approved" : "revoked";
+    const failed = verification.includes(task) && body?.failed === true;
+    if (!failed && typeof body?.approved !== "boolean") return forbid("驗證狀態錯誤", 400);
+    const status = failed ? "rejected" : body.approved ? "approved" : "revoked";
     if (verification.includes(task)) {
       if (typeof body.proofId !== "string") return forbid("請先取得會員的驗證截圖", 409);
-      const result = await db.prepare("UPDATE daily_task_proofs SET status=? WHERE id=? AND user_id=? AND task=? AND task_day=''")
-        .bind(status, body.proofId, userId, task).run();
-      if (!result.meta?.changes) return forbid("會員已更新截圖，請重新讀取", 409);
+      const proof = await db.prepare("SELECT image_key FROM daily_task_proofs WHERE id=? AND user_id=? AND task=? AND task_day=''")
+        .bind(body.proofId, userId, task).first();
+      if (!proof?.image_key) return forbid("會員已更新截圖，請重新讀取", 409);
+      const platform = task === "instagram" ? "Instagram" : "Threads";
+      const message = failed ? `您的 ${platform} 驗證失敗，請聯絡客服。` :
+        body.approved ? `您的 ${platform} 已通過驗證，可前往每日任務領取獎勵。` : `您的 ${platform} 驗證狀態已更新。`;
+      const change = db.prepare(`UPDATE daily_task_proofs SET status=?, image_key=CASE WHEN ?=1 THEN NULL ELSE image_key END
+        WHERE id=? AND user_id=? AND task=? AND task_day='' AND image_key=? AND status<>?`)
+        .bind(status, Number(failed), body.proofId, userId, task, proof.image_key, status);
+      const result = await runMemberChange(db, change, memberNotification(db, userId, body, message, failed));
+      if (!result.meta?.changes) return forbid("驗證狀態已更新，請重新讀取", 409);
+      if (failed) await purgeRejectedProofs(db, env.RAFFLE_R2, proof.image_key);
     } else {
-      await db.prepare(`INSERT INTO daily_task_proofs(id,user_id,task,task_day,status) VALUES (?,?,?,?,?)
-        ON CONFLICT(user_id,task,task_day) DO UPDATE SET status=excluded.status`)
-        .bind(crypto.randomUUID(), userId, task, today, status).run();
+      const change = db.prepare(`INSERT INTO daily_task_proofs(id,user_id,task,task_day,status) VALUES (?,?,?,?,?)
+        ON CONFLICT(user_id,task,task_day) DO UPDATE SET status=excluded.status WHERE status<>excluded.status`)
+        .bind(crypto.randomUUID(), userId, task, today, status);
+      await runMemberChange(db, change, memberNotification(db, userId, body, "您的每日任務審核狀態已更新。"));
     }
     return json({ success: true });
   }

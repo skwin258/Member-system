@@ -1,3 +1,4 @@
+import { askMemberNotification } from "../../lib/askMemberNotification.js";
 import { useEffect, useState } from "react";
 import { api } from "../../api";
 import { dailyTaskNames } from "../../lib/dailyTasks";
@@ -40,12 +41,14 @@ export default function AdminMemberDailyTasks({ userId }) {
     return () => { active = false; };
   }, [userId]);
 
-  async function review(task, approved, proofId) {
+  async function review(task, approved, proofId, failed = false) {
     if (busy) return;
     setBusy(task);
     setError("");
     try {
-      const result = await api.adminReviewDailyTask(userId, task, approved, proofId);
+      const notification = await askMemberNotification({ required: failed });
+      if (!notification) return;
+      const result = await api.adminReviewDailyTask(userId, task, approved, proofId, { ...notification, failed });
       if (!result?.success) throw new Error(result?.error || "更新狀態失敗");
       const latest = await api.adminDailyTasks(userId);
       if (!latest?.success) throw new Error(latest?.error || "已更新，重新讀取失敗");
@@ -70,9 +73,11 @@ export default function AdminMemberDailyTasks({ userId }) {
           const approved = item?.status === "approved";
           return <div className="adminCard task-proof-card" key={task}>
             <strong>{dailyTaskNames[task]}</strong>
-            {item?.has_image ? <ProofImage key={item.id} id={item.id} /> : <p>尚未提交截圖</p>}
+            {item?.has_image ? <ProofImage key={item.id} id={item.id} /> : <p>{item?.status === "rejected" ? "驗證失敗，截圖已刪除" : "尚未提交截圖"}</p>}
             <button className={`auMini ${approved ? "on" : ""}`} type="button" disabled={Boolean(busy) || !item?.has_image}
               onClick={() => review(task, !approved, item.id)}>{approved ? "已驗證" : "驗證"}</button>
+            {item?.has_image && <button type="button" className="auMini" disabled={Boolean(busy)}
+              onClick={() => review(task, false, item.id, true)}>驗證失敗</button>}
           </div>;
         })}
       </div>

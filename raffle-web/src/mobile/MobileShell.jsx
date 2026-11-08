@@ -1,3 +1,4 @@
+import MemberNotifications, { useMemberNotifications } from "./MemberNotifications.jsx";
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import "./mobileShell.css";
 import FantasyHome from './FantasyHome.jsx';
@@ -275,6 +276,12 @@ export default function MobileShell({
 
 const [showGuestAuth, setShowGuestAuth] = useState(false);
 const [showDailyTasks, setShowDailyTasks] = useState(false);
+const [showNotifications, setShowNotifications] = useState(false);
+const notifications = useMemberNotifications(!isGuest && activeKey === "home", me?.user?.id);
+function openNotifications() {
+  setShowNotifications(true);
+  void notifications.refresh({ markRead: true });
+}
 const [authDefaultView, setAuthDefaultView] = useState("login");
 
 const [electronicStatus, setElectronicStatus] = useState({
@@ -543,7 +550,9 @@ const electronicBadgeNumber = (() => {
           {renderBottomNav()}
         </div>
     ) : <>
-      <FantasyHome isGuest={isGuest} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>
+      <FantasyHome isGuest={isGuest} unreadNotifications={notifications.unread} onNotifications={openNotifications} onNavigate={handleGo} onAuth={(view)=>{setAuthDefaultView(view);setShowGuestAuth(true)}} onLogout={onLogout}/>
+      {!isGuest && showNotifications && <MemberNotifications items={notifications.items} error={notifications.error}
+        onClose={() => setShowNotifications(false)} onRetry={() => notifications.refresh({ markRead: true })} />}
       <button className="daily-task-launch" type="button" aria-haspopup="dialog"
         onClick={() => { if (isGuest) needLogin(); else setShowDailyTasks(true); }}>
         <img src="/daily-tasks/icon.png" alt="" />每日任務

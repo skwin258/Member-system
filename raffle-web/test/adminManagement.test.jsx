@@ -161,3 +161,22 @@ it("shows member details while wallet and order history are still loading", asyn
   await act(async () => finishLogs({ success: true, items: [] }));
   await waitFor(() => expect(screen.getAllByRole("cell", { name: "讀取中…" })).toHaveLength(1));
 });
+
+it("shows the unread count on the signed-in notification bell and keeps logout separate", () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: true }));
+  mocks.homeBanners.mockResolvedValue({ success: true, items: [] });
+  const onNotifications = vi.fn();
+  const onLogout = vi.fn();
+  const { rerender } = render(<FantasyHome isGuest={false} unreadNotifications={2}
+    onNotifications={onNotifications} onLogout={onLogout} />);
+  const bell = screen.getByRole("button", { name: "通知，2 則未讀" });
+  expect(bell.querySelector("svg")).not.toBeNull();
+  expect(bell.textContent).toBe("2");
+  fireEvent.click(bell);
+  fireEvent.click(screen.getByRole("button", { name: "登出" }));
+  expect(onNotifications).toHaveBeenCalledOnce();
+  expect(onLogout).toHaveBeenCalledOnce();
+  rerender(<FantasyHome isGuest />);
+  expect(screen.getByRole("button", { name: "登入" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "註冊" })).toBeTruthy();
+});

@@ -7,6 +7,7 @@
   "name": "raffle-api",
   "main": "src/index.js",
   "compatibility_date": "2026-02-28",
+  "triggers": { "crons": ["*/15 * * * *"] },
   "observability": {
     "enabled": true
   },
