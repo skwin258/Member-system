@@ -109,7 +109,7 @@ test('redpacket uses the configured board, prevents duplicate draws and settles 
   } finally { sqlite.close(); }
 });
 
-test('daily task proofs stay private, approval unlocks one reward, and nicknames stay internal', async () => {
+test('daily task proofs stay private, approval unlocks one reward, and nicknames stay internal', async (t) => {
   const { db, sqlite } = database();
   const files = new Map();
   let failDelete = false;
@@ -242,6 +242,32 @@ test('daily task proofs stay private, approval unlocks one reward, and nicknames
     assert.doesNotMatch(JSON.stringify([firstPage,secondPage]), /older than seven days/);
     await worker.scheduled(null,env);
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM member_notifications WHERE message='older than seven days'").get().n,0);
+    const clock = t.mock.method(Date, 'now', () => Date.parse('2035-01-12T11:59:59+08:00'));
+    const tasks = ['share_post','like_post','share_story'];
+    const review = (task, body) => call('/admin/daily-tasks/users/1/'+task,'owner','PATCH',body);
+    const adminTasks = async () => (await call('/admin/daily-tasks/users/1','owner')).json();
+    assert.equal((await adminTasks()).socialDay,'2035-01-11');
+    for (const task of tasks) {
+      assert.equal((await review(task,{ approved:true, socialDay:'2035-01-11' })).status,200);
+      assert.equal((await call('/daily-tasks/claim/'+task,'member','POST')).status,200);
+    }
+    assert.equal((await call('/daily-tasks/checkin','member','POST')).status,200);
+    assert.equal((await call('/daily-tasks/claim/checkin','member','POST')).status,200);
+    assert.equal((await (await call('/daily-tasks','member')).json()).progress,4);
+    clock.mock.mockImplementation(() => Date.parse('2035-01-12T12:00:00+08:00'));
+    const afterNoon = await (await call('/daily-tasks','member')).json();
+    assert.equal(afterNoon.progress,1);
+    assert.equal(afterNoon.tasks.checkin,'claimed');
+    assert.equal(afterNoon.tasks.instagram,'claimed');
+    for (const task of tasks) {
+      assert.equal(afterNoon.tasks[task],'available');
+      assert.equal((await adminTasks()).items.some(item=>item.task===task),false);
+      assert.equal((await call('/daily-tasks/claim/'+task,'member','POST')).status,409);
+      assert.equal((await review(task,{ approved:true, socialDay:'2035-01-11' })).status,409);
+      assert.equal((await review(task,{ approved:true, socialDay:'2035-01-12' })).status,200);
+      assert.equal((await call('/daily-tasks/claim/'+task,'member','POST')).status,200);
+    }
+    assert.equal((await (await call('/daily-tasks','member')).json()).progress,4);
   } finally { sqlite.close(); }
 });
 

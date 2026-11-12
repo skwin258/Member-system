@@ -42,12 +42,12 @@ export default function DailyTasks({ onClose, lineUrl }) {
     if (!data?.day) return;
     const midnight = Date.parse(data.day + "T00:00:00+08:00") + 86400000;
     const timer = window.setInterval(() => {
-      if (Date.now() >= midnight && !running.current) {
+      if (Date.now() >= Math.min(midnight, data.socialResetAt ?? Infinity) && !running.current) {
         void run(load);
       }
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [data?.day]);
+  }, [data?.day, data?.socialResetAt]);
 
   function openStep(task) {
     setFile(null);

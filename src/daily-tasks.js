@@ -31,24 +31,34 @@ const social = ["share_post", "like_post", "share_story"];
 const daily = ["checkin", ...social];
 const allTasks = [...verification, ...daily];
 export const DAILY_TASK_PROOF_PREFIX = "daily-task-proofs/";
-const taipeiDay = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+function taskPeriod(now = Date.now()) {
+  const dayAt = offsetHours => new Date(now + offsetHours * 3600000).toISOString().slice(0, 10);
+  const socialDay = dayAt(-4);
+  return {
+    today: dayAt(8), socialDay,
+    socialResetAt: Date.parse(socialDay + "T12:00:00+08:00") + 86400000,
+  };
+}
 const imageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
-const taskDay = (task, today) => verification.includes(task) ? "" : today;
+const taskDay = (task, period) => verification.includes(task) ? "" :
+  social.includes(task) ? period.socialDay : period.today;
 
-async function statuses(db, id, today) {
+async function statuses(db, id, period) {
+  const { today, socialResetAt } = period;
   const [{ results: proofs }, { results: claims }] = await Promise.all([
-    db.prepare("SELECT task,status FROM daily_task_proofs WHERE user_id=? AND task_day IN ('',?)").bind(id, today).all(),
-    db.prepare("SELECT task,claim_day FROM daily_task_claims WHERE user_id=? AND task_day IN ('',?)").bind(id, today).all(),
+    db.prepare("SELECT task,task_day,status FROM daily_task_proofs WHERE user_id=? AND task_day IN ('',?,?)").bind(id, today, period.socialDay).all(),
+    db.prepare("SELECT task,task_day,claim_day FROM daily_task_claims WHERE user_id=? AND task_day IN ('',?,?)").bind(id, today, period.socialDay).all(),
   ]);
   return {
     day: today,
+    socialResetAt,
     tasks: Object.fromEntries(allTasks.map(task => [
       task,
-      claims.some(row => row.task === task) ? "claimed" :
-        proofs.find(row => row.task === task)?.status || "available",
+      claims.some(row => row.task === task && row.task_day === taskDay(task, period)) ? "claimed" :
+        proofs.find(row => row.task === task && row.task_day === taskDay(task, period))?.status || "available",
     ])),
     hiddenTasks: claims.filter(row => verification.includes(row.task) && row.claim_day < today).map(row => row.task),
-    progress: claims.filter(row => daily.includes(row.task) && row.claim_day === today).length,
+    progress: claims.filter(row => daily.includes(row.task) && row.task_day === taskDay(row.task, period)).length,
   };
 }
 
@@ -63,20 +73,21 @@ async function validImage(file) {
 export async function handleDailyTasks({ request, url, db, env, requireUser, requireAdmin, isSuperAdmin, json, forbid }) {
   const path = url.pathname;
   if (path !== "/daily-tasks" && !path.startsWith("/daily-tasks/") && !path.startsWith("/admin/daily-tasks/")) return null;
-  const today = taipeiDay();
+  const period = taskPeriod();
+  const { today, socialDay, socialResetAt } = period;
 
   if (!path.startsWith("/admin/")) {
     const session = await requireUser();
     if (!session) return forbid("請先登入會員", 401);
     const user = await db.prepare("SELECT id FROM users WHERE id=? AND enabled=1 AND locked=0").bind(session.user_id).first();
     if (!user) return forbid("會員帳號暫時無法使用", 403);
-    if (path === "/daily-tasks" && request.method === "GET") return json({ success: true, ...await statuses(db, user.id, today) });
+    if (path === "/daily-tasks" && request.method === "GET") return json({ success: true, ...await statuses(db, user.id, period) });
 
     if (path === "/daily-tasks/checkin" && request.method === "POST") {
       await db.prepare(`INSERT INTO daily_task_proofs(id,user_id,task,task_day,status)
         VALUES (?,?,'checkin',?,'approved') ON CONFLICT(user_id,task,task_day) DO NOTHING`)
         .bind(crypto.randomUUID(), user.id, today).run();
-      return json({ success: true, ...await statuses(db, user.id, today) });
+      return json({ success: true, ...await statuses(db, user.id, period) });
     }
 
     const proofTask = path.match(/^\/daily-tasks\/proof\/(instagram|threads)$/)?.[1];
@@ -106,17 +117,17 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
         return forbid("已送出驗證資料", 409);
       }
       if (old?.image_key) await bucket.delete(old.image_key).catch(() => {});
-      return json({ success: true, ...await statuses(db, user.id, today) });
+      return json({ success: true, ...await statuses(db, user.id, period) });
     }
 
     const task = path.match(/^\/daily-tasks\/claim\/([a-z_]+)$/)?.[1];
     if (task && allTasks.includes(task) && request.method === "POST") {
-      const day = taskDay(task, today);
+      const day = taskDay(task, period);
       await db.prepare(`INSERT OR IGNORE INTO daily_task_claims(user_id,task,task_day,claim_day)
         SELECT ?,?,?,? WHERE EXISTS (
           SELECT 1 FROM daily_task_proofs WHERE user_id=? AND task_day=? AND task=? AND status='approved'
         )`).bind(user.id, task, day, today, user.id, day, task).run();
-      const state = await statuses(db, user.id, today);
+      const state = await statuses(db, user.id, period);
       if (state.tasks[task] !== "claimed") return forbid("尚未完成這個任務", 409);
       return json({ success: true, ...state });
     }
@@ -156,8 +167,9 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
   const user = await db.prepare("SELECT id,created_by_admin_id FROM users WHERE id=?").bind(userId).first();
   if (!user || (!superAdmin && Number(user.created_by_admin_id) !== owner)) return forbid("無法管理這位會員", 403);
   if (request.method === "GET" && !match[2]) {
-    const { results } = await db.prepare("SELECT id,task,status,submitted_at,image_key IS NOT NULL AS has_image FROM daily_task_proofs WHERE user_id=? AND task_day IN ('',?)").bind(userId, today).all();
-    return json({ success: true, items: results });
+    const { results } = await db.prepare("SELECT id,task,task_day,status,submitted_at,image_key IS NOT NULL AS has_image FROM daily_task_proofs WHERE user_id=? AND task_day IN ('',?,?)").bind(userId, today, socialDay).all();
+    const items = results.filter(row => row.task_day === taskDay(row.task, period));
+    return json({ success: true, items, socialDay, socialResetAt });
   }
   const task = match[2];
   if (request.method === "PATCH" && [...verification, ...social].includes(task)) {
@@ -180,9 +192,10 @@ export async function handleDailyTasks({ request, url, db, env, requireUser, req
       if (!result.meta?.changes) return forbid("驗證狀態已更新，請重新讀取", 409);
       if (failed) await purgeRejectedProofs(db, env.RAFFLE_R2, proof.image_key);
     } else {
+      if (body.socialDay !== undefined && body.socialDay !== socialDay) return forbid("每日社群任務已重置，請重新讀取", 409);
       const change = db.prepare(`INSERT INTO daily_task_proofs(id,user_id,task,task_day,status) VALUES (?,?,?,?,?)
         ON CONFLICT(user_id,task,task_day) DO UPDATE SET status=excluded.status WHERE status<>excluded.status`)
-        .bind(crypto.randomUUID(), userId, task, today, status);
+        .bind(crypto.randomUUID(), userId, task, socialDay, status);
       await runMemberChange(db, change, memberNotification(db, userId, body, "您的每日任務審核狀態已更新。"));
     }
     return json({ success: true });

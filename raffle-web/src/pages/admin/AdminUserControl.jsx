@@ -27,6 +27,7 @@ export default function AdminUserControl({ initialUserId } = {}) {
 
   const [user, setUser] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [showLogs, setShowLogs] = useState(false);
   const [orders, setOrders] = useState([]);
   const [logsStatus, setLogsStatus] = useState("");
   const [ordersStatus, setOrdersStatus] = useState("");
@@ -157,6 +158,7 @@ const toggleReview = async (id) => {
     setDetailLoading(true);
     setUser(null);
     setLogs([]);
+    setShowLogs(false);
     setOrders([]);
     setLogsStatus("讀取中…");
     setOrdersStatus("讀取中…");
@@ -700,8 +702,11 @@ const toggleReview = async (id) => {
         <AdminMemberDailyTasks key={user.id} userId={user.id} />
 
         <div className="auSection">
-          <div className="auSectionTitle">抽獎紀錄 / 異動紀錄（近90天）</div>
-          <div className="logWrap">
+          <button type="button" className="auSectionTitle auHistoryToggle" aria-expanded={showLogs}
+            onClick={() => setShowLogs(open => !open)}>
+            <span aria-hidden="true">{showLogs ? "▾" : "▸"}</span> 抽獎紀錄 / 異動紀錄（近90天）
+          </button>
+          {showLogs && <div className="logWrap">
             <div className="temple-table-scroll"><table className="logTable">
               <thead>
                 <tr>
@@ -747,7 +752,7 @@ const toggleReview = async (id) => {
                 ) : null}
               </tbody>
             </table></div>
-          </div>
+          </div>}
         </div>
 
         <div className="auSection">

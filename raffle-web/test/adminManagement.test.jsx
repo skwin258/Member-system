@@ -157,9 +157,15 @@ it("shows member details while wallet and order history are still loading", asyn
   expect(mocks.adminListUsers).toHaveBeenLastCalledWith("", { limit: 50, before: 2 });
   fireEvent.click(screen.getByRole("button", { name: /second/ }));
   await screen.findByText("基本資料");
+  const history = screen.getByRole("button", { name: /抽獎紀錄/ });
+  expect(history.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.getAllByRole("cell", { name: "讀取中…" })).toHaveLength(1);
+  fireEvent.click(history);
   expect(screen.getAllByRole("cell", { name: "讀取中…" })).toHaveLength(2);
   await act(async () => finishLogs({ success: true, items: [] }));
   await waitFor(() => expect(screen.getAllByRole("cell", { name: "讀取中…" })).toHaveLength(1));
+  fireEvent.click(history);
+  expect(history.getAttribute("aria-expanded")).toBe("false");
 });
 
 it("shows the unread count on the signed-in notification bell and keeps logout separate", () => {

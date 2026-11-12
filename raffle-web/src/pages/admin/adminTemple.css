@@ -110,6 +110,8 @@ html.is-admin-route{color-scheme:dark;background:#0a140f}
 .ra-adminShell .auIdBadge{color:#cdb37d;background:#9f854422;border-color:#a58a4944}
 .ra-adminShell :is(.auPaneHead,.auSection,.auStatic,.auMini,.auSearchBar){border-color:#9e854844;background:#18291c88;color:#d5c39c}
 .ra-adminShell :is(.auPaneTitle,.auSectionTitle,.auAccount){color:#dcc89a}
+.ra-adminShell .auHistoryToggle{display:flex;align-items:center;gap:8px;width:100%;margin:0;padding:0;border:0;background:none;text-align:left;cursor:pointer}
+.ra-adminShell .auHistoryToggle[aria-expanded="true"]{margin-bottom:10px}
 .ra-adminShell .auBalanceRow.green{color:#aec69a;background:#526c3433;border-color:#8fa05b55}
 .ra-adminShell .alp-delete{color:#e3b39a;border-color:#a2774e88;background:linear-gradient(#483525,#281f16);box-shadow:inset 0 0 0 2px #1a1710}
 .ra-adminShell .apPreviewHtml{background:#08150e88;border-color:#9d834138;color:#c5bfa0}

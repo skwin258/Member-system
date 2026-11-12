@@ -29,16 +29,30 @@ function ProofImage({ id }) {
 
 export default function AdminMemberDailyTasks({ userId }) {
   const [items, setItems] = useState(null);
+  const [socialDay, setSocialDay] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
 
   useEffect(() => {
     let active = true;
-    api.adminDailyTasks(userId).then(result => {
-      if (!result?.success) throw new Error(result?.error || "讀取任務失敗");
-      if (active) setItems(result.items);
-    }).catch(err => { if (active) setError(err.message); });
-    return () => { active = false; };
+    let timer;
+    async function refresh() {
+      try {
+        const result = await api.adminDailyTasks(userId);
+        if (!result?.success) throw new Error(result?.error || "讀取任務失敗");
+        if (!active) return;
+        setItems(result.items);
+        setSocialDay(result.socialDay);
+        setError("");
+        if (result.socialResetAt) timer = setTimeout(refresh, Math.max(1000, result.socialResetAt - Date.now()));
+      } catch (err) {
+        if (!active) return;
+        setError(err.message);
+        timer = setTimeout(refresh, 10000);
+      }
+    }
+    void refresh();
+    return () => { active = false; clearTimeout(timer); };
   }, [userId]);
 
   async function review(task, approved, proofId, failed = false) {
@@ -50,11 +64,12 @@ export default function AdminMemberDailyTasks({ userId }) {
         approved && accountTasks.includes(task) ? "通過驗證後，系統會通知會員領取獎勵。" : "";
       const notification = await askMemberNotification({ requiredMessage });
       if (!notification) return;
-      const result = await api.adminReviewDailyTask(userId, task, approved, proofId, { ...notification, failed });
+      const result = await api.adminReviewDailyTask(userId, task, approved, proofId, { ...notification, failed, socialDay });
       if (!result?.success) throw new Error(result?.error || "更新狀態失敗");
       const latest = await api.adminDailyTasks(userId);
       if (!latest?.success) throw new Error(latest?.error || "已更新，重新讀取失敗");
       setItems(latest.items);
+      setSocialDay(latest.socialDay);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -83,7 +98,7 @@ export default function AdminMemberDailyTasks({ userId }) {
           </div>;
         })}
       </div>
-      <p>會員私訊官方 LINE 後，確認社群任務符合 24 小時規則，再開放領取。</p>
+      <p>會員私訊官方 LINE 後，確認社群任務符合 24 小時規則，再開放領取。三項確認每天台灣時間中午 12 點重置。</p>
       <div className="task-notifications">
         {socialTasks.map(task => {
           const approved = get(task)?.status === "approved";
